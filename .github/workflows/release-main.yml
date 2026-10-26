@@ -16,6 +16,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  # The application pins Asia/Shanghai at startup; upstream traffic tests assume it.
+  TZ: Asia/Shanghai
   IMAGE: ghcr.io/aoomee/nodectl-wg
   VERSION: ${{ inputs.version }}
 

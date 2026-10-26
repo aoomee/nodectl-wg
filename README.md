@@ -8,7 +8,22 @@
 
 ## Docker 一键启动
 
-先安装 Docker 和 Docker Compose，然后执行：
+**如果你使用网页里的「粘贴部署内容 / Compose YAML」输入框**，请只粘贴下面的 YAML（从 `services:` 开始），不要粘贴 `mkdir`、`curl` 或 `docker compose` 命令：
+
+```yaml
+services:
+  nodectl:
+    image: ghcr.io/aoomee/nodectl-wg:latest
+    restart: unless-stopped
+    init: true
+    ports:
+      - "127.0.0.1:7878:8080"
+    volumes:
+      - ./data:/app/data
+    stop_grace_period: 75s
+```
+
+**如果你使用服务器终端**，先安装 Docker 和 Docker Compose，然后执行：
 
 ```bash
 mkdir -p /opt/nodectl-wg

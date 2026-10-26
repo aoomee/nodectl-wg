@@ -18,6 +18,8 @@ import (
 	"gorm.io/gorm/logger"
 	"nhooyr.io/websocket"
 	"nodectl/internal/database"
+	"nodectl/internal/requestmeta"
+	"nodectl/internal/testutil"
 )
 
 func identityTestDB(t *testing.T) *TrafficHub {
@@ -48,6 +50,107 @@ func identityTestDB(t *testing.T) *TrafficHub {
 		}
 	}
 	return h
+}
+
+func TestAuthenticatedAgentThroughHTTPSProxy(t *testing.T) {
+	for _, kind := range []string{"go", "nginx"} {
+		t.Run(kind, func(t *testing.T) {
+			h := identityTestDB(t)
+			secret := enrollTestAgent(t)
+			if err := requestmeta.Configure("127.0.0.1"); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = requestmeta.Configure("") })
+			finished := make(chan struct{}, 1)
+			backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// Use the production authentication and command correlation over a
+				// real WebSocket, without launching traffic persistence workers.
+				session, err := authenticateAgentRequest(r)
+				if err != nil {
+					http.Error(w, "invalid credentials", 401)
+					return
+				}
+				if r.TLS != nil {
+					t.Error("fixture must exercise HTTP upstream")
+				}
+				c, err := websocket.Accept(w, r, nil)
+				if err != nil {
+					return
+				}
+				defer c.CloseNow()
+				defer func() { finished <- struct{}{} }()
+				h.agentMu.Lock()
+				h.agentConns[session.installID] = c
+				h.agentSessions[c] = session
+				h.agentMu.Unlock()
+				for {
+					_, b, err := c.Read(r.Context())
+					if err != nil {
+						return
+					}
+					var result AgentCommandResult
+					if json.Unmarshal(b, &result) == nil {
+						h.acceptAgentResult(c, session.installID, result)
+					}
+				}
+			}))
+			defer backend.Close()
+			proxyURL, httpClient := testutil.HTTPSProxy(t, backend.URL, kind)
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			headers := http.Header{"Authorization": {"Bearer " + secret}, AgentInstallIDHeader: {"aaaaaaaaaaaa"}, AgentCapabilityHeader: {WGRelayV2Capability}}
+			client, _, err := websocket.Dial(ctx, "wss"+strings.TrimPrefix(proxyURL, "https"), &websocket.DialOptions{HTTPClient: httpClient, HTTPHeader: headers})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer client.CloseNow()
+			for !WGAgentV2Ready("aaaaaaaaaaaa") {
+				select {
+				case <-ctx.Done():
+					t.Fatal("authenticated agent not ready")
+				default:
+					time.Sleep(time.Millisecond)
+				}
+			}
+			result := make(chan error, 1)
+			go func() {
+				_, b, err := client.Read(ctx)
+				if err != nil {
+					result <- err
+					return
+				}
+				var cmd AgentCommand
+				if err := json.Unmarshal(b, &cmd); err != nil {
+					result <- err
+					return
+				}
+				b, _ = json.Marshal(AgentCommandResult{Type: "result", CommandID: cmd.CommandID, Status: "ok", Data: json.RawMessage(`{"ready":true}`)})
+				result <- client.Write(ctx, websocket.MessageText, b)
+			}()
+			data, err := SendWGCommand(ctx, "aaaaaaaaaaaa", "wg-status", nil)
+			if err != nil || string(data) != `{"ready":true}` {
+				t.Fatalf("command=%s err=%v", data, err)
+			}
+			if err := <-result; err != nil {
+				t.Fatal(err)
+			}
+			if err := RevokeAgentIdentity("node-a"); err != nil {
+				t.Fatal(err)
+			}
+			select {
+			case <-finished:
+			case <-ctx.Done():
+				t.Fatal("revocation did not close the upstream connection")
+			}
+			if WGAgentReady("aaaaaaaaaaaa") {
+				t.Fatal("revoked connection remains ready")
+			}
+			_, response, err := websocket.Dial(ctx, "wss"+strings.TrimPrefix(proxyURL, "https"), &websocket.DialOptions{HTTPClient: httpClient, HTTPHeader: headers})
+			if err == nil || response == nil || response.StatusCode != 401 {
+				t.Fatal("revoked credential reconnected")
+			}
+		})
+	}
 }
 func enrollTestAgent(t *testing.T) string {
 	t.Helper()

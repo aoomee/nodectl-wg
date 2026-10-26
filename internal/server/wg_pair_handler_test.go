@@ -12,6 +12,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"nodectl/internal/database"
+	"nodectl/internal/requestmeta"
 )
 
 func wgHandlerDB(t *testing.T) {
@@ -101,12 +102,18 @@ func TestWGPairHandlerRejectsInvalidRequests(t *testing.T) {
 }
 func TestWGPairPushPersistsDisableWithoutCommands(t *testing.T) {
 	wgHandlerDB(t)
+	if err := requestmeta.Configure("127.0.0.1"); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = requestmeta.Configure("") })
 	p := database.WGPair{ID: "1234567890abcdef12345678", EntryUUID: "entry", PeerUUID: "landing", EntryAddress: "10.64.0.2/32", PeerAddress: "10.64.0.3/32", DesiredRevision: 1, AppliedRevision: 1, Enabled: true, Status: "active", Phase: "active", RealityLink: "vless://SECRET"}
 	if e := database.DB.Create(&p).Error; e != nil {
 		t.Fatal(e)
 	}
 	r := httptest.NewRequest("POST", "https://panel.test/api/wg/push", strings.NewReader(`{"uuid":"entry","revision":2,"enabled":false}`))
-	r.TLS = &tls.ConnectionState{}
+	r.TLS = nil
+	r.RemoteAddr = "127.0.0.1:123"
+	r.Header.Set("X-Forwarded-Proto", "https")
 	r.Header.Set("Content-Type", "application/json")
 	r.Header.Set("X-NodeCtl-WG", "1")
 	w := httptest.NewRecorder()

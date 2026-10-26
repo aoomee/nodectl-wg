@@ -16,6 +16,7 @@ import (
 	"gorm.io/gorm/clause"
 	"nhooyr.io/websocket"
 	"nodectl/internal/database"
+	"nodectl/internal/requestmeta"
 )
 
 const WGRelayCapability = "wg-relay-v1"
@@ -165,15 +166,15 @@ func validAgentSession(installID string, session agentSession) bool {
 	return session.authenticated && session.installID == installID && id.SecretHash != "" && id.SecretHash == session.secretHash
 }
 
-// TLS is checked on the actual backend connection. Forwarded headers are NOT a
-// trust boundary. Reverse proxies must use verified HTTPS to this backend.
+// Credentials require HTTPS, directly or through an explicitly trusted proxy.
+// Untrusted forwarding headers cannot bypass the transport requirement.
 func authenticateAgentRequest(r *http.Request) (agentSession, error) {
 	auth := r.Header.Get("Authorization")
 	id := strings.TrimSpace(r.Header.Get(AgentInstallIDHeader))
 	s := agentSession{installID: id}
 	if auth != "" {
 		parts := strings.Fields(auth)
-		if r.TLS == nil || len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") || len(parts[1]) != 64 || id == "" {
+		if !requestmeta.IsSecure(r) || len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") || len(parts[1]) != 64 || id == "" {
 			return s, ErrAgentIdentity
 		}
 		s.authenticated = true

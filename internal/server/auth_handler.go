@@ -14,6 +14,7 @@ import (
 	"nodectl/internal/database"
 	"nodectl/internal/logger"
 	"nodectl/internal/middleware"
+	"nodectl/internal/requestmeta"
 	"nodectl/internal/service"
 	"nodectl/internal/version"
 
@@ -120,7 +121,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 			Value:    tokenString,
 			Path:     "/",
 			HttpOnly: true,
-			Secure:   false,
+			Secure:   requestmeta.IsSecure(r),
 			MaxAge:   maxAge,
 			Expires:  expireAt,
 			SameSite: http.SameSiteLaxMode,

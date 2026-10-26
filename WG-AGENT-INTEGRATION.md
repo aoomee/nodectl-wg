@@ -31,7 +31,7 @@ REALITY 在 A 终结；B 不要求 REALITY。订阅保留 A 的原地址、端�
 ## 部署前提与未完成边界
 
 - Linux/systemd、root、已安装 ip/wg、内核 WG、IPv4，每台机器参与一对。不自动安装系统依赖/重写防火墙；需允许双端 WG UDP 端口和 B 隧道上的 SS TCP。
-- 绑定接口要求真实后端 TLS。普通 HTTPS 代理但 HTTP 回源不能作为可信绑定通道；需要可信 TLS 回源或面板原生 HTTPS。
+- 绑定和认证连接要求对外可信 HTTPS/WSS。支持面板原生 HTTPS，也支持显式配置可信代理后的 NGINX HTTPS → 本机 HTTP 回源，见 [反代配置](REVERSE-PROXY.md)。不信任未配置来源的 HTTPS 标记，Agent 证书验证保持开启。
 - 面板/两端 Agent 都要升级；已有 upstream Agent 的版本比较不保证自动迁移至 fork。
 - 运行状态 active 表示配置已应用、进程存活、WG 与目标 TCP 可达；**不等于真实 REALITY→SS 客户端认证和 B 出口已通过端到端验证**。
 - 尚未在授权隔离 Linux 双机环境验证完整链路、真实出口、断 WG 无公网回退及生产更新迁移。当前开发主机 macOS，无 Docker。

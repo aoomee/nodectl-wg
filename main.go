@@ -5,6 +5,7 @@ import (
 	"embed"
 	"nodectl/internal/database"
 	"nodectl/internal/logger"
+	"nodectl/internal/requestmeta"
 	"nodectl/internal/server"
 	"nodectl/internal/service"
 	"nodectl/internal/version"
@@ -27,6 +28,10 @@ func main() {
 	// 1. 初始化日志组件
 	logger.Init(logger.LoadPersistedLogLevel())
 	logger.Log.Debug("Nodectl Core 正在启动", "版本号", version.Version)
+	if err := requestmeta.Configure(os.Getenv(requestmeta.TrustedProxiesEnv)); err != nil {
+		logger.ConsoleAndLog.Error("可信反向代理配置无效，服务未启动", "error", err)
+		os.Exit(1)
+	}
 	// 2.初始化数据库
 	database.InitDB()
 

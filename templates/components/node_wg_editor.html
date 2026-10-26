@@ -103,7 +103,7 @@ function renderNodeWGCard() {
             <details id="nodeWGSetupDetails"><summary>首次授权与部署条件</summary>
                 <p>先部署 A 的 REALITY 和 B 的 SS，再选择 WG 出站。两端需支持新版 Agent、Linux/systemd、root、ip/wg 工具及可达 UDP。</p>
                 <p>首次授权用于确认机器身份，不是 WG 密钥，也不需要每次建隧道都操作。已完成授权的机器无需重复绑定。</p>
-                <p>当前版本仍需在服务器终端完成一次确认，连接使用受信任 HTTPS/WSS。面板后端也需 HTTPS，不能仅依赖反向代理传入的 HTTPS 标记。</p>
+                <p>首次授权需在服务器终端确认，连接使用有效的 HTTPS/WSS。支持 NGINX HTTPS → 本机 HTTP 回源，反代部署需先配置面板的可信代理地址。</p>
                 <div class="node-wg-actions"><button type="button" id="nodeWGBind">授权当前机器</button></div>
                 <pre id="nodeWGBinding" hidden></pre>
             </details>`;

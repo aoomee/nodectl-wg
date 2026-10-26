@@ -7,11 +7,12 @@ import (
 	"net/http"
 	"net/url"
 
+	"nodectl/internal/requestmeta"
 	"nodectl/internal/service"
 )
 
 // Admin handlers MUST be registered behind withAuthAndSecure. All credential
-// operations also require real backend TLS; forwarded headers are not trusted.
+// operations require HTTPS, directly or through an explicitly trusted proxy.
 func agentIdentityRequest(w http.ResponseWriter, r *http.Request, admin bool, body any) bool {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -20,8 +21,8 @@ func agentIdentityRequest(w http.ResponseWriter, r *http.Request, admin bool, bo
 		agentIdentityError(w, 405, "method not allowed")
 		return false
 	}
-	if r.TLS == nil {
-		agentIdentityError(w, 400, "HTTPS required")
+	if !requestmeta.IsSecure(r) {
+		agentIdentityError(w, 400, "HTTPS required; configure NODECTL_TRUSTED_PROXIES for HTTPS reverse proxies")
 		return false
 	}
 	media, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))

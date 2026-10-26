@@ -10,6 +10,7 @@ import (
 
 	"nodectl/internal/database"
 	"nodectl/internal/logger"
+	"nodectl/internal/requestmeta"
 	"nodectl/internal/service"
 )
 
@@ -29,7 +30,7 @@ func getBaseURL(r *http.Request) string {
 		return strings.TrimRight(config.Value, "/")
 	}
 	scheme := "http"
-	if r.TLS != nil {
+	if requestmeta.IsSecure(r) {
 		scheme = "https"
 	}
 	return scheme + "://" + r.Host

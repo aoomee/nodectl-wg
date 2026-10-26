@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"nodectl/internal/database"
+	"nodectl/internal/requestmeta"
 	"nodectl/internal/service"
 )
 
@@ -17,28 +18,9 @@ var AppStartTime = time.Now()
 // ------------------- [通用辅助函数] -------------------
 
 // getClientIP 从请求中提取真实客户端 IP（支持反向代理场景）
-// 优先级: X-Real-IP > X-Forwarded-For 第一个 > RemoteAddr
+// 仅显式配置的可信代理可以传递客户端地址。
 func getClientIP(r *http.Request) string {
-	// 1. 优先使用 X-Real-IP（Nginx 常用）
-	if ip := strings.TrimSpace(r.Header.Get("X-Real-IP")); ip != "" {
-		return ip
-	}
-	// 2. 其次取 X-Forwarded-For 的第一个 IP（多级代理场景）
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		if ip := strings.TrimSpace(strings.Split(xff, ",")[0]); ip != "" {
-			return ip
-		}
-	}
-	// 3. 兜底使用 RemoteAddr，并去掉端口号
-	ip := r.RemoteAddr
-	if idx := strings.LastIndex(ip, ":"); idx != -1 {
-		// 处理 IPv6 带方括号的情况 [::1]:port
-		if bracketIdx := strings.LastIndex(ip, "]"); bracketIdx != -1 {
-			return strings.Trim(ip[:bracketIdx+1], "[]")
-		}
-		return ip[:idx]
-	}
-	return ip
+	return requestmeta.ClientIP(r)
 }
 
 // sendJSON 辅助函数：智能返回 JSON 响应

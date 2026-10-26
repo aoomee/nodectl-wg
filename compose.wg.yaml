@@ -3,6 +3,8 @@ services:
     image: ${NODECTL_IMAGE:-ghcr.io/aoomee/nodectl-wg:latest}
     restart: unless-stopped
     init: true
+    environment:
+      NODECTL_TRUSTED_PROXIES: ${NODECTL_TRUSTED_PROXIES:-}
     ports:
       - "${NODECTL_BIND:-127.0.0.1}:${NODECTL_PORT:-7878}:8080"
     volumes:

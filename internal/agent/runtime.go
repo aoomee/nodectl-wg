@@ -41,11 +41,13 @@ type Runtime struct {
 	bootID    string
 
 	// 🆕 sing-box 管理模块
-	singboxMgr *singbox.Manager
-	linkGen    *links.Generator
-	commandMu  sync.Mutex
-	wgManager  *wgrelay.Manager
-	commandCtx context.Context
+	singboxMgr        *singbox.Manager
+	linkGen           *links.Generator
+	commandMu         sync.Mutex
+	wgManager         *wgrelay.Manager
+	commandCtx        context.Context
+	wgRouteLease      *time.Timer
+	wgLeaseGeneration uint64
 }
 
 // NewRuntime 创建运行时实例
@@ -793,6 +795,7 @@ func (rt *Runtime) shutdown() {
 		rt.cancel()
 	}
 	rt.commandMu.Lock()
+	rt.stopWGRouteLease()
 	if rt.wgManager != nil {
 		_ = rt.wgManager.Close()
 	}
@@ -821,6 +824,13 @@ func (rt *Runtime) handleCommand(cmd ServerCommand, reply func(CommandResult)) {
 	if strings.HasPrefix(cmd.Action, "wg-") {
 		rt.executeWGCommand(cmd, reply)
 		return
+	}
+	if rt.singboxMgr != nil && (cmd.Action == "reset-links" || cmd.Action == "reinstall-singbox" || cmd.Action == "push-config") {
+		route, err := rt.singboxMgr.GetConfigManager().GetWGRoute()
+		if err != nil || (route != nil && route.Mode != "direct") {
+			reply(CommandResult{Type: "result", Status: "error", Message: "请先明确停用并清理 WG 出站，再修改普通协议"})
+			return
+		}
 	}
 	// 先回复 accepted
 	reply(CommandResult{

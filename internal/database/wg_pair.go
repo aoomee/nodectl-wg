@@ -9,7 +9,14 @@ import (
 // REALITY credentials are private persistence only; never serialize them.
 // WireGuard private keys remain exclusively on the agents.
 type WGPair struct {
-	ID                string `gorm:"primaryKey;size:32"`
+	ID string `gorm:"primaryKey;size:32"`
+	// Zero/one are legacy cleanup-only records; migration must not upgrade them.
+	TopologyVersion int
+	// RestoreDirect records explicit user disable intent, never automatic failure.
+	RestoreDirect     bool
+	TargetLinkHash    string `json:"-"`
+	RealityDigest     string `json:"-"`
+	SSDigest          string `json:"-"`
 	EntryUUID         string `gorm:"uniqueIndex;size:36;not null"`
 	PeerUUID          string `gorm:"index;size:36;not null"`
 	EntryInstallID    string

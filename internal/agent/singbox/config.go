@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 // 默认路径常量
@@ -25,6 +26,11 @@ type ConfigManager struct {
 	protocolsPath string          // 协议配置缓存路径
 	certDir       string          // 证书目录
 	Protocols     *ProtocolConfig // 当前协议配置
+
+	wgMu            sync.Mutex
+	wgAuthorized    *WGRoute // Never persisted: a restarted agent must reauthorize.
+	wgRealityDigest string
+	wgSeen          bool
 }
 
 // NewConfigManager 创建配置管理器
@@ -79,6 +85,7 @@ type sbConfig struct {
 	Log       sbLog        `json:"log"`
 	Inbounds  []any        `json:"inbounds"`
 	Outbounds []sbOutbound `json:"outbounds"`
+	Route     *sbRoute     `json:"route,omitempty"`
 }
 
 type sbLog struct {
@@ -87,8 +94,14 @@ type sbLog struct {
 }
 
 type sbOutbound struct {
-	Type string `json:"type"`
-	Tag  string `json:"tag"`
+	Type          string `json:"type"`
+	Tag           string `json:"tag"`
+	Server        string `json:"server,omitempty"`
+	ServerPort    int    `json:"server_port,omitempty"`
+	Method        string `json:"method,omitempty"`
+	Password      string `json:"password,omitempty"`
+	BindInterface string `json:"bind_interface,omitempty"`
+	Network       string `json:"network,omitempty"`
 }
 
 // --- 各协议 inbound 结构体 ---
@@ -235,6 +248,9 @@ type sbTransport struct {
 // GenerateConfig 根据当前协议配置生成 sing-box JSON 配置
 func (cm *ConfigManager) GenerateConfig() ([]byte, error) {
 	pc := cm.Protocols
+	if pc == nil {
+		return nil, fmt.Errorf("protocol configuration is nil")
+	}
 
 	cfg := sbConfig{
 		Log: sbLog{
@@ -446,6 +462,9 @@ func (cm *ConfigManager) GenerateConfig() ([]byte, error) {
 		})
 	}
 
+	if err := cm.applyWGOverlay(&cfg); err != nil {
+		return nil, err
+	}
 	return json.MarshalIndent(cfg, "", "  ")
 }
 
@@ -462,7 +481,7 @@ func (cm *ConfigManager) GenerateAndSave() error {
 		}
 	}
 
-	if err := os.WriteFile(cm.configPath, data, 0644); err != nil {
+	if err := writePrivateAtomic(cm.configPath, data); err != nil {
 		return fmt.Errorf("写入 sing-box 配置文件失败: %w", err)
 	}
 
@@ -498,7 +517,7 @@ func (cm *ConfigManager) SaveToCache() error {
 		return fmt.Errorf("序列化协议配置失败: %w", err)
 	}
 
-	if err := os.WriteFile(cm.protocolsPath, data, 0644); err != nil {
+	if err := writePrivateAtomic(cm.protocolsPath, data); err != nil {
 		return fmt.Errorf("写入协议缓存失败: %w", err)
 	}
 

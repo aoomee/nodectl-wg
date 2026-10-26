@@ -51,8 +51,12 @@ func GenerateRawNodesYAML(routingType int, useFlag bool) (string, error) {
 		if shouldExcludeNodeByTrafficThreshold(node) {
 			continue
 		}
+		realityAllowed := WGRealitySubscriptionAllowed(node.UUID)
 		enabledProtocolCount := 0
 		for p, l := range node.Links {
+			if p == "reality" && !realityAllowed {
+				continue
+			}
 			if strings.TrimSpace(l) == "" {
 				continue
 			}
@@ -62,6 +66,9 @@ func GenerateRawNodesYAML(routingType int, useFlag bool) (string, error) {
 		}
 
 		for proto, link := range node.Links {
+			if proto == "reality" && !realityAllowed {
+				continue
+			}
 			if strings.TrimSpace(link) == "" {
 				continue // Agent 尚未上报该协议链接，跳过
 			}
@@ -238,8 +245,12 @@ func GenerateV2RaySubBase64(useFlag bool) (string, error) {
 		if shouldExcludeNodeByTrafficThreshold(node) {
 			continue
 		}
+		realityAllowed := WGRealitySubscriptionAllowed(node.UUID)
 		enabledProtocolCount := 0
 		for p, l := range node.Links {
+			if p == "reality" && !realityAllowed {
+				continue
+			}
 			if strings.TrimSpace(l) == "" {
 				continue
 			}
@@ -249,6 +260,9 @@ func GenerateV2RaySubBase64(useFlag bool) (string, error) {
 		}
 
 		for proto, link := range node.Links {
+			if proto == "reality" && !realityAllowed {
+				continue
+			}
 			if strings.TrimSpace(link) == "" {
 				continue // Agent 尚未上报该协议链接，跳过
 			}

@@ -738,6 +738,7 @@
 
     /* 移动端 */
     @media (max-width: 768px) {
+        .edit-left-col, .edit-right-col { box-sizing: border-box; min-width: 0; }
         .edit-modal-card {
             max-width: 95%;
             height: 85vh;
@@ -1384,6 +1385,7 @@
 
         const container = document.getElementById('protocolListContainer');
         container.appendChild(div);
+        if (proto === 'reality' && typeof renderNodeWGCard === 'function') renderNodeWGCard();
 
         if (!isLocked && isNew) {
             const textarea = div.querySelector('.link-textarea');
@@ -1579,6 +1581,10 @@
     }
 
     function closeCmdLogPanel() {
+        if (typeof nodeWGEditor !== 'undefined' && nodeWGEditor.ordinaryPending) {
+            nodeWGEditor.ordinaryPending = false;
+            nodeWGEditor.ordinaryFailed = true; // Closing the stream is not proof of deployment.
+        }
         const panel = document.getElementById('cmdLogPanel');
         const protoList = document.getElementById('protocolListContainer');
         const addSection = document.getElementById('addProtocolSection');
@@ -1591,7 +1597,7 @@
         }
     }
 
-    function streamCommandLog(commandID) {
+    function streamCommandLog(commandID, onComplete) {
         if (_cmdLogEventSource) {
             _cmdLogEventSource.close();
         }
@@ -1605,6 +1611,7 @@
                 if (entry.type === 'result' || entry.type === 'error') {
                     es.close();
                     _cmdLogEventSource = null;
+                    if (onComplete) onComplete(entry.type === 'result' && entry.status === 'ok');
                 }
             } catch (err) {
                 console.warn('SSE parse error:', err);
@@ -1614,6 +1621,7 @@
         es.onerror = function() {
             es.close();
             _cmdLogEventSource = null;
+            if (onComplete) onComplete(false);
         };
     }
 
@@ -1759,6 +1767,12 @@
         }
 
         if (isInitializingEdit) return;
+        if (typeof nodeWGBlocksOrdinary === 'function' && nodeWGBlocksOrdinary()) {
+            clearTimeout(editNodeAutoSaveTimer); editNodeAutoSaveTimer = null;
+            nodeWGEditor.deferredAutosave = true;
+            nodeWGMessage('普通配置已锁定：请先明确停用配对并等待清理完成，再保存和推送变更。');
+            return;
+        }
 
         const uuid = document.getElementById('editNodeUUID').value;
         if (!uuid) return;
@@ -1977,8 +1991,11 @@
 
     function closeEditModal() {
         if (typeof resetNodeWGEditor === 'function') resetNodeWGEditor();
+        clearTimeout(editNodeAutoSaveTimer); editNodeAutoSaveTimer = null;
+        clearTimeout(_pushConfigConfirmTimer); resetPushConfigBtn();
+        closeCmdLogPanel();
         editModalEl.classList.remove('active');
-        setTimeout(() => { editModalCard.classList.remove('has-content'); }, 300);
+        setTimeout(() => { if (!editModalEl.classList.contains('active')) editModalCard.classList.remove('has-content'); }, 300);
     }
 
     function updateLayoutState() {
@@ -1989,8 +2006,9 @@
         container.querySelectorAll('.protocol-card').forEach(card => {
             existingProtos.add(card.getAttribute('data-proto'));
         });
-        const availableProtos = [...GLOBAL_SUPPORTED_PROTOCOLS, 'wg_relay'].filter(p => !existingProtos.has(p) && (p !== 'wg_relay' || !document.getElementById('nodeWGCard')));
+        const availableProtos = GLOBAL_SUPPORTED_PROTOCOLS.filter(p => p !== 'wg_relay' && !existingProtos.has(p));
 
+        if (typeof renderNodeWGCard === 'function') renderNodeWGCard();
         const addSection = document.getElementById('addProtocolSection');
         if (addSection) {
             if (availableProtos.length === 0) addSection.style.display = 'none';
@@ -2005,6 +2023,7 @@
             if (parseInt(el.getAttribute('data-type')) === val) el.classList.add('active');
         });
         if (val === 1 || val === 2) originalRoutingType = val;
+        if (typeof renderNodeWGCard === 'function') renderNodeWGCard();
         if (!skipSave) triggerNodeAutoSave(true);
     }
 
@@ -2018,7 +2037,7 @@
             existingProtos.add(card.getAttribute('data-proto'));
         });
 
-        const availableProtos = [...GLOBAL_SUPPORTED_PROTOCOLS, 'wg_relay'].filter(p => !existingProtos.has(p) && (p !== 'wg_relay' || !document.getElementById('nodeWGCard')));
+        const availableProtos = GLOBAL_SUPPORTED_PROTOCOLS.filter(p => p !== 'wg_relay' && !existingProtos.has(p));
 
         if (availableProtos.length === 0) {
             alert('所有支持的协议均已添加');
@@ -2027,7 +2046,7 @@
 
         availableProtos.forEach(proto => {
             const item = document.createElement('div');
-            item.innerText = proto === 'wg_relay' ? 'WG 中转（REALITY / TCP）' : proto.toUpperCase();
+            item.innerText = proto.toUpperCase();
             item.style.padding = '8px 12px';
             item.style.cursor = 'pointer';
             item.style.borderRadius = '6px';
@@ -2047,7 +2066,7 @@
     }
 
     function insertProtocolCard(proto) {
-        if (proto === 'wg_relay') { addNodeWGCard(); return; }
+        if (proto === 'wg_relay') return; // WG is a REALITY outbound, never a protocol.
         // 新增协议时，从节点的 link_ports 中读取该协议的默认端口
         const uuid = document.getElementById('editNodeUUID').value;
         const node = window.allNodesData && window.allNodesData[uuid];
@@ -2097,8 +2116,17 @@
 
     // 推送当前启用的协议及端口配置给 Agent
     async function pushConfigToAgent() {
-        if (document.getElementById('nodeWGCard')) { await pushNodeWGConfig(); return; }
+        const pushUUID = document.getElementById('editNodeUUID').value;
+        const pushGeneration = typeof nodeWGEditor !== 'undefined' ? nodeWGEditor.generation : null;
+        if (typeof handleNodeWGPush === 'function' && await handleNodeWGPush()) return;
+        if (typeof nodeWGEditor !== 'undefined' && nodeWGEditor.deferredAutosave) {
+            nodeWGEditor.deferredAutosave = false; triggerNodeAutoSave(true);
+        }
         try { await waitForNodeAutoSave(); } catch (err) { alert(err.message); return; }
+        if (document.getElementById('editNodeUUID').value !== pushUUID || (pushGeneration !== null && pushGeneration !== nodeWGEditor.generation)) return;
+        // Recheck the fence after autosave, never bypass an active/blocked pair.
+        if (typeof handleNodeWGPush === 'function' && await handleNodeWGPush()) return;
+        const ordinarySnapshot = typeof nodeWGOrdinarySnapshot === 'function' ? nodeWGOrdinarySnapshot() : null;
         const uuid = document.getElementById('editNodeUUID').value;
         const name = document.getElementById('editNodeName').value || uuid;
         if (!uuid) return;
@@ -2152,6 +2180,7 @@
 
         showCmdLogPanel('推送配置');
 
+        if (pushGeneration !== null) nodeWGEditor.ordinaryPending = true;
         fetch('/api/node/control/push-config', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -2163,18 +2192,32 @@
         })
         .then(res => res.json())
         .then(data => {
+            if (pushGeneration !== null && pushGeneration !== nodeWGEditor.generation) return;
+            const completed = success => {
+                if (pushGeneration === null || pushGeneration !== nodeWGEditor.generation) return;
+                nodeWGEditor.ordinaryPending = false;
+                nodeWGEditor.ordinaryFailed = !success;
+                if (success) nodeWGEditor.baseline = ordinarySnapshot;
+                nodeWGMessage(success ? '普通部署执行成功；关闭日志并刷新后可选择 WG，尚未启用 WG。' : '普通部署未确认成功，请重试普通推送。');
+            };
             if (data.status === 'success' && data.command_id) {
-                streamCommandLog(data.command_id);
+                streamCommandLog(data.command_id, completed);
             } else if (data.status === 'success' && data.data && data.data.command_id) {
-                streamCommandLog(data.data.command_id);
+                streamCommandLog(data.data.command_id, completed);
             } else {
+                completed(false);
                 appendCmdLog({ type: 'error', message: data.message || data.data || '命令下发失败' });
             }
         })
         .catch(err => {
+            if (pushGeneration !== null) {
+                if (pushGeneration !== nodeWGEditor.generation) return;
+                nodeWGEditor.ordinaryPending = false; nodeWGEditor.ordinaryFailed = true;
+            }
             appendCmdLog({ type: 'error', message: '网络错误: ' + err.message });
         })
         .finally(() => {
+            if (pushGeneration !== null && pushGeneration !== nodeWGEditor.generation) return;
             if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
         });
     }

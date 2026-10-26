@@ -72,6 +72,8 @@ func TestWGPairHandlerRejectsInvalidRequests(t *testing.T) {
 		{"POST", `{"uuid":"entry","revision":0}`, true, true, "", 400},
 		{"POST", `{"uuid":"entry","revision":1,"unknown":true}`, true, true, "", 400},
 		{"POST", `{"uuid":"entry","revision":1} {}`, true, true, "", 400},
+		{"POST", `{"uuid":"entry","revision":1,"enabled":true,"peer_uuid":"landing"}`, true, true, "", 409},
+		{"POST", `{"uuid":"entry","revision":1,"enabled":true,"peer_uuid":"landing","entry_port":-1}`, true, true, "", 400},
 		{"POST", `{"uuid":"entry","revision":1,"enabled":true,"peer_uuid":"landing","entry_port":70000}`, true, true, "", 400},
 		{"POST", `{"uuid":"entry","revision":1,"enabled":true,"peer_uuid":"landing","entry_port":1443}`, true, true, "", 409},
 	}
@@ -116,5 +118,32 @@ func TestWGPairPushPersistsDisableWithoutCommands(t *testing.T) {
 	database.DB.First(&got, "id = ?", p.ID)
 	if got.Enabled || got.Status != "cleanup_pending" || got.Phase != "remove_a" || got.DesiredRevision != 2 {
 		t.Fatalf("disable not persisted: %+v", got)
+	}
+}
+
+func TestWGPairV2HandlerExplicitDisable(t *testing.T) {
+	wgHandlerDB(t)
+	p := database.WGPair{ID: "1234567890abcdef12345678", TopologyVersion: 2, EntryUUID: "entry", PeerUUID: "landing", EntryPort: 8443, EntryWGPort: 23456, PeerWGPort: 45678, EntryAddress: "10.64.0.2/32", PeerAddress: "10.64.0.3/32", DesiredRevision: 1, Status: "disabled", Phase: "blocked"}
+	if e := database.DB.Create(&p).Error; e != nil {
+		t.Fatal(e)
+	}
+	r := httptest.NewRequest("POST", "https://panel.test/api/wg/push", strings.NewReader(`{"uuid":"entry","revision":2,"enabled":false}`))
+	r.TLS = &tls.ConnectionState{}
+	r.Header.Set("Content-Type", "application/json")
+	r.Header.Set("X-NodeCtl-WG", "1")
+	w := httptest.NewRecorder()
+	apiWGPairPush(w, r)
+	if w.Code != 200 {
+		t.Fatalf("%d %s", w.Code, w.Body.String())
+	}
+	var got database.WGPair
+	database.DB.First(&got, "id = ?", p.ID)
+	if !got.RestoreDirect || got.Phase != "block_a" || got.Status != "cleanup_pending" {
+		t.Fatalf("explicit intent missing: %+v", got)
+	}
+	for _, field := range []string{`"topology_version":2`, `"source_protocol":"reality"`, `"target_protocol":"ss"`, `"entry_wg_port":23456`, `"peer_wg_port":45678`} {
+		if !strings.Contains(w.Body.String(), field) {
+			t.Fatalf("missing %s in %s", field, w.Body.String())
+		}
 	}
 }

@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net"
 	"net/netip"
 	"net/url"
 	"sort"
@@ -55,6 +54,12 @@ type WGPairPush struct {
 	Enabled   bool   `json:"enabled"`
 }
 type WGPairDTO struct {
+	TopologyVersion int    `json:"topology_version"`
+	SourceProtocol  string `json:"source_protocol"`
+	TargetProtocol  string `json:"target_protocol"`
+	EntryWGPort     int    `json:"entry_wg_port"`
+	PeerWGPort      int    `json:"peer_wg_port"`
+	RestoreDirect   bool   `json:"restore_direct"`
 	ID              string `json:"id"`
 	UUID            string `json:"uuid"`
 	PeerUUID        string `json:"peer_uuid"`
@@ -78,20 +83,26 @@ type WGPairOptionsDTO struct {
 }
 
 func wgDTO(p database.WGPair) WGPairDTO {
-	return WGPairDTO{p.ID, p.EntryUUID, p.PeerUUID, p.EntryPort, p.DesiredRevision, p.AppliedRevision, p.Enabled, p.Status, p.Phase, p.Error}
+	out := WGPairDTO{ID: p.ID, UUID: p.EntryUUID, PeerUUID: p.PeerUUID, EntryPort: p.EntryPort, Revision: p.DesiredRevision, AppliedRevision: p.AppliedRevision, Enabled: p.Enabled, Status: p.Status, Phase: p.Phase, Error: p.Error, TopologyVersion: p.TopologyVersion, EntryWGPort: p.EntryWGPort, PeerWGPort: p.PeerWGPort, RestoreDirect: p.RestoreDirect}
+	if p.TopologyVersion == 2 {
+		out.SourceProtocol = "reality"
+		out.TargetProtocol = "ss"
+	}
+	return out
 }
 
 type wgPairCoordinator struct {
-	db      *gorm.DB
-	ready   func(string) bool
-	send    func(context.Context, string, string, interface{}) (json.RawMessage, error)
-	now     func() time.Time
-	timeout time.Duration
+	db          *gorm.DB
+	ready       func(string) bool
+	legacyReady func(string) bool
+	send        func(context.Context, string, string, interface{}) (json.RawMessage, error)
+	now         func() time.Time
+	timeout     time.Duration
 	// Proof is process-local: persisted active alone can never publish a link.
 	confirmed map[string]uint64
 }
 
-var wgDefault = &wgPairCoordinator{ready: WGAgentReady, send: SendWGCommand, now: time.Now, timeout: 20 * time.Second, confirmed: map[string]uint64{}}
+var wgDefault = &wgPairCoordinator{ready: WGAgentV2Ready, legacyReady: WGAgentReady, send: SendWGCommand, now: time.Now, timeout: 20 * time.Second, confirmed: map[string]uint64{}}
 
 func (c *wgPairCoordinator) database() *gorm.DB {
 	if c.db != nil {
@@ -141,6 +152,17 @@ func wgReality(n database.NodePool) (string, int, error) {
 	}
 	return link, port, nil
 }
+
+// Public SS links are dependency fingerprints only. Credentials must come from
+// the authenticated agent's canonical local configuration, never URI parsing.
+func wgSS(n database.NodePool) (string, int, error) {
+	link := strings.TrimSpace(n.Links["ss"])
+	port := n.LinkPorts["ss"]
+	if contains(n.DisabledLinks, "ss") || !strings.HasPrefix(link, "ss://") || len(link) <= len("ss://") || port < 1 || port > 65535 {
+		return "", 0, ErrWGUnavailable
+	}
+	return link, port, nil
+}
 func (c *wgPairCoordinator) identity(db *gorm.DB, n database.NodePool) (string, error) {
 	var i database.AgentIdentity
 	if db.Where("node_uuid = ? AND install_id = ?", n.UUID, n.InstallID).First(&i).Error != nil || !i.Bound || i.SecretHash == "" || !c.ready(n.InstallID) {
@@ -161,12 +183,16 @@ func (c *wgPairCoordinator) dependencies(db *gorm.DB, aID, bID string) (a, b dat
 	if err != nil {
 		return
 	}
-	link, port, err = wgReality(b)
+	if _, _, err = wgReality(a); err != nil {
+		return
+	}
+	link, port, err = wgSS(b)
 	return
 }
 func (c *wgPairCoordinator) valid(p database.WGPair) bool {
 	a, b, ah, bh, link, port, e := c.dependencies(c.database(), p.EntryUUID, p.PeerUUID)
-	return e == nil && a.InstallID == p.EntryInstallID && b.InstallID == p.PeerInstallID && a.IPV4 == p.EntryIP && b.IPV4 == p.PeerIP && ah == p.EntryIdentityHash && bh == p.PeerIdentityHash && wgHash(link) == p.LinkHash && port == p.TargetPort
+	source, entryPort, sourceErr := wgReality(a)
+	return p.TopologyVersion == 2 && sourceErr == nil && entryPort == p.EntryPort && wgHash(source) == p.LinkHash && e == nil && a.InstallID == p.EntryInstallID && b.InstallID == p.PeerInstallID && a.IPV4 == p.EntryIP && b.IPV4 == p.PeerIP && ah == p.EntryIdentityHash && bh == p.PeerIdentityHash && wgHash(link) == p.TargetLinkHash && port == p.TargetPort
 }
 func SaveWGPair(ctx context.Context, r WGPairPush) (WGPairDTO, error) {
 	unlock := WGAcquireNodeLocks(r.UUID, r.PeerUUID)
@@ -185,21 +211,25 @@ func (c *wgPairCoordinator) save(ctx context.Context, r WGPairPush) (WGPairDTO, 
 			return e
 		}
 		if exists {
-			if r.Revision == p.DesiredRevision && r.Enabled == p.Enabled && (!r.Enabled || r.PeerUUID == p.PeerUUID && r.EntryPort == p.EntryPort) {
+			if r.Revision == p.DesiredRevision && r.Enabled == p.Enabled && (r.Enabled || p.TopologyVersion != 2 || p.RestoreDirect) && (!r.Enabled || p.TopologyVersion == 2 && r.PeerUUID == p.PeerUUID && (r.EntryPort == 0 || r.EntryPort == p.EntryPort)) {
 				return nil
 			}
 			if r.Revision != p.DesiredRevision+1 {
 				return ErrWGConflict
 			}
-			if r.Enabled && p.Status != "disabled" {
+			if r.Enabled && (p.Status != "disabled" || !p.RestoreDirect) {
 				return errors.New("disable pair and finish cleanup before editing")
 			}
 			if !r.Enabled {
 				p.Enabled = false
+				p.RestoreDirect = true
 				p.DesiredRevision = r.Revision
-				if p.Status != "disabled" {
+				if p.Status != "disabled" || p.TopologyVersion == 2 {
 					p.Status = "cleanup_pending"
 					p.Phase = "remove_a"
+					if p.TopologyVersion == 2 {
+						p.Phase = "block_a"
+					}
 				}
 				p.NextRetryAt = time.Time{}
 				p.RetryCount = 0
@@ -209,17 +239,19 @@ func (c *wgPairCoordinator) save(ctx context.Context, r WGPairPush) (WGPairDTO, 
 		} else if !r.Enabled || r.Revision != 1 {
 			return ErrWGConflict
 		}
-		if r.EntryPort < 1 || r.EntryPort > 65535 || r.PeerUUID == "" || len(r.PeerUUID) > 36 {
+		if r.EntryPort < 0 || r.EntryPort > 65535 || r.PeerUUID == "" || len(r.PeerUUID) > 36 {
 			return ErrWGConflict
 		}
 		a, b, ah, bh, link, port, e := c.dependencies(tx, r.UUID, r.PeerUUID)
 		if e != nil {
 			return e
 		}
-		for proto, v := range a.LinkPorts {
-			if v == r.EntryPort && !contains(a.DisabledLinks, proto) {
-				return errors.New("entry port conflicts with existing protocol")
-			}
+		source, entryPort, e := wgReality(a)
+		if e != nil {
+			return e
+		}
+		if r.EntryPort != 0 && r.EntryPort != entryPort {
+			return errors.New("entry port must match existing local REALITY")
 		}
 		if !exists {
 			var id [12]byte
@@ -243,19 +275,24 @@ func (c *wgPairCoordinator) save(ctx context.Context, r WGPairPush) (WGPairDTO, 
 		p.PeerIP = b.IPV4
 		p.EntryIdentityHash = ah
 		p.PeerIdentityHash = bh
-		p.EntryPort = r.EntryPort
+		p.EntryPort = entryPort
+		p.TopologyVersion = 2
+		p.RestoreDirect = false
 		p.TargetPort = port
-		p.RealityLink = link
-		p.LinkHash = wgHash(link)
+		p.RealityLink = source
+		p.LinkHash = wgHash(source)
+		p.TargetLinkHash = wgHash(link)
 		p.DesiredRevision = r.Revision
 		p.Enabled = true
 		p.Status = "pending"
-		p.Phase = "prepare_a"
+		p.Phase = "guard_a"
 		p.Error = ""
 		p.RetryCount = 0
 		p.NextRetryAt = time.Time{}
 		p.HealthCheckedAt = time.Time{}
 		p.EntryPublicKey = ""
+		p.RealityDigest = ""
+		p.SSDigest = ""
 		p.PeerPublicKey = ""
 		if e = tx.Create(&database.WGPairNode{NodeUUID: a.UUID, PairID: p.ID}).Error; e != nil {
 			return ErrWGConflict
@@ -286,7 +323,8 @@ func (c *wgPairCoordinator) options(id string) (WGPairOptionsDTO, error) {
 		return out, ErrWGUnavailable
 	}
 	_, e := c.identity(db, a)
-	out.Ready = e == nil && wgNodeEligible(a, "entry")
+	_, _, realityErr := wgReality(a)
+	out.Ready = e == nil && realityErr == nil && wgNodeEligible(a, "entry")
 	var p database.WGPair
 	e = db.First(&p, "entry_uuid = ?", id).Error
 	if e == nil {
@@ -310,7 +348,7 @@ func (c *wgPairCoordinator) options(id string) (WGPairOptionsDTO, error) {
 		if count != 0 {
 			continue
 		}
-		if _, _, e = wgReality(b); e != nil {
+		if _, _, e = wgSS(b); e != nil {
 			continue
 		}
 		_, e = c.identity(db, b)
@@ -320,6 +358,9 @@ func (c *wgPairCoordinator) options(id string) (WGPairOptionsDTO, error) {
 }
 func (c *wgPairCoordinator) payload(p database.WGPair, entry bool) wgrelay.Payload {
 	v := wgrelay.Payload{PairID: p.ID, Revision: p.DesiredRevision, EntryPort: p.EntryPort, TargetPort: p.TargetPort}
+	if p.TopologyVersion == 2 {
+		v.Topology = "reality_ss_v2"
+	}
 	if entry {
 		v.Role = "entry"
 		v.LocalAddress = p.EntryAddress
@@ -339,15 +380,59 @@ func (c *wgPairCoordinator) payload(p database.WGPair, entry bool) wgrelay.Paylo
 	}
 	return v
 }
-func (c *wgPairCoordinator) command(ctx context.Context, p database.WGPair, entry bool, action string) (wgrelay.Status, error) {
-	var s wgrelay.Status
+
+// Canonical SS credentials have command-local lifetime only. Never persist or
+// return this type in an API DTO, log, error, or coordinator state.
+type wgCanonicalSS struct {
+	Method   string `json:"method"`
+	Password string `json:"password"`
+	Port     int    `json:"port"`
+	Digest   string `json:"digest"`
+}
+type wgRouteRequest struct {
+	PairID                string `json:"pair_id"`
+	Revision              uint64 `json:"revision"`
+	Method                string `json:"method"`
+	Password              string `json:"password"`
+	Port                  int    `json:"port"`
+	SSDigest              string `json:"ss_digest"`
+	ExpectedRealityDigest string `json:"expected_reality_digest"`
+}
+
+func (c *wgPairCoordinator) request(ctx context.Context, p database.WGPair, entry bool, action string, payload interface{}) (json.RawMessage, error) {
 	id := p.PeerInstallID
 	if entry {
 		id = p.EntryInstallID
 	}
-	if !c.ready(id) {
-		return s, ErrWGUnavailable
+	ready := c.ready
+	if p.TopologyVersion != 2 && c.legacyReady != nil {
+		ready = c.legacyReady
 	}
+	if ready == nil || !ready(id) {
+		return nil, ErrWGUnavailable
+	}
+	timeout := c.timeout
+	if timeout <= 0 {
+		timeout = 20 * time.Second
+	}
+	cmdCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	raw, err := c.send(cmdCtx, id, action, payload)
+	if err != nil {
+		return nil, ErrWGUnavailable
+	}
+	return raw, nil
+}
+func (c *wgPairCoordinator) canonicalSS(ctx context.Context, p database.WGPair) (wgCanonicalSS, error) {
+	var secret wgCanonicalSS
+	raw, err := c.request(ctx, p, false, "wg-v2-ss", wgrelay.Payload{PairID: p.ID, Revision: p.DesiredRevision})
+	if err != nil || json.Unmarshal(raw, &secret) != nil || secret.Method == "" || secret.Password == "" || secret.Port != p.TargetPort || secret.Digest == "" {
+		return wgCanonicalSS{}, ErrWGUnavailable
+	}
+	return secret, nil
+}
+func (c *wgPairCoordinator) command(ctx context.Context, p database.WGPair, entry bool, action string) (wgrelay.Status, error) {
+	var s wgrelay.Status
 	payload := c.payload(p, entry)
 	if action == "wg-prepare" {
 		payload.PeerPublicKey = ""
@@ -357,18 +442,23 @@ func (c *wgPairCoordinator) command(ctx context.Context, p database.WGPair, entr
 	if action != "wg-prepare" && action != "wg-configure" {
 		payload = wgrelay.Payload{PairID: p.ID, Revision: p.DesiredRevision}
 	}
-	timeout := c.timeout
-	if timeout <= 0 {
-		timeout = 20 * time.Second
+	var request interface{} = payload
+	if action == "wg-v2-route" {
+		secret, err := c.canonicalSS(ctx, p)
+		if err != nil {
+			return s, err
+		}
+		if p.SSDigest == "" || secret.Digest != p.SSDigest {
+			return s, ErrWGUnavailable
+		}
+		request = wgRouteRequest{PairID: p.ID, Revision: p.DesiredRevision, Method: secret.Method, Password: secret.Password, Port: secret.Port, SSDigest: secret.Digest, ExpectedRealityDigest: p.RealityDigest}
 	}
-	cmdCtx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-	raw, e := c.send(cmdCtx, id, action, payload)
-	if e != nil {
-		return s, ErrWGUnavailable
+	raw, err := c.request(ctx, p, entry, action, request)
+	if err != nil {
+		return s, err
 	}
 	if json.Unmarshal(raw, &s) != nil || s.PairID != p.ID || s.Revision != p.DesiredRevision {
-		return s, errors.New("invalid WireGuard acknowledgement")
+		return s, ErrWGUnavailable
 	}
 	if action == "wg-remove" {
 		if s.Phase != "removed" || s.ProxyListening {
@@ -384,6 +474,14 @@ func (c *wgPairCoordinator) command(ctx context.Context, p database.WGPair, entr
 		return s, ErrWGUnavailable
 	}
 	switch action {
+	case "wg-v2-guard", "wg-v2-block":
+		if (s.Phase != "guarded" && s.Phase != "blocked") || s.RouteActive || s.ProxyListening {
+			return s, ErrWGUnavailable
+		}
+	case "wg-v2-direct":
+		if s.Phase != "direct" || s.RouteActive || s.ProxyListening {
+			return s, ErrWGUnavailable
+		}
 	case "wg-prepare":
 		key, e := base64.StdEncoding.DecodeString(s.PublicKey)
 		if e != nil || len(key) != 32 || s.Phase != "prepared" {
@@ -397,14 +495,16 @@ func (c *wgPairCoordinator) command(ctx context.Context, p database.WGPair, entr
 		if (s.Phase != "verified" && s.Phase != "active") || (entry && !s.TargetTCPVerified) {
 			return s, ErrWGUnavailable
 		}
-	case "wg-activate":
-		if s.Phase != "active" || !s.ProxyListening || !s.TargetTCPVerified {
+	case "wg-v2-route", "wg-v2-status":
+		if s.Phase != "active" || !s.RouteActive || !s.TargetTCPVerified || s.ProxyListening {
 			return s, ErrWGUnavailable
 		}
 	case "wg-status":
-		if (entry && (!s.TargetTCPVerified || s.Phase != "active" || !s.ProxyListening)) || (!entry && s.Phase != "verified") {
+		if entry || s.Phase != "verified" || s.ProxyListening {
 			return s, ErrWGUnavailable
 		}
+	default:
+		return s, ErrWGUnavailable
 	}
 	return s, nil
 }
@@ -413,40 +513,75 @@ func (c *wgPairCoordinator) fail(p *database.WGPair) error {
 	delete(c.confirmed, p.ID)
 	p.Status = "cleanup_pending"
 	p.Phase = "remove_a"
+	if p.TopologyVersion == 2 {
+		p.Phase = "block_a"
+	}
+	p.RestoreDirect = false
 	p.Error = "WireGuard operation or dependency failed; cleanup required"
 	p.NextRetryAt = time.Time{}
 	p.RetryCount = 0
 	return c.persist(p)
 }
 func (c *wgPairCoordinator) cleanup(ctx context.Context, p *database.WGPair) error {
-	entry := p.Phase != "remove_b"
-	if _, e := c.command(ctx, *p, entry, "wg-remove"); e != nil {
+	entry, action := true, "wg-remove"
+	switch p.Phase {
+	case "block_a":
+		action = "wg-v2-block"
+	case "remove_a":
+	case "remove_b":
+		entry = false
+	case "direct_a":
+		if p.TopologyVersion != 2 || !p.RestoreDirect {
+			return c.fail(p)
+		}
+		action = "wg-v2-direct"
+	default:
+		return c.fail(p)
+	}
+	if _, err := c.command(ctx, *p, entry, action); err != nil {
 		p.RetryCount++
-		delay := time.Second << min(p.RetryCount, 6)
-		p.NextRetryAt = c.now().Add(delay)
+		p.NextRetryAt = c.now().Add(time.Second << min(p.RetryCount, 6))
 		p.Error = "cleanup pending; authenticated agent acknowledgement required"
 		return c.persist(p)
 	}
 	p.RetryCount = 0
 	p.NextRetryAt = time.Time{}
-	if entry {
+	switch p.Phase {
+	case "block_a":
+		p.Phase = "remove_a"
+		return c.persist(p)
+	case "remove_a":
 		p.Phase = "remove_b"
 		return c.persist(p)
+	case "remove_b":
+		if p.TopologyVersion == 2 && p.RestoreDirect {
+			p.Phase = "direct_a"
+			return c.persist(p)
+		}
 	}
 	return c.database().Transaction(func(tx *gorm.DB) error {
 		p.Status = "disabled"
 		p.Phase = "disabled"
 		p.Enabled = false
 		p.RealityLink = ""
-		p.Error = ""
-		if e := tx.Save(p).Error; e != nil {
-			return e
+		if p.TopologyVersion == 2 && !p.RestoreDirect {
+			p.Phase = "blocked"
+			p.Error = "REALITY remains blocked; explicitly disable to restore direct routing"
+		} else {
+			p.Error = ""
+		}
+		if err := tx.Save(p).Error; err != nil {
+			return err
+		}
+		// Keep node mutations fenced while a fail-closed guard remains installed.
+		if p.TopologyVersion == 2 && !p.RestoreDirect {
+			return nil
 		}
 		return tx.Where("pair_id = ?", p.ID).Delete(&database.WGPairNode{}).Error
 	})
 }
 
-// step performs at most two bounded commands (active health probes), persisting
+// step performs at most two bounded commands, persisting
 // the next stage before returning. No command runs inside a database transaction.
 func (c *wgPairCoordinator) step(ctx context.Context, id string) error {
 	var p database.WGPair
@@ -459,12 +594,16 @@ func (c *wgPairCoordinator) step(ctx context.Context, id string) error {
 	if p.Status == "cleanup_pending" {
 		return c.cleanup(ctx, &p)
 	}
-	if !p.Enabled || !c.valid(p) {
+	if p.TopologyVersion != 2 || !p.Enabled || !c.valid(p) {
 		return c.fail(&p)
 	}
 	if p.Status == "active" {
 		delete(c.confirmed, p.ID)
-		if _, e := c.command(ctx, p, true, "wg-status"); e != nil {
+		secret, e := c.canonicalSS(ctx, p)
+		if e != nil || secret.Digest != p.SSDigest {
+			return c.fail(&p)
+		}
+		if _, e := c.command(ctx, p, true, "wg-v2-status"); e != nil {
 			return c.fail(&p)
 		}
 		if _, e := c.command(ctx, p, false, "wg-status"); e != nil {
@@ -484,13 +623,21 @@ func (c *wgPairCoordinator) step(ctx context.Context, id string) error {
 		entry        bool
 		action, next string
 	}{
+		"guard_a":   {true, "wg-v2-guard", "prepare_a"},
 		"prepare_a": {true, "wg-prepare", "prepare_b"}, "prepare_b": {false, "wg-prepare", "configure_b"},
 		"configure_b": {false, "wg-configure", "configure_a"}, "configure_a": {true, "wg-configure", "verify_a"},
-		"verify_a": {true, "wg-verify", "verify_b"}, "verify_b": {false, "wg-verify", "activate_a"}, "activate_a": {true, "wg-activate", "active"},
+		"verify_a": {true, "wg-verify", "verify_b"}, "verify_b": {false, "wg-verify", "activate_a"}, "activate_a": {true, "wg-v2-route", "active"},
 	}
 	stage, ok := stages[p.Phase]
 	if !ok {
 		return c.fail(&p)
+	}
+	if p.Phase == "prepare_a" {
+		secret, e := c.canonicalSS(ctx, p)
+		if e != nil {
+			return c.fail(&p)
+		}
+		p.SSDigest = secret.Digest
 	}
 	s, e := c.command(ctx, p, stage.entry, stage.action)
 	if e != nil {
@@ -498,6 +645,12 @@ func (c *wgPairCoordinator) step(ctx context.Context, id string) error {
 	}
 	if !c.valid(p) {
 		return c.fail(&p)
+	}
+	if stage.action == "wg-v2-guard" {
+		if s.SourceDigest == "" {
+			return c.fail(&p)
+		}
+		p.RealityDigest = s.SourceDigest
 	}
 	if stage.action == "wg-prepare" {
 		if stage.entry {
@@ -528,7 +681,24 @@ func (c *wgPairCoordinator) recover() error {
 	c.confirmed = map[string]uint64{}
 	// A crash can occur after an agent acted but before its acknowledgement was
 	// persisted. Never infer success or reopen a listener from saved stage alone.
-	return c.database().Model(&database.WGPair{}).Where("status NOT IN ?", []string{"disabled", "cleanup_pending"}).Updates(map[string]interface{}{"status": "cleanup_pending", "phase": "remove_a", "error": "coordinator restarted; cleanup required", "next_retry_at": time.Time{}}).Error
+	return c.database().Transaction(func(tx *gorm.DB) error {
+		for _, version := range []bool{false, true} {
+			phase := "remove_a"
+			if version {
+				phase = "block_a"
+			}
+			query := tx.Model(&database.WGPair{}).Where("status NOT IN ?", []string{"disabled", "cleanup_pending"})
+			if version {
+				query = query.Where("topology_version = ?", 2)
+			} else {
+				query = query.Where("topology_version <> ? OR topology_version IS NULL", 2)
+			}
+			if err := query.Updates(map[string]interface{}{"status": "cleanup_pending", "phase": phase, "restore_direct": false, "error": "coordinator restarted; cleanup required", "next_retry_at": time.Time{}}).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 var wgReconcilerMu sync.Mutex
@@ -590,17 +760,30 @@ func (c *wgPairCoordinator) subscriptionLinks(routingType int) []string {
 		if c.confirmed[p.ID] != p.DesiredRevision || p.AppliedRevision != p.DesiredRevision || c.now().Sub(p.HealthCheckedAt) > 30*time.Second || !c.valid(p) {
 			continue
 		}
-		u, e := url.Parse(p.RealityLink)
-		if e != nil {
-			continue
-		}
-		var a, b database.NodePool
-		if c.database().First(&a, "uuid = ?", p.EntryUUID).Error != nil || c.database().First(&b, "uuid = ?", p.PeerUUID).Error != nil {
-			continue
-		}
-		u.Host = net.JoinHostPort(p.EntryIP, strconv.Itoa(p.EntryPort))
-		u.Fragment = a.Name + " → " + b.Name + " [WG]"
-		links = append(links, u.String())
+		// Publish the original A REALITY link, never B credentials or a new listener.
+		links = append(links, p.RealityLink)
 	}
 	return links
+}
+
+// WGRealitySubscriptionAllowed fences ordinary REALITY publication whenever a
+// pair owns A. Active v2 links are emitted once by subscriptionLinks instead.
+func WGRealitySubscriptionAllowed(id string) bool {
+	unlock := WGAcquireNodeLocks(id)
+	defer unlock()
+	return wgDefault.realitySubscriptionAllowed(id)
+}
+func (c *wgPairCoordinator) realitySubscriptionAllowed(id string) bool {
+	if c.database() == nil {
+		return false
+	}
+	var p database.WGPair
+	err := c.database().First(&p, "entry_uuid = ?", id).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return true
+	}
+	if err != nil {
+		return false
+	}
+	return p.Status == "disabled" && (p.TopologyVersion != 2 || p.RestoreDirect)
 }

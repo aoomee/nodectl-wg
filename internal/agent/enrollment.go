@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-const agentCapability = "wg-relay-v1"
+const agentCapability = "wg-relay-v1,wg-reality-ss-v2"
 
 func validAgentToken(token string) bool {
 	if len(token) != 64 {

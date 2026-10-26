@@ -115,7 +115,7 @@ func TestReporterSendsAuthenticatedHeadersAndBoundResults(t *testing.T) {
 	token := strings.Repeat("a", 64)
 	results := make(chan CommandResult, 1)
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Authorization") != "Bearer "+token || r.Header.Get("X-NodeCtl-Install-ID") != "aaaaaaaaaaaa" || r.Header.Get("X-NodeCtl-Capabilities") != "wg-relay-v1" {
+		if r.Header.Get("Authorization") != "Bearer "+token || r.Header.Get("X-NodeCtl-Install-ID") != "aaaaaaaaaaaa" || r.Header.Get("X-NodeCtl-Capabilities") != "wg-relay-v1,wg-reality-ss-v2" {
 			t.Error("missing authenticated agent headers")
 		}
 		conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{Subprotocols: []string{"nodectl-agent"}})

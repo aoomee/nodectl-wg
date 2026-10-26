@@ -43,8 +43,9 @@ type Manager struct {
 	pidPath    string
 
 	// 子进程
-	cmd    *exec.Cmd
-	cancel context.CancelFunc
+	cmd         *exec.Cmd
+	cancel      context.CancelFunc
+	processDone chan struct{} // watchProcess is the sole cmd.Wait owner.
 
 	// 状态
 	running    bool
@@ -125,12 +126,24 @@ func (m *Manager) Start(ctx context.Context) error {
 
 // startProcess 内部启动逻辑（调用者须持有锁）
 func (m *Manager) startProcess(ctx context.Context) error {
+	// Never boot a stale on-disk active configuration after an agent restart.
+	// Legacy starts retain their existing generated file when no overlay exists.
+	route, err := m.config.GetWGRoute()
+	if err != nil {
+		return err
+	}
+	if route != nil {
+		if err := m.config.GenerateAndSave(); err != nil {
+			return err
+		}
+	}
 	// 创建子 context 用于管理进程生命周期
 	procCtx, cancel := context.WithCancel(ctx)
 	m.cancel = cancel
 
 	// 构造命令: sing-box run -c config.json
 	cmd := exec.CommandContext(procCtx, m.binaryPath, "run", "-c", m.configPath)
+	configureProcessGuard(cmd)
 
 	// 设置日志输出
 	logWriter, err := m.openLogWriter()
@@ -188,7 +201,8 @@ func (m *Manager) startProcess(ctx context.Context) error {
 	log.Printf("[SingBox] sing-box 已启动 (PID=%d, config=%s)", m.pid, m.configPath)
 
 	// 启动监控协程
-	go m.watchProcess(ctx, cmd, logWriter)
+	m.processDone = make(chan struct{})
+	go m.watchProcess(procCtx, cmd, logWriter, m.processDone)
 
 	return nil
 }
@@ -206,7 +220,12 @@ func (m *Manager) Stop() error {
 
 // stopProcess 内部停止逻辑（调用者须持有锁）
 func (m *Manager) stopProcess() error {
+	// Also cancel a pending crash-restart timer when the child already exited.
+	if m.cancel != nil {
+		m.cancel()
+	}
 	if !m.running || m.cmd == nil {
+		m.cmd = nil
 		return nil
 	}
 
@@ -218,13 +237,7 @@ func (m *Manager) stopProcess() error {
 	}
 
 	// 等待进程退出（最多 10 秒）
-	done := make(chan struct{})
-	go func() {
-		if m.cmd.Process != nil {
-			m.cmd.Wait()
-		}
-		close(done)
-	}()
+	done := m.processDone
 
 	select {
 	case <-done:
@@ -234,6 +247,11 @@ func (m *Manager) stopProcess() error {
 		if m.cmd.Process != nil {
 			log.Printf("[SingBox] sing-box 停止超时，强制终止 (PID=%d)", m.pid)
 			m.cmd.Process.Kill()
+		}
+		select {
+		case <-done:
+		case <-time.After(2 * time.Second):
+			return fmt.Errorf("owned sing-box process did not exit")
 		}
 	}
 
@@ -306,9 +324,10 @@ func (m *Manager) IsRunning() bool {
 // --- 内部方法 ---
 
 // watchProcess 监控 sing-box 子进程，异常退出时自动重启
-func (m *Manager) watchProcess(ctx context.Context, cmd *exec.Cmd, logWriter io.Writer) {
-	// 等待进程退出
+func (m *Manager) watchProcess(ctx context.Context, cmd *exec.Cmd, logWriter io.Writer, done chan struct{}) {
+	// This is the only Wait call; Stop waits on done without racing Wait.
 	err := cmd.Wait()
+	close(done)
 
 	// 关闭日志文件
 	if closer, ok := logWriter.(io.Closer); ok {
@@ -316,6 +335,10 @@ func (m *Manager) watchProcess(ctx context.Context, cmd *exec.Cmd, logWriter io.
 	}
 
 	m.mu.Lock()
+	if m.cmd != cmd {
+		m.mu.Unlock()
+		return
+	}
 	m.running = false
 	m.removePID()
 
@@ -352,6 +375,10 @@ func (m *Manager) watchProcess(ctx context.Context, cmd *exec.Cmd, logWriter io.
 	}
 
 	m.mu.Lock()
+	if ctx.Err() != nil || m.cmd != cmd || m.running {
+		m.mu.Unlock()
+		return
+	}
 	if err := m.startProcess(ctx); err != nil {
 		log.Printf("[SingBox] 自动重启失败: %v", err)
 		m.lastError = fmt.Sprintf("自动重启失败: %v", err)
@@ -435,11 +462,7 @@ func (m *Manager) ForceKill() {
 		m.cmd.Process.Kill()
 
 		// 短暂等待进程退出，回收资源
-		done := make(chan struct{})
-		go func() {
-			m.cmd.Wait()
-			close(done)
-		}()
+		done := m.processDone
 		select {
 		case <-done:
 		case <-time.After(2 * time.Second):

@@ -34,7 +34,7 @@ func apiWGPairPush(w http.ResponseWriter, r *http.Request) {
 	if !agentIdentityRequest(w, r, true, &request) {
 		return
 	}
-	if request.UUID == "" || len(request.UUID) > 36 || request.Revision < 1 || (request.Enabled && (request.PeerUUID == "" || len(request.PeerUUID) > 36 || request.EntryPort < 1 || request.EntryPort > 65535)) {
+	if request.UUID == "" || len(request.UUID) > 36 || request.Revision < 1 || (request.Enabled && (request.PeerUUID == "" || len(request.PeerUUID) > 36 || request.EntryPort < 0 || request.EntryPort > 65535)) {
 		wgPairError(w, 400, "invalid WireGuard pair request")
 		return
 	}

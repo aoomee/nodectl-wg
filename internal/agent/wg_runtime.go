@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"nodectl/internal/agent/singbox"
@@ -15,6 +16,21 @@ func (rt *Runtime) executeWGCommand(cmd ServerCommand, reply func(CommandResult)
 	fail := func(message string) { reply(CommandResult{Type: "result", Status: "error", Message: message}) }
 	if rt.cfg == nil || rt.cfg.AgentToken == "" || validateAgentTransport(rt.cfg) != nil {
 		fail("WG 中转要求已安全绑定的 Agent 和可信 HTTPS/WSS 连接")
+		return
+	}
+	if strings.HasPrefix(cmd.Action, "wg-v2-") {
+		ctx := rt.commandCtx
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		ctx, cancel := context.WithTimeout(ctx, 18*time.Second)
+		defer cancel()
+		data, err := rt.executeWGV2(ctx, cmd)
+		if err != nil {
+			fail("WG REALITY→SS 操作失败；保持阻断，请检查阶段状态及双端配置")
+			return
+		}
+		reply(CommandResult{Type: "result", Status: "ok", Data: data})
 		return
 	}
 	switch cmd.Action {

@@ -19,6 +19,7 @@ import (
 )
 
 const WGRelayCapability = "wg-relay-v1"
+const WGRelayV2Capability = "wg-reality-ss-v2"
 const AgentCapabilityHeader = "X-NodeCtl-Capabilities"
 const AgentInstallIDHeader = "X-NodeCtl-Install-ID"
 
@@ -133,8 +134,8 @@ func RevokeAgentIdentity(nodeUUID string) error {
 }
 
 type agentSession struct {
-	installID, secretHash string
-	authenticated, wg     bool
+	installID, secretHash   string
+	authenticated, wg, wgV2 bool
 }
 type commandOwner struct {
 	installID string
@@ -178,6 +179,10 @@ func authenticateAgentRequest(r *http.Request) (agentSession, error) {
 		s.authenticated = true
 		s.secretHash = agentHash(parts[1])
 		for _, cap := range strings.Split(r.Header.Get(AgentCapabilityHeader), ",") {
+			if strings.TrimSpace(cap) == WGRelayV2Capability {
+				s.wgV2 = true
+				s.wg = true
+			}
 			if strings.TrimSpace(cap) == WGRelayCapability {
 				s.wg = true
 			}
@@ -228,9 +233,20 @@ func WGAgentReady(installID string) bool {
 	return c != nil && s.authenticated && s.wg && validAgentSession(installID, s)
 }
 
+func WGAgentV2Ready(installID string) bool {
+	agentIdentityMu.Lock()
+	defer agentIdentityMu.Unlock()
+	h := GetTrafficHub()
+	h.agentMu.RLock()
+	defer h.agentMu.RUnlock()
+	c := h.agentConns[installID]
+	s := h.agentSessions[c]
+	return c != nil && s.authenticated && s.wgV2 && validAgentSession(installID, s)
+}
+
 func SendWGCommand(ctx context.Context, installID, action string, payload interface{}) (json.RawMessage, error) {
 	switch action {
-	case "wg-prepare", "wg-configure", "wg-verify", "wg-activate", "wg-remove", "wg-status":
+	case "wg-prepare", "wg-configure", "wg-verify", "wg-activate", "wg-remove", "wg-status", "wg-v2-guard", "wg-v2-block", "wg-v2-direct", "wg-v2-ss", "wg-v2-route", "wg-v2-status":
 	default:
 		return nil, errors.New("invalid WireGuard action")
 	}
@@ -244,7 +260,7 @@ func SendWGCommand(ctx context.Context, installID, action string, payload interf
 	h.agentMu.RLock()
 	conn := h.agentConns[installID]
 	session := h.agentSessions[conn]
-	if conn == nil || !session.authenticated || !session.wg || !validAgentSession(installID, session) {
+	if conn == nil || !session.authenticated || !session.wg || (strings.HasPrefix(action, "wg-v2-") && !session.wgV2) || !validAgentSession(installID, session) {
 		h.agentMu.RUnlock()
 		agentIdentityMu.Unlock()
 		return nil, errors.New("authenticated WireGuard agent unavailable")

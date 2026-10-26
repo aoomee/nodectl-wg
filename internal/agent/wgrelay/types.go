@@ -29,6 +29,7 @@ var (
 // credentials may be omitted until configure. Configure needs the full payload.
 // Verify, activate, and remove need only PairID and Revision. Status accepts {}.
 type Payload struct {
+	Topology      string `json:"topology,omitempty"`
 	PairID        string `json:"pair_id"`
 	Revision      uint64 `json:"revision"`
 	Role          string `json:"role,omitempty"`
@@ -54,6 +55,8 @@ type record struct {
 
 // Status contains no private keys, ownership tokens, or command output.
 type Status struct {
+	RouteActive       bool   `json:"route_active,omitempty"`
+	SourceDigest      string `json:"source_digest,omitempty"`
 	PairID            string `json:"pair_id"`
 	Revision          uint64 `json:"revision"`
 	Role              string `json:"role,omitempty"`
@@ -103,6 +106,9 @@ func privateHost(s string) (netip.Prefix, error) {
 }
 
 func validateConfig(p Payload, peerRequired bool) error {
+	if p.Topology != "" && p.Topology != "reality_ss_v2" {
+		return errors.New("unsupported relay topology")
+	}
 	if err := validateID(p); err != nil {
 		return err
 	}

@@ -248,6 +248,9 @@ func (m *Manager) Execute(ctx context.Context, action string, raw json.RawMessag
 			r.Phase = "active"
 		}
 	case "wg-activate":
+		if r.Config.Topology == "reality_ss_v2" {
+			return nil, errors.New("v2 topology requires REALITY route activation, not TCP proxy")
+		}
 		if r.Phase == "active" {
 			return m.result(r)
 		}

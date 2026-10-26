@@ -1,0 +1,18 @@
+services:
+  nodectl:
+    build:
+      context: .
+      dockerfile: Dockerfile.wg
+    image: nodectl-wg:local
+    restart: unless-stopped
+    init: true
+    ports:
+      - "${NODECTL_BIND:-127.0.0.1}:${NODECTL_PORT:-7878}:8080"
+    volumes:
+      - ./data:/app/data
+    stop_grace_period: 75s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

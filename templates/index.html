@@ -1165,6 +1165,7 @@
                             ><span class="rule-icon">☁️</span
                             ><span class="rule-name">CF配置</span></a
                         >
+                        <a href="javascript:void(0)" onclick="openWGRelayModal()" class="btn-edit-rule"><span class="rule-icon">⇄</span><span class="rule-name">WG 中转</span></a>
                         <a
                             href="javascript:void(0)"
                             onclick="openCustomNodesModal()"
@@ -1742,5 +1743,6 @@
         {{template "airport_sub_modal.html" .}} {{template "logs_modal.html" .}}
         {{template "cf_modal.html" .}}
         {{template "custom_nodes_modal.html" .}}
+        {{template "wg_relay_modal.html" .}}
     </body>
 </html>

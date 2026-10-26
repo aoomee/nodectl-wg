@@ -1,7 +1,9 @@
-FROM alpine:latest
+FROM python:3.12-slim-bookworm
 
 # 安装基础证书和时区数据
-RUN apk --no-cache add ca-certificates tzdata
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates tzdata && rm -rf /var/lib/apt/lists/*
+COPY requirements-wg.txt /tmp/requirements-wg.txt
+RUN pip install --no-cache-dir -r /tmp/requirements-wg.txt
 
 # 设定工作目录为 /app
 WORKDIR /app

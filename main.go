@@ -49,6 +49,9 @@ func main() {
 		// 停止 CF 优选任务子进程
 		service.StopCFIPOptTask()
 
+		// Allow the WG worker to stop its remote operation and clean temporary credentials.
+		server.StopWGRelay()
+
 		// 步骤 2: 等待存量请求完成 (graceful drain)
 		time.Sleep(3 * time.Second)
 

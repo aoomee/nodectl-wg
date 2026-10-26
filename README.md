@@ -1,3 +1,7 @@
+> **WG 中转集成版**：新增两台 VPS 的 WireGuard 中转部署、检查和订阅导入。请先阅读 [WG 部署说明](WG-README.md)，使用 `compose.wg.yaml`，而不是下方原版镜像。
+>
+> [下载整合包和 Linux 程序](https://github.com/aoomee/nodectl-wg/releases/latest) · [集成来源](WG-SOURCES.md)
+
 ﻿# 🎯 NodeCtl：你的个人节点管理神器
 
 > 一个轻量、高效、功能强大的个人节点与订阅管理面板

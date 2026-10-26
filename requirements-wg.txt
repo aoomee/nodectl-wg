@@ -1,0 +1,2 @@
+# Deployment engine dependency from the supplied offline package.
+paramiko==5.1.0

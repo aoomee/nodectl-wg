@@ -1,0 +1,114 @@
+{{define "wg_relay_modal.html"}}
+<style>
+#wgRelayModal { z-index:3100; }
+.wg-body {overflow:auto; padding:22px 25px; color:#333; font-size:13px;}
+.wg-body p {line-height:1.6; margin:0 0 16px; color:#667085;}
+.wg-grid {display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.wg-host {border:1px solid #e5e5ea;border-radius:10px;padding:16px;background:#fafbfc;}
+.wg-host h3 {margin:0 0 12px;font-size:14px;}
+.wg-body label {display:block;margin:10px 0 5px;font-weight:500;}
+.wg-body input,.wg-body select {box-sizing:border-box;width:100%;padding:9px;border:1px solid #d1d1d6;border-radius:6px;background:white;color:#222;font:inherit;}
+.wg-body input:focus,.wg-body select:focus {outline:2px solid #007aff;outline-offset:1px;}
+.wg-actions {display:flex;flex-wrap:wrap;gap:8px;margin:16px 0;}
+.wg-actions button,.wg-close {border:1px solid #d1d1d6;border-radius:6px;background:white;padding:9px 13px;cursor:pointer;color:#333;font:inherit;}
+.wg-actions button.wg-primary {background:#007aff;border-color:#007aff;color:white;}
+.wg-actions button:disabled {opacity:.5;cursor:default;}
+#wgLog {white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;border:1px solid #e5e5ea;background:#f6f7f9;border-radius:8px;padding:12px;font-size:12px;line-height:1.6;}
+#wgLink {min-height:70px;width:100%;box-sizing:border-box;resize:vertical;overflow-wrap:anywhere;font-size:12px;padding:10px;}
+#wgMessage {min-height:20px;margin:8px 0;color:#b54708;}
+#wgStatus {font-weight:600;margin:12px 0;}
+@media(max-width:650px){.wg-grid{grid-template-columns:1fr;}.wg-body{padding:16px;}}
+</style>
+<div id="wgRelayModal" class="cn-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="wgTitle">
+ <div class="cn-modal-card">
+  <div class="cn-header"><div class="cn-title" id="wgTitle">⇄ WG 中转</div><button class="wg-close" type="button" onclick="closeWGRelayModal()" aria-label="关闭 WG 中转">关闭</button></div>
+  <div class="wg-body">
+   <p>将两台 VPS 通过 WireGuard 连接。支持 Debian / Ubuntu、x86_64、systemd；两端需要公网 IPv4、Python 3 和 root 或可 sudo 的账号。部署会在两端安装独立服务，请选空闲业务端口。</p>
+   <form id="wgForm" autocomplete="off">
+    <fieldset id="wgFields" style="border:0;padding:0;margin:0;min-width:0">
+     <label for="wgArchitecture">链路模式</label>
+     <select id="wgArchitecture" name="architecture"><option value="realm">Realm → WG → VLESS / REALITY（推荐）</option><option value="vless_ss">VLESS / REALITY → WG → Shadowsocks</option></select>
+     <p id="wgModeHelp" style="margin-top:8px">A 负责转发，B 运行 VLESS / REALITY，最终从 B 出口访问网络。</p>
+     <div class="wg-grid">
+      <section class="wg-host"><h3>A · 中转服务器</h3>
+       <label for="wgAIP">公网 IPv4</label><input id="wgAIP" name="a_ip" placeholder="填写 A 的公网 IP" required>
+       <div class="wg-grid"><div><label for="wgASSH">SSH 端口</label><input id="wgASSH" name="a_ssh" type="number" min="1" max="65535" value="22" required></div><div><label for="wgAPort">业务端口</label><input id="wgAPort" name="a_port" type="number" min="1" max="65535" value="443" required></div></div>
+       <label for="wgAUser">SSH 用户名</label><input id="wgAUser" name="a_username" value="root" required maxlength="33">
+       <label for="wgAPass">SSH 密码</label><input id="wgAPass" name="a_password" type="password" autocomplete="new-password" required maxlength="512">
+      </section>
+      <section class="wg-host"><h3>B · 落地服务器</h3>
+       <label for="wgBIP">公网 IPv4</label><input id="wgBIP" name="b_ip" placeholder="填写 B 的公网 IP" required>
+       <div class="wg-grid"><div><label for="wgBSSH">SSH 端口</label><input id="wgBSSH" name="b_ssh" type="number" min="1" max="65535" value="22" required></div><div><label for="wgBPort">业务端口</label><input id="wgBPort" name="b_port" type="number" min="1" max="65535" value="443" required></div></div>
+       <label for="wgBUser">SSH 用户名</label><input id="wgBUser" name="b_username" value="root" required maxlength="33">
+       <label for="wgBPass">SSH 密码</label><input id="wgBPass" name="b_password" type="password" autocomplete="new-password" required maxlength="512">
+      </section>
+     </div>
+     <div class="wg-grid"><div><label for="wgSNI">REALITY 域名</label><input id="wgSNI" name="sni" value="addons.mozilla.org" required maxlength="253"></div><div><label for="wgMTU">WireGuard MTU</label><input id="wgMTU" name="mtu" type="number" value="1280" min="1280" max="1500" required></div></div>
+    </fieldset>
+    <p style="margin-top:12px">密码仅用于本次任务，提交成功后清空；不保存在任务记录中。检查通过仅代表预检完成，WG 握手和业务连通性会在部署时验证。首次 SSH 连接记录指纹，后续变化会拒绝连接。</p>
+    <div class="wg-actions"><button type="submit" value="check" id="wgCheck">检查连接 / 诊断</button><button type="submit" value="deploy" class="wg-primary" id="wgDeploy">部署并验证</button><button type="button" id="wgCancel" disabled>停止当前任务</button></div>
+   </form>
+   <div id="wgMessage" role="alert"></div>
+   <label for="wgJobs">最近任务（最多 50 条）</label><select id="wgJobs"><option value="">暂无任务</option></select>
+   <div id="wgStatus" aria-live="polite">尚未选择任务</div>
+   <pre id="wgLog">部署进度将在这里显示。</pre>
+   <div id="wgResult" hidden><label for="wgLink">已验证的 VLESS 链接</label><textarea id="wgLink" readonly></textarea><div class="wg-actions"><button id="wgCopy" type="button">复制链接</button><button id="wgImport" type="button" class="wg-primary">加入 NodeCtl 订阅</button></div><p>导入后可在「自定义节点」修改名称和分流。删除自定义节点只停止订阅分发，不会卸载两端服务。</p></div>
+  </div>
+ </div>
+</div>
+<script>
+(() => {
+ const el=id=>document.getElementById(id), modal=el('wgRelayModal'), form=el('wgForm');
+ const labels={running:'正在执行',cancelling:'正在停止并清理',succeeded:'已完成',failed:'未完成',cancelled:'已停止',timed_out:'已超时',interrupted:'进程中断，需检查远端'};
+ let selected='',active='',timer=null,visible=false,loading=false,submitting=false,current=null,previousFocus=null;
+ const busy=j=>j.status==='running'||j.status==='cancelling';
+ async function api(action,body) {
+  const res=await fetch('/api/wg-relay/'+action,body===undefined?{cache:'no-store'}:{method:'POST',headers:{'Content-Type':'application/json','X-NodeCtl-WG':'1'},body:JSON.stringify(body)});
+  if(res.redirected||!res.headers.get('Content-Type')?.includes('application/json'))throw Error('登录已失效，请重新登录面板。');
+  const data=await res.json();if(!res.ok)throw Error(data.error||'请求失败');return data;
+ }
+ function controls(){el('wgFields').disabled=!!active||submitting;el('wgCheck').disabled=!!active||submitting;el('wgDeploy').disabled=!!active||submitting;el('wgCancel').disabled=!active;}
+ function display(j){
+  current=j;let status=labels[j.status]||j.status;
+  if(j.status==='succeeded') status=j.spec.mode==='check'?'预检完成（不代表 WG 部署成功）':'部署及业务验证通过';
+  el('wgStatus').textContent=status;
+  el('wgLog').textContent=j.log||'正在连接，请稍候…';
+  const ok=j.status==='succeeded'&&j.spec.mode==='deploy'&&j.result?.link;
+  el('wgResult').hidden=!ok;el('wgLink').value=ok?j.result.link:'';
+ }
+ async function refresh(){
+  if(loading||!visible)return;loading=true;
+  try{
+   const data=await api('jobs');active=data.jobs.find(busy)?.id||'';controls();
+   if(!selected||!data.jobs.some(j=>j.id===selected))selected=active||data.jobs[0]?.id||'';
+   const select=el('wgJobs');select.replaceChildren();
+   if(!data.jobs.length)select.add(new Option('暂无任务',''));
+   for(const j of data.jobs)select.add(new Option(`${new Date(j.created).toLocaleString()} · ${j.spec.mode==='check'?'检查':'部署'} · ${j.spec.a_ip} → ${j.spec.b_ip} · ${labels[j.status]||j.status}`,j.id));
+   select.value=selected;
+   if(selected){const id=selected,j=await api('job?id='+encodeURIComponent(id));if(selected===id)display(j);}
+  }catch(e){el('wgMessage').textContent=e.message;}finally{loading=false;if(visible){clearTimeout(timer);timer=setTimeout(refresh,2000);}}
+ }
+ window.openWGRelayModal=()=>{previousFocus=document.activeElement;visible=true;modal.classList.add('active');el('wgArchitecture').focus();refresh();};
+ window.closeWGRelayModal=()=>{visible=false;clearTimeout(timer);modal.classList.remove('active');el('wgAPass').value='';el('wgBPass').value='';previousFocus?.focus();};
+ modal.addEventListener('click',e=>{if(e.target===modal)closeWGRelayModal();});
+ document.addEventListener('keydown',e=>{
+  if(!visible)return;
+  if(e.key==='Escape'){closeWGRelayModal();return;}
+  if(e.key==='Tab'){const items=[...modal.querySelectorAll('button,input,select,textarea')].filter(x=>!x.disabled&&x.getClientRects().length);const first=items[0],last=items.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}
+ });
+ el('wgArchitecture').addEventListener('change',()=>{el('wgModeHelp').textContent=el('wgArchitecture').value==='realm'?'A 负责转发，B 运行 VLESS / REALITY，最终从 B 出口访问网络。':'A 运行 VLESS / REALITY，通过 WG 连接 B 的 Shadowsocks，仍生成 VLESS 链接。';});
+ form.addEventListener('submit',async e=>{
+  e.preventDefault();if(active||submitting)return;if(!form.reportValidity())return;
+  const body=Object.fromEntries(new FormData(form));body.mode=e.submitter?.value||'check';
+  for(const key of ['a_ssh','b_ssh','a_port','b_port','mtu'])body[key]=Number(body[key]);
+  submitting=true;controls();el('wgMessage').textContent='正在提交任务…';
+  try{const j=await api('start',body);selected=j.id;active=j.id;display(j);el('wgAPass').value='';el('wgBPass').value='';el('wgMessage').textContent='任务已启动，关闭此窗口仍会继续。';}
+  catch(e){el('wgMessage').textContent=e.message;}finally{body.a_password='';body.b_password='';submitting=false;controls();refresh();}
+ });
+ el('wgJobs').addEventListener('change',()=>{selected=el('wgJobs').value;refresh();});
+ el('wgCancel').addEventListener('click',async()=>{try{await api('cancel',{id:active});el('wgMessage').textContent='正在停止并清理，可能需要约 45 秒。远端已安装的服务会保留。';refresh();}catch(e){el('wgMessage').textContent=e.message;}});
+ el('wgCopy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(el('wgLink').value);el('wgMessage').textContent='链接已复制。';}catch{el('wgLink').select();el('wgMessage').textContent='请手动复制已选中的链接。';}});
+ el('wgImport').addEventListener('click',async()=>{if(!current)return;el('wgImport').disabled=true;try{const result=await api('import',{id:current.id});el('wgMessage').textContent=result.message+'；可在「自定义节点」查看。';}catch(e){el('wgMessage').textContent=e.message;}finally{el('wgImport').disabled=false;}});
+})();
+</script>
+{{end}}

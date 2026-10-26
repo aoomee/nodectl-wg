@@ -8,3 +8,6 @@ AGENT_MEMORY_OPTIMIZATION_PLAN.md
 CF优选IP实施方案.md
 tmp
 docs
+outputs/
+**/__pycache__/
+**/*.pyc

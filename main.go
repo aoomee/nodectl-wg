@@ -30,6 +30,14 @@ func main() {
 	// 2.初始化数据库
 	database.InitDB()
 
+	wgCtx, stopWGPairs := context.WithCancel(context.Background())
+	wgDone := make(chan struct{})
+	go func() {
+		defer close(wgDone)
+		service.StartWGPairReconciler(wgCtx)
+	}()
+	defer stopWGPairs()
+
 	// 2.5 初始化 CF 优选IP模块（必须在 logger 初始化之后）
 	service.InitCFIPOpt()
 
@@ -51,6 +59,12 @@ func main() {
 
 		// Allow the WG worker to stop its remote operation and clean temporary credentials.
 		server.StopWGRelay()
+		stopWGPairs()
+		select {
+		case <-wgDone:
+		case <-time.After(25 * time.Second):
+			logger.Log.Warn("WG 配对协调器尚未退出，未完成操作将在下次启动清理")
+		}
 
 		// 步骤 2: 等待存量请求完成 (graceful drain)
 		time.Sleep(3 * time.Second)

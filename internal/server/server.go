@@ -333,6 +333,11 @@ func Start(tmplFS embed.FS) {
 	mux.HandleFunc("/api/traffic/live", withAuthAndSecure(apiTrafficLive)) // 前端实时流量订阅
 
 	// ========== 节点控制 (Agent 命令下发) ==========
+	mux.HandleFunc("/api/node/agent/enrollment", withAuthAndSecure(apiNodeAgentEnrollment))
+	mux.HandleFunc("/api/node/agent/revoke", withAuthAndSecure(apiNodeAgentRevoke))
+	mux.HandleFunc("/api/agent/enroll", apiAgentEnroll)
+	mux.HandleFunc("/api/node/wg/options", withAuthAndSecure(apiWGPairOptions))
+	mux.HandleFunc("/api/node/wg/push", withAuthAndSecure(apiWGPairPush))
 	mux.HandleFunc("/api/callback/reset-protocol", withAuthAndSecure(apiResetProtocol))                       // 🆕 协议重置接口（管理员操作，需登录鉴权）
 	mux.HandleFunc("/api/node/control/check-agent-update", withAuthAndSecure(apiNodeControlCheckAgentUpdate)) // 远程检查 Agent 更新
 	mux.HandleFunc("/api/node/control/push-config", withAuthAndSecure(apiNodeControlPushConfig))              // 推送协议配置到 Agent

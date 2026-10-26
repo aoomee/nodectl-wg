@@ -454,6 +454,9 @@ func openPostgres(cfg DBConfig) (*gorm.DB, error) {
 func autoMigrateAll(db *gorm.DB) error {
 	return db.AutoMigrate(
 		&NodePool{},
+		&AgentIdentity{},
+		&WGPair{},
+		&WGPairNode{},
 		&NodeTrafficStat{},
 		&SysConfig{},
 		&AirportSub{},
@@ -701,6 +704,23 @@ func MigrateToPostgres(pgCfg DBConfig) error {
 	// 4.2 迁移 NodePool
 	if err := migrateTable[NodePool](srcDB, dstDB, "node_pool"); err != nil {
 		return fmt.Errorf("迁移 node_pool 失败: %w", err)
+	}
+
+	// Preserve binding tombstones and owned relay state across engine migration.
+	if srcDB.Migrator().HasTable(&AgentIdentity{}) {
+		if err := migrateTable[AgentIdentity](srcDB, dstDB, "agent_identities"); err != nil {
+			return err
+		}
+	}
+	if srcDB.Migrator().HasTable(&WGPair{}) {
+		if err := migrateTable[WGPair](srcDB, dstDB, "wg_pairs"); err != nil {
+			return err
+		}
+	}
+	if srcDB.Migrator().HasTable(&WGPairNode{}) {
+		if err := migrateTable[WGPairNode](srcDB, dstDB, "wg_pair_nodes"); err != nil {
+			return err
+		}
 	}
 
 	// 4.3 迁移 NodeTrafficStat (可能数据量大，分批处理)

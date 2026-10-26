@@ -1192,6 +1192,7 @@
         if (!node) { alert('数据加载异常，请刷新'); return; }
 
         // 1. 基础信息填充
+        if (typeof resetNodeWGEditor === 'function') resetNodeWGEditor();
         document.getElementById('editNodeUUID').value = node.uuid;
         document.getElementById('editNodeName').value = node.name;
         const resetDay = Number(node.reset_day || 0);
@@ -1316,6 +1317,7 @@
         editModalCard.classList.add('has-content');
 
         setTimeout(() => { isInitializingEdit = false; }, 100);
+        if (typeof loadNodeWGEditor === 'function') loadNodeWGEditor(uuid);
     }
 
     // 渲染多行协议卡片 (支持折叠)
@@ -1739,6 +1741,16 @@
 
     // 自动保存函数 (适配 HTTPS 和 HTTP 模式)
     let editNodeAutoSaveTimer = null;
+    let editNodeSaveRunning = 0;
+    let editNodeSaveFailed = false;
+    async function waitForNodeAutoSave() {
+        const deadline = Date.now() + 15000;
+        while (editNodeAutoSaveTimer !== null || editNodeSaveRunning > 0) {
+            if (Date.now() > deadline) throw new Error('节点配置保存尚未完成，请稍后重试');
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
+        if (editNodeSaveFailed) throw new Error('节点配置保存失败，请修正后重试');
+    }
     function triggerNodeAutoSave(immediate = false) {
         updateIPModeVisibility();
 
@@ -1759,6 +1771,8 @@
         const delayMs = immediate ? 0 : 700;
 
         editNodeAutoSaveTimer = setTimeout(async () => {
+            editNodeAutoSaveTimer = null;
+            editNodeSaveRunning++;
             const name = document.getElementById('editNodeName').value;
             const uiState = parseInt(document.getElementById('editNodeUIState').value);
             const resetMode = document.getElementById('editNodeResetMode').value || 'fixed_day';
@@ -1884,6 +1898,7 @@
                     })
                 });
                 const res = await response.json();
+                editNodeSaveFailed = res.status !== 'success';
 
                 if (res.status === 'success') {
                     indicator.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg> 已保存`;
@@ -1895,7 +1910,10 @@
                     indicator.innerHTML = `<span style="color:#ff3b30;">保存失败: ${res.message || '未知错误'}</span>`;
                 }
             } catch (err) {
+                editNodeSaveFailed = true;
                 indicator.innerHTML = '<span style="color:#ff3b30;">网络错误</span>';
+            } finally {
+                editNodeSaveRunning--;
             }
         }, delayMs);
     }
@@ -1958,6 +1976,7 @@
     }
 
     function closeEditModal() {
+        if (typeof resetNodeWGEditor === 'function') resetNodeWGEditor();
         editModalEl.classList.remove('active');
         setTimeout(() => { editModalCard.classList.remove('has-content'); }, 300);
     }
@@ -1970,7 +1989,7 @@
         container.querySelectorAll('.protocol-card').forEach(card => {
             existingProtos.add(card.getAttribute('data-proto'));
         });
-        const availableProtos = GLOBAL_SUPPORTED_PROTOCOLS.filter(p => !existingProtos.has(p));
+        const availableProtos = [...GLOBAL_SUPPORTED_PROTOCOLS, 'wg_relay'].filter(p => !existingProtos.has(p) && (p !== 'wg_relay' || !document.getElementById('nodeWGCard')));
 
         const addSection = document.getElementById('addProtocolSection');
         if (addSection) {
@@ -1999,7 +2018,7 @@
             existingProtos.add(card.getAttribute('data-proto'));
         });
 
-        const availableProtos = GLOBAL_SUPPORTED_PROTOCOLS.filter(p => !existingProtos.has(p));
+        const availableProtos = [...GLOBAL_SUPPORTED_PROTOCOLS, 'wg_relay'].filter(p => !existingProtos.has(p) && (p !== 'wg_relay' || !document.getElementById('nodeWGCard')));
 
         if (availableProtos.length === 0) {
             alert('所有支持的协议均已添加');
@@ -2008,7 +2027,7 @@
 
         availableProtos.forEach(proto => {
             const item = document.createElement('div');
-            item.innerText = proto.toUpperCase();
+            item.innerText = proto === 'wg_relay' ? 'WG 中转（REALITY / TCP）' : proto.toUpperCase();
             item.style.padding = '8px 12px';
             item.style.cursor = 'pointer';
             item.style.borderRadius = '6px';
@@ -2028,6 +2047,7 @@
     }
 
     function insertProtocolCard(proto) {
+        if (proto === 'wg_relay') { addNodeWGCard(); return; }
         // 新增协议时，从节点的 link_ports 中读取该协议的默认端口
         const uuid = document.getElementById('editNodeUUID').value;
         const node = window.allNodesData && window.allNodesData[uuid];
@@ -2076,7 +2096,9 @@
     }
 
     // 推送当前启用的协议及端口配置给 Agent
-    function pushConfigToAgent() {
+    async function pushConfigToAgent() {
+        if (document.getElementById('nodeWGCard')) { await pushNodeWGConfig(); return; }
+        try { await waitForNodeAutoSave(); } catch (err) { alert(err.message); return; }
         const uuid = document.getElementById('editNodeUUID').value;
         const name = document.getElementById('editNodeName').value || uuid;
         if (!uuid) return;

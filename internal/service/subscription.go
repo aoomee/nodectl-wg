@@ -149,6 +149,13 @@ func GenerateRawNodesYAML(routingType int, useFlag bool) (string, error) {
 		}
 	}
 
+	// Pair-owned links are ephemeral subscription output, never NodePool.Links or CustomNode rows.
+	for _, link := range wgSubscriptionLinks(routingType) {
+		if node := ParseLinkToClashNode(link, ""); node != nil {
+			proxyList = append(proxyList, node)
+		}
+	}
+
 	// 如果遍历完数据库后，proxyList 依然为空（说明用户没配节点，或节点都被禁用了）
 	// 强制插入一个 "直连" 类型的占位节点，防止客户端报错，并实现自动直连
 	if len(proxyList) == 0 {
@@ -327,6 +334,8 @@ func GenerateV2RaySubBase64(useFlag bool) (string, error) {
 			lines = append(lines, strings.TrimSpace(cnode.Link))
 		}
 	}
+
+	lines = append(lines, wgSubscriptionLinks(0)...)
 
 	// 用换行符拼接并进行 Base64 编码
 	rawStr := strings.Join(lines, "\n")

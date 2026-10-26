@@ -41,6 +41,13 @@ func apiUpdateNode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	unlockWG := service.WGAcquireNodeLocks(req.UUID)
+	defer unlockWG()
+	if err := service.WGNodeMutationAllowed(req.UUID); err != nil {
+		sendJSON(w, "error", "请先停用 WG 配对并等待清理完成，再修改节点配置")
+		return
+	}
+
 	// 2. 先从数据库查出真实存在的节点 (确保拿到主键 ID 和 原有数据)
 	var targetNode database.NodePool
 	if err := database.DB.First(&targetNode, "uuid = ?", req.UUID).Error; err != nil {
@@ -1585,6 +1592,13 @@ func apiDeleteNode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// ── 防并发：同一节点同时只允许一个删除操作 ──
+	unlockWG := service.WGAcquireNodeLocks(req.UUID)
+	defer unlockWG()
+	if err := service.WGNodeMutationAllowed(req.UUID); err != nil {
+		sendJSON(w, "error", "请先停用 WG 配对并等待清理完成，再删除节点")
+		return
+	}
+
 	mu := getNodeDeleteLock(req.UUID)
 	if !mu.TryLock() {
 		// 已有一个删除请求正在处理，直接返回，避免行锁争抢
@@ -1852,6 +1866,13 @@ func apiNodeControlPushConfig(w http.ResponseWriter, r *http.Request) {
 
 	if len(req.Protocols) == 0 {
 		sendJSON(w, "error", "启用的协议列表不能为空")
+		return
+	}
+
+	unlockWG := service.WGAcquireNodeLocks(req.UUID)
+	defer unlockWG()
+	if err := service.WGNodeMutationAllowed(req.UUID); err != nil {
+		sendJSON(w, "error", "请先停用 WG 配对并等待清理完成，再推送普通协议")
 		return
 	}
 

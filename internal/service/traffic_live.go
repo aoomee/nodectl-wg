@@ -138,11 +138,12 @@ type AgentCommand struct {
 
 // AgentCommandResult Agent 回传命令执行结果
 type AgentCommandResult struct {
-	Type      string `json:"type"` // "accepted" / "progress" / "result"
-	CommandID string `json:"command_id"`
-	Status    string `json:"status,omitempty"` // "ok" / "error"
-	Message   string `json:"message,omitempty"`
-	Stage     string `json:"stage,omitempty"` // 执行阶段描述
+	Data      json.RawMessage `json:"data,omitempty"`
+	Type      string          `json:"type"` // "accepted" / "progress" / "result"
+	CommandID string          `json:"command_id"`
+	Status    string          `json:"status,omitempty"` // "ok" / "error"
+	Message   string          `json:"message,omitempty"`
+	Stage     string          `json:"stage,omitempty"` // 执行阶段描述
 }
 
 // TrafficHub 实时流量中枢：管理 Agent 连接与前端订阅
@@ -175,12 +176,14 @@ type TrafficHub struct {
 	subMu       sync.Mutex
 
 	// Agent 活跃连接：install_id → websocket.Conn（用于命令下发）
-	agentConns map[string]*websocket.Conn
-	agentMu    sync.RWMutex
+	agentConns    map[string]*websocket.Conn
+	agentMu       sync.RWMutex
+	agentSessions map[*websocket.Conn]agentSession
 
 	// 命令结果回调通道：command_id → channel
 	cmdResults map[string]chan AgentCommandResult
 	cmdMu      sync.Mutex
+	cmdOwners  map[string]commandOwner
 
 	// 命令日志：command_id → CommandLog（供 SSE 流式推送）
 	cmdLogs map[string]*CommandLog
@@ -195,12 +198,14 @@ var hubOnce sync.Once
 func GetTrafficHub() *TrafficHub {
 	hubOnce.Do(func() {
 		globalHub = &TrafficHub{
-			nodes:       make(map[string]*NodeLiveState),
-			idCache:     make(map[string]string),
-			subscribers: make(map[string]map[chan FrontendPushMsg]struct{}),
-			agentConns:  make(map[string]*websocket.Conn),
-			cmdResults:  make(map[string]chan AgentCommandResult),
-			cmdLogs:     make(map[string]*CommandLog),
+			nodes:         make(map[string]*NodeLiveState),
+			idCache:       make(map[string]string),
+			subscribers:   make(map[string]map[chan FrontendPushMsg]struct{}),
+			agentConns:    make(map[string]*websocket.Conn),
+			agentSessions: make(map[*websocket.Conn]agentSession),
+			cmdOwners:     make(map[string]commandOwner),
+			cmdResults:    make(map[string]chan AgentCommandResult),
+			cmdLogs:       make(map[string]*CommandLog),
 		}
 		go globalHub.runTotalPersistLoop()
 		go globalHub.runPointPersistLoop()
@@ -453,6 +458,16 @@ func (h *TrafficHub) bindAgentConnection(conn *websocket.Conn, installID, client
 		return false
 	}
 
+	agentIdentityMu.Lock()
+	defer agentIdentityMu.Unlock()
+	h.agentMu.RLock()
+	session := h.agentSessions[conn]
+	current := h.agentConns[installID]
+	h.agentMu.RUnlock()
+	if (session.installID != "" && session.installID != installID) || !validAgentSession(installID, session) || (*agentInstallID != "" && current != conn) {
+		_ = conn.Close(websocket.StatusPolicyViolation, "invalid agent identity")
+		return false
+	}
 	if *agentInstallID != "" {
 		return true
 	}
@@ -471,6 +486,7 @@ func (h *TrafficHub) bindAgentConnection(conn *websocket.Conn, installID, client
 
 	// 如果同一节点已有旧连接，主动关闭旧连接，避免并发双连接导致状态抖动。
 	if prevConn != nil && prevConn != conn {
+		h.failAgentCommands(prevConn)
 		_ = prevConn.Close(websocket.StatusPolicyViolation, "superseded by newer connection")
 	}
 	h.ensureNodeLiveState(installID)
@@ -507,6 +523,8 @@ func (h *TrafficHub) unbindAgentConnectionIfCurrent(conn *websocket.Conn, instal
 	}
 
 	delete(h.agentConns, installID)
+	delete(h.agentSessions, conn)
+	h.failAgentCommands(conn)
 	return true
 }
 
@@ -520,6 +538,13 @@ func (h *TrafficHub) unbindAgentConnectionIfCurrent(conn *websocket.Conn, instal
 func HandleAgentWS(w http.ResponseWriter, r *http.Request) {
 	hub := GetTrafficHub()
 	clientIP := getClientIP(r)
+	agentIdentityMu.Lock()
+	session, authErr := authenticateAgentRequest(r)
+	agentIdentityMu.Unlock()
+	if authErr != nil {
+		http.Error(w, "invalid agent credentials", http.StatusUnauthorized)
+		return
+	}
 
 	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 		Subprotocols:   []string{"nodectl-agent"},
@@ -530,6 +555,7 @@ func HandleAgentWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer conn.Close(websocket.StatusNormalClosure, "connection closed")
+	conn.SetReadLimit(1 << 20)
 
 	ctx := r.Context()
 
@@ -538,6 +564,21 @@ func HandleAgentWS(w http.ResponseWriter, r *http.Request) {
 
 	// 首个消息用于识别 install_id 并注册连接
 	var agentInstallID string
+	hub.agentMu.Lock()
+	hub.agentSessions[conn] = session
+	hub.agentMu.Unlock()
+	defer func() {
+		if hub.unbindAgentConnectionIfCurrent(conn, agentInstallID) {
+			OnNodeConnectionStatusChanged(agentInstallID, false)
+		}
+		hub.agentMu.Lock()
+		delete(hub.agentSessions, conn)
+		hub.agentMu.Unlock()
+		hub.failAgentCommands(conn)
+	}()
+	if session.installID != "" && !hub.bindAgentConnection(conn, session.installID, clientIP, &agentInstallID) {
+		return
+	}
 
 	for {
 		readCtx, readCancel := context.WithTimeout(ctx, agentReadTimeout)
@@ -588,21 +629,13 @@ func HandleAgentWS(w http.ResponseWriter, r *http.Request) {
 			var cmdResult AgentCommandResult
 			json.Unmarshal(data, &cmdResult)
 
-			// 写入命令日志并通知 SSE 订阅者
-			hub.appendCommandLog(cmdResult)
-
-			hub.cmdMu.Lock()
-			if ch, exists := hub.cmdResults[cmdResult.CommandID]; exists {
-				select {
-				case ch <- cmdResult:
-				default:
-				}
-				// result 类型表示执行完毕，清理通道
-				if cmdResult.Type == "result" {
-					delete(hub.cmdResults, cmdResult.CommandID)
-				}
+			var resultIdentity struct {
+				InstallID string `json:"install_id"`
 			}
-			hub.cmdMu.Unlock()
+			if json.Unmarshal(data, &resultIdentity) != nil || (resultIdentity.InstallID != "" && resultIdentity.InstallID != agentInstallID) {
+				return
+			}
+			hub.acceptAgentResult(conn, agentInstallID, cmdResult)
 			continue
 		}
 
@@ -1077,12 +1110,17 @@ func DispatchCommandToNode(installID string, action string, payload interface{},
 	resultCh := make(chan AgentCommandResult, 8)
 	hub.cmdMu.Lock()
 	hub.cmdResults[commandID] = resultCh
+	if hub.cmdOwners == nil {
+		hub.cmdOwners = make(map[string]commandOwner)
+	}
+	hub.cmdOwners[commandID] = commandOwner{installID: installID, conn: conn}
 	hub.cmdMu.Unlock()
 
 	// 清理函数
 	defer func() {
 		hub.cmdMu.Lock()
 		delete(hub.cmdResults, commandID)
+		delete(hub.cmdOwners, commandID)
 		hub.cmdMu.Unlock()
 	}()
 
@@ -1186,6 +1224,14 @@ func CleanupNodeState(installID string, nodeUUID string) {
 
 // FireCommandToNode 异步下发命令，立即返回 commandID（不等待结果）
 func FireCommandToNode(installID string, action string, payload interface{}) (string, error) {
+	// All normal control paths, including Telegram/automatic operations, must
+	// respect relay dependencies. WG uses its authenticated typed transport.
+	if database.DB != nil && database.DB.Migrator().HasTable(&database.WGPairNode{}) {
+		var node database.NodePool
+		if err := database.DB.Select("uuid").Where("install_id = ?", installID).First(&node).Error; err == nil && WGNodeInUse(node.UUID) {
+			return "", fmt.Errorf("请先停用 WG 配对并等待清理完成，再执行节点控制")
+		}
+	}
 	hub := GetTrafficHub()
 
 	hub.agentMu.RLock()
@@ -1204,6 +1250,20 @@ func FireCommandToNode(installID string, action string, payload interface{}) (st
 		Payload:   payload,
 	}
 
+	hub.cmdMu.Lock()
+	if hub.cmdOwners == nil {
+		hub.cmdOwners = make(map[string]commandOwner)
+	}
+	hub.cmdOwners[commandID] = commandOwner{installID: installID, conn: conn}
+	hub.cmdMu.Unlock()
+	sent := false
+	defer func() {
+		if !sent {
+			hub.cmdMu.Lock()
+			delete(hub.cmdOwners, commandID)
+			hub.cmdMu.Unlock()
+		}
+	}()
 	// 预创建命令日志（SSE 订阅者可能在命令结果到来之前就连接）
 	hub.logMu.Lock()
 	hub.cmdLogs[commandID] = &CommandLog{
@@ -1229,9 +1289,13 @@ func FireCommandToNode(installID string, action string, payload interface{}) (st
 	}
 	logger.Log.Debug("命令已异步下发", "install_id", installID, "node_name", nodeName, "action", action, "command_id", commandID)
 
+	sent = true
 	// 5 分钟后自动清理日志
 	go func() {
 		time.Sleep(5 * time.Minute)
+		hub.cmdMu.Lock()
+		delete(hub.cmdOwners, commandID)
+		hub.cmdMu.Unlock()
 		hub.logMu.Lock()
 		delete(hub.cmdLogs, commandID)
 		hub.logMu.Unlock()

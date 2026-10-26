@@ -138,6 +138,11 @@ func apiDownloadAgent(w http.ResponseWriter, r *http.Request) {
 		githubRepo = "hobin66/nodectl" // 默认仓库
 	}
 
+	// WG fork releases contain their own Agent; never redirect a WG build to upstream.
+	if strings.Contains(version.Version, "-wg") {
+		githubRepo = "aoomee/nodectl-wg"
+	}
+
 	// 构造 Release Tag（使用面板版本号，因为 Agent 二进制附在面板的 Release 中）
 	releaseTag := getPanelReleaseTag(channel)
 
@@ -247,6 +252,13 @@ func apiResetProtocol(w http.ResponseWriter, r *http.Request) {
 	var node database.NodePool
 	if err := database.DB.Where("install_id = ?", installID).First(&node).Error; err != nil {
 		sendJSON(w, "error", "node not found")
+		return
+	}
+
+	unlockWG := service.WGAcquireNodeLocks(node.UUID)
+	defer unlockWG()
+	if err := service.WGNodeMutationAllowed(node.UUID); err != nil {
+		sendJSON(w, "error", "请先停用 WG 配对并等待清理完成，再重置或改变协议")
 		return
 	}
 

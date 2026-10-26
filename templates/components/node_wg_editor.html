@@ -1,0 +1,108 @@
+{{define "node_wg_editor.html"}}
+<style>
+.node-wg-card { padding:20px; margin-bottom:16px; background:#f2f7ff; border:1px solid #c8ddff; border-radius:18px; }
+.node-wg-card label { display:block; margin:12px 0 5px; font-size:13px; }
+.node-wg-card input[type=number], .node-wg-card select { width:100%; box-sizing:border-box; padding:10px; border:1px solid #c8ddff; border-radius:10px; background:white; }
+.node-wg-card p { font-size:12px; line-height:1.6; color:#555; }
+.node-wg-card button { padding:8px 12px; border-radius:10px; border:1px solid #c8ddff; background:white; cursor:pointer; }
+.node-wg-card pre { white-space:pre-wrap; overflow-wrap:anywhere; font-size:12px; }
+</style>
+<script>
+let nodeWGEditor = {uuid:'', pair:null, peers:[], ready:false, timer:null, generation:0};
+function resetNodeWGEditor() {
+    clearTimeout(nodeWGEditor.timer);
+    nodeWGEditor = {uuid:'', pair:null, peers:[], ready:false, timer:null, generation:nodeWGEditor.generation+1};
+    document.getElementById('nodeWGCard')?.remove();
+}
+async function nodeWGRequest(path, body) {
+    const response = await fetch(path, body === undefined ? {cache:'no-store'} : {method:'POST', headers:{'Content-Type':'application/json','X-NodeCtl-WG':'1'}, body:JSON.stringify(body)});
+    const result = await response.json();
+    if (!response.ok || result.status === 'error' || result.error) throw new Error(result.message || result.error || 'WG 请求失败');
+    return result.data || result;
+}
+async function loadNodeWGEditor(uuid) {
+    nodeWGEditor.uuid = uuid;
+    const generation = nodeWGEditor.generation;
+    try {
+        const data = await nodeWGRequest('/api/node/wg/options?uuid='+encodeURIComponent(uuid));
+        if (generation !== nodeWGEditor.generation || document.getElementById('editNodeUUID').value !== uuid) return;
+        Object.assign(nodeWGEditor, data);
+        if (data.pair) renderNodeWGCard();
+    } catch (error) {
+        if (generation === nodeWGEditor.generation) nodeWGEditor.error = error.message;
+    }
+}
+function addNodeWGCard() {
+    if (!nodeWGEditor.uuid) nodeWGEditor.uuid = document.getElementById('editNodeUUID').value;
+    renderNodeWGCard();
+    updateLayoutState();
+}
+function renderNodeWGCard() {
+    const old = document.getElementById('nodeWGCard');
+    if (old) old.remove();
+    const card = document.createElement('section');
+    card.id = 'nodeWGCard'; card.className = 'node-wg-card';
+    card.innerHTML = `<strong>WG 中转 · REALITY / TCP</strong>
+        <p>当前直连节点作为入口 A，选择已配置 REALITY 的落地 B。仅通过 WG 隧道转发 TCP；不改动已有协议、不回退公网。</p>
+        <label><input type="checkbox" id="nodeWGEnabled"> 启用 WG 中转</label>
+        <label for="nodeWGPeer">落地节点 B（须已部署 REALITY 并安全绑定）</label><select id="nodeWGPeer"></select>
+        <label for="nodeWGPort">入口 TCP 端口（不得与已有协议冲突）</label><input id="nodeWGPort" type="number" min="1" max="65535" value="24443">
+        <p id="nodeWGStatus" role="status"></p>
+        <p>首次需升级并安全绑定两端 Agent；要求面板后端 HTTPS/WSS、Linux/systemd、root、ip/wg 工具及双端 UDP 可达。普通 HTTP 回源反向代理不支持此安全绑定。</p>
+        <button type="button" id="nodeWGBind">生成当前机器绑定令牌</button> <button type="button" id="nodeWGRefresh">刷新状态</button>
+        <pre id="nodeWGBinding" hidden></pre>
+        <p>使用底部“推送配置”仅提交本卡片；普通协议请先单独配置好。配对期间修改普通协议/节点需先关闭本卡片开关、推送并等待清理。面板重启后此试验版会清理旧配对，需重新启用。</p>`;
+    document.getElementById('protocolListContainer').appendChild(card);
+    const pair = nodeWGEditor.pair;
+    const select = card.querySelector('#nodeWGPeer');
+    const placeholder = document.createElement('option'); placeholder.value=''; placeholder.textContent='请选择落地节点'; select.appendChild(placeholder);
+    for (const peer of nodeWGEditor.peers || []) {
+        const option = document.createElement('option'); option.value=peer.uuid; option.textContent=peer.name+(peer.ready?'':'（未就绪）'); option.disabled=!peer.ready; select.appendChild(option);
+    }
+    if (pair && !Array.from(select.options).some(o=>o.value===pair.peer_uuid)) {
+        const option=document.createElement('option'); option.value=pair.peer_uuid; option.textContent=pair.peer_uuid+'（当前配对）'; select.appendChild(option);
+    }
+    select.value=pair?.peer_uuid || '';
+    card.querySelector('#nodeWGPort').value=pair?.entry_port || 24443;
+    card.querySelector('#nodeWGEnabled').checked=pair ? pair.enabled : true;
+    card.querySelector('#nodeWGStatus').textContent=nodeWGEditor.error || (pair ? `状态：${pair.status} / ${pair.phase} · 修订 ${pair.revision}${pair.error?' · '+pair.error:''}` : (nodeWGEditor.ready?'入口 Agent 已就绪':'入口尚未就绪：先升级/安全绑定并确保节点为直连、在线且未屏蔽'));
+    card.querySelector('#nodeWGRefresh').onclick=async()=>{await loadNodeWGEditor(nodeWGEditor.uuid); if(!nodeWGEditor.pair) renderNodeWGCard();};
+    card.querySelector('#nodeWGBind').onclick=async()=>{
+        const output=card.querySelector('#nodeWGBinding'); output.hidden=false;
+        if (!confirm('将生成短期、单次使用的绑定令牌。请仅在当前机器的可信终端输入，勿发给他人。继续？')) return;
+        try {
+            const data=await nodeWGRequest('/api/node/agent/enrollment',{node_uuid:nodeWGEditor.uuid,rotate:false});
+            output.textContent=`一次性令牌（过期：${data.expires_at}）：\n${data.token}\n\n升级本仓库 Agent 后在该服务器运行：\nsudo nodectl-agent enroll -config /etc/nodectl-agent/config.json\n按提示输入令牌，然后重启 nodectl-agent 服务。确保配置中的面板地址为受信任 HTTPS。`;
+        } catch(error) {output.textContent=error.message;}
+    };
+}
+async function pushNodeWGConfig() {
+    const card=document.getElementById('nodeWGCard'); if(!card)return;
+    const uuid=nodeWGEditor.uuid, generation=nodeWGEditor.generation;
+    const enabled=card.querySelector('#nodeWGEnabled').checked;
+    const peer_uuid=card.querySelector('#nodeWGPeer').value;
+    const entry_port=Number(card.querySelector('#nodeWGPort').value);
+    const button=document.getElementById('btnPushConfig');
+    if(enabled && (!peer_uuid || !Number.isInteger(entry_port) || entry_port<1 || entry_port>65535)){alert('请选择落地节点并填写有效入口端口');return;}
+    if(enabled && !nodeWGEditor.ready){alert('当前 Agent 未完成安全绑定或尚未就绪');return;}
+    if(button)button.disabled=true;
+    try {
+        // A disable must remain possible even after an unrelated autosave failed.
+        if(enabled) await waitForNodeAutoSave();
+        if(generation!==nodeWGEditor.generation)return;
+        const data=await nodeWGRequest('/api/node/wg/push',{uuid,peer_uuid,entry_port,revision:(nodeWGEditor.pair?.revision||0)+1,enabled});
+        if(generation!==nodeWGEditor.generation)return;
+        nodeWGEditor.pair=data.pair; renderNodeWGCard();
+        const poll=async()=>{
+            if(generation!==nodeWGEditor.generation)return;
+            await loadNodeWGEditor(uuid);
+            if(generation!==nodeWGEditor.generation)return;
+            const status=nodeWGEditor.pair?.status;
+            if(status && !['active','disabled','failed'].includes(status)) nodeWGEditor.timer=setTimeout(poll,2000);
+        };
+        nodeWGEditor.timer=setTimeout(poll,1000);
+    }catch(error){if(generation===nodeWGEditor.generation)card.querySelector('#nodeWGStatus').textContent=error.message;}
+    finally{if(button)button.disabled=false;}
+}
+</script>
+{{end}}

@@ -2,6 +2,8 @@
 package main
 
 import (
+	"bufio"
+	"context"
 	"flag"
 	"fmt"
 	"io"
@@ -9,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"strings"
+	"time"
 
 	"gopkg.in/natefinch/lumberjack.v2"
 
@@ -16,6 +20,31 @@ import (
 )
 
 func main() {
+	// Subcommand has its own FlagSet; existing daemon flags remain unchanged.
+	if len(os.Args) > 1 && os.Args[1] == "enroll" {
+		fs := flag.NewFlagSet("enroll", flag.ExitOnError)
+		path := fs.String("config", agent.DefaultConfigPath, "配置文件路径")
+		token := fs.String("token", "", "one-time enrollment token (prefer NODECTL_ENROLLMENT_TOKEN or stdin)")
+		_ = fs.Parse(os.Args[2:])
+		if *token == "" {
+			*token = os.Getenv("NODECTL_ENROLLMENT_TOKEN")
+		}
+		if *token == "" {
+			fmt.Fprint(os.Stderr, "请输入一次性绑定令牌并按回车：")
+			data, err := bufio.NewReader(io.LimitReader(os.Stdin, 66)).ReadString('\n')
+			if err != nil && err != io.EOF {
+				log.Fatal("cannot read enrollment token")
+			}
+			*token = strings.TrimSpace(data)
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+		defer cancel()
+		if err := agent.EnrollAgent(ctx, *path, *token); err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println("Agent enrolled; permanent credential saved with mode 0600.")
+		return
+	}
 	configPath := flag.String("config", agent.DefaultConfigPath, "配置文件路径")
 	showVersion := flag.Bool("version", false, "显示版本号")
 	flag.Parse()

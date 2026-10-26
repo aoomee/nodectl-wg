@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"log"
 	"math/rand/v2"
+	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -39,11 +41,13 @@ type ServerCommand struct {
 
 // CommandResult Agent 回传命令执行结果
 type CommandResult struct {
-	Type      string `json:"type"` // "accepted" / "progress" / "result"
-	CommandID string `json:"command_id"`
-	Status    string `json:"status,omitempty"` // "ok" / "error"
-	Message   string `json:"message,omitempty"`
-	Stage     string `json:"stage,omitempty"` // 执行阶段描述
+	Data      json.RawMessage `json:"data,omitempty"`
+	InstallID string          `json:"install_id,omitempty"`
+	Type      string          `json:"type"` // "accepted" / "progress" / "result"
+	CommandID string          `json:"command_id"`
+	Status    string          `json:"status,omitempty"` // "ok" / "error"
+	Message   string          `json:"message,omitempty"`
+	Stage     string          `json:"stage,omitempty"` // 执行阶段描述
 }
 
 // CommandHandler 命令处理函数签名
@@ -51,6 +55,7 @@ type CommandHandler func(cmd ServerCommand, reply func(CommandResult))
 
 // cmdTask 命令任务（用于 worker 队列）
 type cmdTask struct {
+	ctx       context.Context
 	cmd       ServerCommand
 	replyFunc func(CommandResult)
 }
@@ -107,8 +112,19 @@ func (r *Reporter) Connect(ctx context.Context) error {
 	dialCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
+	headers := make(http.Header)
+	if r.cfg.AgentToken != "" {
+		if err := validateAgentTransport(r.cfg); err != nil {
+			return err
+		}
+		headers.Set("Authorization", "Bearer "+r.cfg.AgentToken)
+		headers.Set("X-NodeCtl-Install-ID", r.cfg.InstallID)
+		headers.Set("X-NodeCtl-Capabilities", agentCapability)
+	}
 	conn, _, err := websocket.Dial(dialCtx, r.cfg.WSURL, &websocket.DialOptions{
 		Subprotocols: []string{"nodectl-agent"},
+		HTTPHeader:   headers,
+		HTTPClient:   &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }},
 	})
 	if err != nil {
 		r.connected = false
@@ -125,6 +141,7 @@ func (r *Reporter) Connect(ctx context.Context) error {
 		r.conn = nil
 	}
 
+	conn.SetReadLimit(1 << 20)
 	r.conn = conn
 	r.connected = true
 	r.reconnectCount = 0
@@ -158,7 +175,7 @@ func (r *Reporter) cmdWorker(ctx context.Context) {
 			r.mu.Lock()
 			handler := r.commandHandler
 			r.mu.Unlock()
-			if handler != nil {
+			if handler != nil && (task.ctx == nil || task.ctx.Err() == nil) {
 				handler(task.cmd, task.replyFunc)
 			}
 		}
@@ -176,7 +193,9 @@ func (r *Reporter) startReadLoop(ctx context.Context, conn *websocket.Conn) {
 			}
 			log.Printf("[Agent] WS 读取异常: %v", err)
 			r.mu.Lock()
-			r.connected = false
+			if r.conn == conn {
+				r.connected = false
+			}
 			r.mu.Unlock()
 			return
 		}
@@ -211,12 +230,17 @@ func (r *Reporter) startReadLoop(ctx context.Context, conn *websocket.Conn) {
 		// 创建回复函数
 		replyFunc := func(result CommandResult) {
 			result.CommandID = cmd.CommandID
-			r.sendResult(ctx, result)
+			result.InstallID = r.cfg.InstallID
+			r.sendResultOnConnection(ctx, conn, result)
+		}
+		if strings.HasPrefix(cmd.Action, "wg-") && r.cfg.AgentToken == "" {
+			replyFunc(CommandResult{Type: "result", Status: "error", Message: "agent enrollment required"})
+			continue
 		}
 
 		// 通过有界 channel 分发到 worker，队列满时拒绝
 		select {
-		case r.cmdCh <- cmdTask{cmd: cmd, replyFunc: replyFunc}:
+		case r.cmdCh <- cmdTask{ctx: ctx, cmd: cmd, replyFunc: replyFunc}:
 		default:
 			replyFunc(CommandResult{
 				Type:    "result",
@@ -228,10 +252,9 @@ func (r *Reporter) startReadLoop(ctx context.Context, conn *websocket.Conn) {
 }
 
 // sendResult 发送命令结果回服务端
-func (r *Reporter) sendResult(ctx context.Context, result CommandResult) {
+func (r *Reporter) sendResultOnConnection(ctx context.Context, conn *websocket.Conn, result CommandResult) {
 	r.mu.Lock()
-	conn := r.conn
-	connected := r.connected
+	connected := r.connected && r.conn == conn && ctx.Err() == nil
 	r.mu.Unlock()
 
 	if !connected || conn == nil {

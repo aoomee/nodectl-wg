@@ -25,23 +25,27 @@ import (
 	"nodectl/internal/agent/links"
 	"nodectl/internal/agent/reporter"
 	"nodectl/internal/agent/singbox"
+	"nodectl/internal/agent/wgrelay"
 )
 
 const fixedWSPushIntervalSec = 2
 
 // Runtime Agent 运行时：调度采集与上报，管理信号与生命周期
 type Runtime struct {
-	cfg            *Config
-	collector      *Collector
-	reporter       *Reporter
-	updater        *Updater
-	logDedup       *LogDedup
-	cancel         context.CancelFunc
-	bootID         string
+	cfg       *Config
+	collector *Collector
+	reporter  *Reporter
+	updater   *Updater
+	logDedup  *LogDedup
+	cancel    context.CancelFunc
+	bootID    string
 
 	// 🆕 sing-box 管理模块
 	singboxMgr *singbox.Manager
 	linkGen    *links.Generator
+	commandMu  sync.Mutex
+	wgManager  *wgrelay.Manager
+	commandCtx context.Context
 }
 
 // NewRuntime 创建运行时实例
@@ -73,6 +77,7 @@ func (rt *Runtime) Run() error {
 	// 创建主 context
 	ctx, cancel := context.WithCancel(context.Background())
 	rt.cancel = cancel
+	rt.commandCtx = ctx
 	defer cancel()
 	connectStartedAt := time.Now()
 	postUpdatePending := rt.updater != nil && rt.updater.IsPostUpdatePending()
@@ -784,6 +789,15 @@ func (rt *Runtime) shutdown() {
 	// 0. 输出日志去重器的累计信息
 	rt.logDedup.Flush()
 
+	if rt.cancel != nil {
+		rt.cancel()
+	}
+	rt.commandMu.Lock()
+	if rt.wgManager != nil {
+		_ = rt.wgManager.Close()
+	}
+	rt.commandMu.Unlock()
+
 	// 1. 🆕 停止 sing-box 子进程
 	if rt.singboxMgr != nil {
 		rt.singboxMgr.Shutdown()
@@ -802,6 +816,12 @@ func (rt *Runtime) shutdown() {
 
 // handleCommand 处理后端下发的命令
 func (rt *Runtime) handleCommand(cmd ServerCommand, reply func(CommandResult)) {
+	rt.commandMu.Lock()
+	defer rt.commandMu.Unlock()
+	if strings.HasPrefix(cmd.Action, "wg-") {
+		rt.executeWGCommand(cmd, reply)
+		return
+	}
 	// 先回复 accepted
 	reply(CommandResult{
 		Type:   "accepted",

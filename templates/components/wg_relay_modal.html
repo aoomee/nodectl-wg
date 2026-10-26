@@ -227,7 +227,7 @@
 </style>
 <div id="wgRelayModal" class="cn-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="wgTitle">
  <div class="cn-modal-card">
-  <div class="cn-header"><div class="cn-title" id="wgTitle">⇄ WG 中转</div><button class="wg-close" type="button" onclick="closeWGRelayModal()" aria-label="关闭 WG 中转">关闭</button></div>
+  <div class="cn-header"><div class="cn-title" id="wgTitle"><span class="ui-icon-badge green" style="width:28px;height:28px;border-radius:9px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg></span>WG 中转</div><button class="wg-close" type="button" onclick="closeWGRelayModal()" aria-label="关闭 WG 中转">关闭</button></div>
   <div class="wg-body">
    <p>将两台 VPS 通过 WireGuard 连接。支持 Debian / Ubuntu、x86_64、systemd；两端需要公网 IPv4、Python 3 和 root 或可 sudo 的账号。部署会在两端安装独立服务，请选空闲业务端口。</p>
    <form id="wgForm" autocomplete="off">

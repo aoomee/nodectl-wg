@@ -23,13 +23,13 @@
         opacity: 1;
     }
 
-    /* 极简卡片：定宽 420px */
+    /* 极简圆润卡片：定宽 440px */
     .add-modal-card {
         background: #ffffff;
         width: 100%;
-        max-width: 420px;
-        border-radius: 22px;
-        box-shadow: 0 24px 56px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.04);
+        max-width: 440px;
+        border-radius: 28px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.04);
         display: flex;
         flex-direction: column;
         overflow: hidden;
@@ -43,19 +43,22 @@
 
     /* 统一 Header 样式与指示器 */
     .add-header {
-        background: rgba(248, 248, 250, 0.9);
-        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-        padding: 16px 26px;
+        background: #ffffff;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        padding: 20px 26px 16px;
         display: flex;
         align-items: center;
         justify-content: space-between;
     }
 
     .add-title {
-        font-size: 16px;
+        font-size: 16.5px;
         font-weight: 700;
         color: #1d1d1f;
         margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 9px;
     }
 
     /* 统一的右上角状态指示器 */
@@ -70,9 +73,9 @@
         gap: 4px;
     }
 
-    /* 主内容区：单行并排布局 */
+    /* 主内容区：左侧标签定宽对齐 */
     .add-body {
-        padding: 28px 26px;
+        padding: 22px 26px 24px;
         background: #fff;
     }
 
@@ -80,19 +83,19 @@
         display: flex;
         gap: 12px;
         align-items: center;
-        height: 40px;
+        height: 42px;
     }
 
-    /* 路由类型分段控制器 (已添加 add- 前缀隔离样式防冲突) */
+    /* 路由类型分段控制器 */
     .add-segmented-control {
-        background: #ebebf0;
-        padding: 3px;
-        border-radius: 11px;
+        background: #f2f3f7;
+        padding: 3.5px;
+        border-radius: 999px;
         border: none;
         display: flex;
         gap: 3px;
         height: 100%;
-        width: 130px;
+        width: 126px;
         flex-shrink: 0;
         box-sizing: border-box;
     }
@@ -105,7 +108,7 @@
         font-size: 13px;
         color: #6e6e73;
         cursor: pointer;
-        border-radius: 9px;
+        border-radius: 999px;
         transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
         font-weight: 600;
     }
@@ -124,32 +127,45 @@
         color: #34c759;
     }
 
-    /* 直连绿 */
     .add-segment-option.active[data-type="2"] {
-        color: #f5a623;
+        color: #f59e0b;
     }
-
-    /* 落地黄 */
 
     /* 名称与数值输入框 */
     .add-input {
         flex: 1;
         min-width: 0;
         height: 100%;
-        padding: 0 13px;
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        border-radius: 11px;
+        padding: 0 14px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 14px;
         font-size: 13.5px;
+        font-weight: 500;
         color: #1d1d1f;
         outline: none;
         transition: all 0.22s ease;
-        background: #f9f9fb;
+        background: #f7f8fa;
         box-sizing: border-box;
+    }
+
+    /* 自定义圆润下拉框箭头（替换原生生硬箭头） */
+    select.add-input {
+        appearance: none;
+        -webkit-appearance: none;
+        padding-right: 34px;
+        cursor: pointer;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+    }
+
+    .add-input:hover {
+        background-color: #f2f3f7;
     }
 
     .add-input:focus {
         border-color: #007aff;
-        background: #fff;
+        background-color: #fff;
         box-shadow: 0 0 0 3.5px rgba(0, 122, 255, 0.12);
     }
 
@@ -159,6 +175,7 @@
 
     .add-input-number {
         text-align: center;
+        font-weight: 600;
     }
 
     /* 流量限额输入组 */
@@ -166,9 +183,9 @@
         display: flex;
         flex: 1;
         align-items: center;
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        border-radius: 11px;
-        background: #f9f9fb;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 14px;
+        background: #f7f8fa;
         transition: all 0.22s ease;
         overflow: hidden;
         height: 100%;
@@ -183,7 +200,7 @@
     .add-traffic-input-group input {
         flex: 1;
         min-width: 0;
-        padding: 0 13px;
+        padding: 0 14px;
         font-size: 13.5px;
         font-weight: 600;
         border: none;
@@ -203,7 +220,7 @@
         display: flex;
         align-items: center;
         border-left: 1px solid rgba(0, 0, 0, 0.06);
-        background: #f2f2f7;
+        background: #eff0f5;
         height: 100%;
     }
 
@@ -213,10 +230,10 @@
         background: transparent;
         border: none;
         outline: none;
-        padding: 0 24px 0 12px;
+        padding: 0 26px 0 13px;
         font-size: 13px;
         font-weight: 600;
-        color: #555;
+        color: #48484a;
         cursor: pointer;
         height: 100%;
     }
@@ -227,8 +244,8 @@
 
     .add-traffic-input-group .add-arrow {
         position: absolute;
-        right: 8px;
-        color: #888;
+        right: 9px;
+        color: #86868b;
         pointer-events: none;
     }
 
@@ -236,11 +253,14 @@
     .add-form-group {
         display: flex;
         flex-direction: column;
-        gap: 15px;
+        gap: 14px;
     }
 
+    /* 强迫症对齐：所有左侧标签严格固定宽度 88px，右侧输入框笔直成一条垂直线 */
     .add-label {
-        font-size: 13px;
+        width: 88px;
+        flex-shrink: 0;
+        font-size: 13.5px;
         color: #48484a;
         font-weight: 600;
         white-space: nowrap;
@@ -249,7 +269,7 @@
 
     /* 统一 Footer 样式 */
     .add-footer {
-        padding: 15px 26px;
+        padding: 16px 26px 20px;
         border-top: 1px solid rgba(0, 0, 0, 0.05);
         display: flex;
         justify-content: flex-end;
@@ -258,30 +278,30 @@
     }
 
     .btn-add-cancel {
-        background: #f2f2f7;
+        background: #f2f3f7;
         border: none;
         color: #1d1d1f;
-        padding: 9px 22px;
+        padding: 10px 24px;
         border-radius: 999px;
         cursor: pointer;
-        font-size: 13px;
+        font-size: 13.5px;
         font-weight: 600;
         transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     .btn-add-cancel:hover {
-        background: #e5e5ea;
+        background: #e5e6eb;
         transform: translateY(-1px);
     }
 
     .btn-add-submit {
-        background: linear-gradient(180deg, #148eff 0%, #007aff 100%);
+        background: linear-gradient(180deg, #1a90ff 0%, #007aff 100%);
         border: none;
         color: white;
-        padding: 9px 22px;
+        padding: 10px 24px;
         border-radius: 999px;
         cursor: pointer;
-        font-size: 13px;
+        font-size: 13.5px;
         font-weight: 600;
         box-shadow: 0 3px 10px rgba(0, 122, 255, 0.25);
         transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
@@ -299,11 +319,10 @@
         transform: none;
     }
 
-    /* ✨ 移动端适配：统一弹窗宽度留白 */
     @media (max-width: 768px) {
         .add-modal-card {
-            max-width: 95%;
-            border-radius: 20px;
+            max-width: 94%;
+            border-radius: 24px;
         }
     }
 </style>
@@ -311,7 +330,15 @@
 <div class="add-modal-overlay" id="addNodeModal">
     <div class="add-modal-card">
         <div class="add-header">
-            <div class="add-title">添加节点</div>
+            <div class="add-title">
+                <span class="ui-icon-badge blue" style="width:28px;height:28px;border-radius:9px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                </span>
+                添加节点
+            </div>
             <div class="add-save-indicator" id="addNodeIndicator">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">
@@ -532,7 +559,6 @@
             const data = await response.json();
 
             if (data.status === 'success') {
-                // 成功时显示绿色打勾并延迟关闭
                 indicator.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg> 添加成功`;
                 indicator.style.opacity = '1';
                 setTimeout(() => {
@@ -540,7 +566,6 @@
                     loadNodesList();
                 }, 600);
             } else {
-                // 失败时直接在右上角显示红色错误文字
                 indicator.innerHTML = `<span style="color:#ff3b30;">${data.message || '添加失败'}</span>`;
                 indicator.style.opacity = '1';
                 btn.disabled = false;

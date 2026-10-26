@@ -56,6 +56,9 @@
         font-weight: 700;
         color: #1d1d1f;
         letter-spacing: -0.01em;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
     }
 
     .ts-switch {
@@ -71,7 +74,7 @@
         border: none;
         background: transparent;
         color: #6e6e73;
-        padding: 5px 12px;
+        padding: 5px 13px;
         border-radius: 999px;
         font-size: 12px;
         font-weight: 600;
@@ -89,14 +92,20 @@
         box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
     }
 
+    /* 胶囊化选中节点指示器，避免元素松散漂浮 */
     .ts-selected-node {
-        font-size: 15.5px;
-        font-weight: 700;
+        font-size: 13.5px;
+        font-weight: 600;
         color: #1d1d1f;
         display: inline-flex;
         align-items: center;
-        gap: 6px;
+        gap: 7px;
         line-height: 1;
+        background: #ffffff;
+        padding: 6px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
     }
 
     .ts-selected-node .dot {
@@ -104,7 +113,8 @@
         height: 8px;
         border-radius: 50%;
         background: #ff4d4f;
-        box-shadow: 0 0 0 3px rgba(255, 77, 79, 0.2);
+        box-shadow: 0 0 0 3px rgba(255, 77, 79, 0.18);
+        flex-shrink: 0;
     }
 
     .ts-selected-node .ts-node-main {
@@ -117,12 +127,15 @@
     .ts-selected-node .ts-node-name {
         display: inline-block;
         line-height: 1.1;
+        font-weight: 700;
     }
 
     .ts-selected-node .ts-node-sub {
         display: inline-block;
-        margin-left: 8px;
-        font-size: 12.5px;
+        margin-left: 6px;
+        padding-left: 8px;
+        border-left: 1px solid rgba(0, 0, 0, 0.08);
+        font-size: 12px;
         font-weight: 500;
         color: #86868b;
         letter-spacing: 0;
@@ -130,9 +143,13 @@
     }
 
     .ts-trend-metric {
-        font-size: 12px;
-        color: #86868b;
+        font-size: 12.5px;
+        color: #6e6e73;
         font-weight: 600;
+        background: #ffffff;
+        padding: 6px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(0, 0, 0, 0.05);
     }
 
     .ts-svg {
@@ -235,20 +252,22 @@
 
     .ts-right {
         border: 1px solid rgba(0, 0, 0, 0.045);
-        border-radius: 18px;
-        background: #f9f9fb;
-        padding: 16px;
+        border-radius: 22px;
+        background: #f7f8fa;
+        padding: 18px;
         display: flex;
         flex-direction: column;
         min-height: 0;
         min-width: 0;
+        position: relative;
     }
 
     .ts-rank-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 10px;
+        margin-bottom: 12px;
+        position: relative;
     }
 
     .ts-rank-title {
@@ -256,32 +275,196 @@
         font-weight: 700;
         color: #1d1d1f;
         letter-spacing: -0.01em;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
     }
 
+    /* 自定义圆润胶囊日期选择器 + 弹出日历面板 */
     .ts-rank-date {
+        position: relative;
         border: 1px solid rgba(0, 0, 0, 0.06);
         border-radius: 999px;
-        padding: 4px 10px;
-        font-size: 11px;
-        color: #555;
+        padding: 5px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #3a3a3c;
         background: #ffffff;
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+        cursor: pointer;
+        user-select: none;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+        transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
-    .ts-rank-date input {
+    .ts-rank-date:hover {
+        border-color: rgba(0, 122, 255, 0.35);
+        background: #f2f8ff;
+        color: #007aff;
+    }
+
+    .ts-rank-date svg {
+        width: 14px;
+        height: 14px;
+        color: #007aff;
+        flex-shrink: 0;
+    }
+
+    /* 隐藏原生丑陋的 date input，保留 DOM 供现有 JS 读写 */
+    .ts-rank-date input[type="date"] {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+        width: 0;
+        height: 0;
         border: none;
-        outline: none;
-        background: transparent;
-        color: #48484a;
-        font-size: 11px;
-        font-weight: 600;
-        min-width: 118px;
         padding: 0;
         margin: 0;
-        font-family: inherit;
+    }
+
+    .ts-custom-cal-popover {
+        display: none;
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 0;
+        width: 268px;
+        background: #ffffff;
+        border-radius: 22px;
+        padding: 16px;
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        box-shadow: 0 18px 44px rgba(0, 0, 0, 0.14), 0 2px 8px rgba(0, 0, 0, 0.04);
+        z-index: 200;
+        cursor: default;
+        color: #1d1d1f;
+        animation: tsCalFadeIn 0.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    .ts-custom-cal-popover.open {
+        display: block;
+    }
+
+    @keyframes tsCalFadeIn {
+        from { opacity: 0; transform: translateY(-6px) scale(0.96); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .ts-cal-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+        padding: 0 2px;
+    }
+
+    .ts-cal-month-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: #1d1d1f;
+        letter-spacing: -0.01em;
+    }
+
+    .ts-cal-nav {
+        display: flex;
+        gap: 4px;
+    }
+
+    .ts-cal-nav-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: none;
+        background: #f2f3f7;
+        color: #48484a;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.18s ease;
+    }
+
+    .ts-cal-nav-btn:hover {
+        background: #eaf4ff;
+        color: #007aff;
+    }
+
+    .ts-cal-weekdays {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        text-align: center;
+        font-size: 11px;
+        font-weight: 600;
+        color: #86868b;
+        margin-bottom: 6px;
+    }
+
+    .ts-cal-days {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 3px;
+    }
+
+    .ts-cal-day {
+        height: 32px;
+        border-radius: 10px;
+        border: none;
+        background: transparent;
+        font-size: 12.5px;
+        font-weight: 600;
+        color: #1d1d1f;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.16s ease;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .ts-cal-day:hover:not(.other-month):not(.selected) {
+        background: #f0f4ff;
+        color: #007aff;
+    }
+
+    .ts-cal-day.other-month {
+        color: #c7c7cc;
+        font-weight: 500;
+    }
+
+    .ts-cal-day.today:not(.selected) {
+        color: #007aff;
+        background: #eef6ff;
+    }
+
+    .ts-cal-day.selected {
+        background: linear-gradient(180deg, #1a90ff 0%, #007aff 100%);
+        color: #ffffff;
+        box-shadow: 0 3px 8px rgba(0, 122, 255, 0.3);
+    }
+
+    .ts-cal-foot {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 12px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .ts-cal-foot-btn {
+        border: none;
+        background: #f2f3f7;
+        color: #007aff;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 5px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        transition: all 0.18s ease;
+    }
+
+    .ts-cal-foot-btn:hover {
+        background: #eaf4ff;
     }
 
     .ts-rank-summary {
@@ -604,7 +787,16 @@
                 <div class="ts-panel">
                     <div class="ts-panel-header">
                         <div class="ts-head-left">
-                            <div class="ts-panel-title">📊 流量分布</div>
+                            <div class="ts-panel-title">
+                                <span class="ui-icon-badge blue" style="width:28px;height:28px;border-radius:9px;">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="3" y="12" width="4" height="8" rx="1.5"></rect>
+                                        <rect x="10" y="7" width="4" height="13" rx="1.5"></rect>
+                                        <rect x="17" y="4" width="4" height="16" rx="1.5"></rect>
+                                    </svg>
+                                </span>
+                                流量分布
+                            </div>
                             <div class="ts-switch" id="ts-dist-switch">
                                 <button type="button" data-interval="2">2小时</button>
                                 <button type="button" data-interval="1" class="active">1小时</button>
@@ -630,7 +822,15 @@
                 <div class="ts-panel">
                     <div class="ts-panel-header">
                         <div class="ts-head-left">
-                            <div class="ts-panel-title">📈 流量趋势</div>
+                            <div class="ts-panel-title">
+                                <span class="ui-icon-badge purple" style="width:28px;height:28px;border-radius:9px;">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+                                        <polyline points="16 7 22 7 22 13"></polyline>
+                                    </svg>
+                                </span>
+                                流量趋势
+                            </div>
                             <div class="ts-switch" id="ts-trend-switch">
                                 <button type="button" data-mode="increment" class="active">增量</button>
                                 <button type="button" data-mode="total">总量</button>
@@ -656,10 +856,49 @@
 
         <div class="ts-right">
             <div class="ts-rank-header">
-                <div class="ts-rank-title">📶 流量消耗</div>
-                <div class="ts-rank-date">
-                    <span>📅</span>
+                <div class="ts-rank-title">
+                    <span class="ui-icon-badge indigo" style="width:28px;height:28px;border-radius:9px;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 20V10"></path>
+                            <path d="M12 20V4"></path>
+                            <path d="M6 20v-6"></path>
+                        </svg>
+                    </span>
+                    流量消耗
+                </div>
+                <div class="ts-rank-date" id="ts-rank-date-trigger" title="选择统计日期">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="4" ry="4"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    <span id="ts-rank-date-label">--</span>
+                    <svg style="width:12px;height:12px;color:#86868b;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
                     <input type="date" id="ts-rank-date-picker" title="选择统计日期">
+                    <div class="ts-custom-cal-popover" id="ts-custom-cal-popover" onclick="event.stopPropagation()">
+                        <div class="ts-cal-head">
+                            <span class="ts-cal-month-title" id="ts-cal-month-title">2026年 10月</span>
+                            <div class="ts-cal-nav">
+                                <button type="button" class="ts-cal-nav-btn" id="ts-cal-prev" title="上个月">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                                </button>
+                                <button type="button" class="ts-cal-nav-btn" id="ts-cal-next" title="下个月">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="ts-cal-weekdays">
+                            <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+                        </div>
+                        <div class="ts-cal-days" id="ts-cal-days"></div>
+                        <div class="ts-cal-foot">
+                            <button type="button" class="ts-cal-foot-btn" id="ts-cal-today">回到今天</button>
+                            <span style="font-size:11px;color:#86868b;font-weight:500;">点击日期切换</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -805,14 +1044,15 @@
         function buildFlagFallbackDataUri(code) {
             const upper = String(code || '').toUpperCase();
             const isCountry = /^[A-Z]{2}$/.test(upper);
-            const emoji = isCountry
-                ? String.fromCodePoint(...upper.split('').map(c => 127397 + c.charCodeAt(0)))
-                : '🌐';
-            const label = isCountry ? upper : 'globe';
+            if (!isCountry) {
+                const globeSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#eaf4ff"/><circle cx="12" cy="12" r="7.2" fill="none" stroke="#007aff" stroke-width="1.8"/><line x1="4.8" y1="12" x2="19.2" y2="12" stroke="#007aff" stroke-width="1.6"/><path d="M12 4.8a11 11 0 0 1 2.8 7.2 11 11 0 0 1-2.8 7.2 11 11 0 0 1-2.8-7.2 11 11 0 0 1 2.8-7.2z" fill="none" stroke="#007aff" stroke-width="1.6"/></svg>`;
+                return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(globeSvg)}`;
+            }
+            const emoji = String.fromCodePoint(...upper.split('').map(c => 127397 + c.charCodeAt(0)));
             const svg = `
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 18" role="img" aria-label="${label}">
-                    <rect x="0.5" y="0.5" width="23" height="17" rx="2" fill="#ffffff" stroke="#d8dbe3"/>
-                    <text x="12" y="12.4" text-anchor="middle" font-size="10.6" font-family="Segoe UI Emoji, Apple Color Emoji, Noto Color Emoji, sans-serif">${emoji}</text>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 18" role="img" aria-label="${upper}">
+                    <rect x="0.5" y="0.5" width="23" height="17" rx="4" fill="#f2f3f7"/>
+                    <text x="12" y="12.6" text-anchor="middle" font-size="10.6" font-family="Segoe UI Emoji, Apple Color Emoji, Noto Color Emoji, sans-serif">${emoji}</text>
                 </svg>
             `;
             return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
@@ -821,12 +1061,12 @@
         function flagEmoji(regionCode) {
             const code = String(regionCode || '').trim().toUpperCase();
             if (!/^[A-Z]{2}$/.test(code)) {
-                return `<img src="${buildFlagFallbackDataUri('')}" alt="globe" style="width: 16px; height: 12px; object-fit: cover; vertical-align: middle; display: inline-block; border-radius: 2px; box-shadow: 0 0 1px rgba(0,0,0,0.15);">`;
+                return `<img src="${buildFlagFallbackDataUri('')}" alt="globe" style="width: 18px; height: 18px; vertical-align: middle; display: inline-block; border-radius: 50%;">`;
             }
 
             const isoCode = code.toLowerCase();
             const fallback = buildFlagFallbackDataUri(code);
-            return `<img src="https://flagcdn.com/${isoCode}.svg" loading="lazy" alt="${isoCode}" onerror="this.onerror=null;this.src='${fallback}'" style="width: 16px; height: 12px; object-fit: cover; vertical-align: middle; display: inline-block; border-radius: 2px; box-shadow: 0 0 1px rgba(0,0,0,0.15);">`;
+            return `<img src="https://flagcdn.com/${isoCode}.svg" loading="lazy" alt="${isoCode}" onerror="this.onerror=null;this.src='${fallback}'" style="width: 18px; height: 13px; object-fit: cover; vertical-align: middle; display: inline-block; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.12);">`;
         }
 
         function fmtBytes(v, noUnit) {
@@ -1094,6 +1334,7 @@
             state.rank = data.rank || null;
             state.rankDate = (state.rank && state.rank.generated_at) || state.rankDate || todayDateStr();
             if (rankDatePicker()) rankDatePicker().value = state.rankDate;
+            syncCustomDateDisplay();
 
             const items = (state.rank && Array.isArray(state.rank.items)) ? state.rank.items : [];
             items.forEach(it => {
@@ -1579,6 +1820,78 @@
             setStatus('', false);
         }
 
+        let calViewYear = new Date().getFullYear();
+        let calViewMonth = new Date().getMonth();
+
+        function syncCustomDateDisplay() {
+            const labelEl = document.getElementById('ts-rank-date-label');
+            const val = state.rankDate || (rankDatePicker() && rankDatePicker().value) || todayDateStr();
+            if (labelEl) {
+                labelEl.textContent = val.replace(/-/g, ' / ');
+            }
+            const parts = val.split('-');
+            if (parts.length === 3) {
+                calViewYear = parseInt(parts[0], 10) || new Date().getFullYear();
+                calViewMonth = (parseInt(parts[1], 10) || 1) - 1;
+            }
+            renderCustomCalendarGrid();
+        }
+
+        function renderCustomCalendarGrid() {
+            const titleEl = document.getElementById('ts-cal-month-title');
+            const daysEl = document.getElementById('ts-cal-days');
+            if (!titleEl || !daysEl) return;
+
+            titleEl.textContent = `${calViewYear}年 ${calViewMonth + 1}月`;
+
+            const firstDay = new Date(calViewYear, calViewMonth, 1).getDay();
+            const daysInMonth = new Date(calViewYear, calViewMonth + 1, 0).getDate();
+            const prevMonthDays = new Date(calViewYear, calViewMonth, 0).getDate();
+
+            const selectedStr = state.rankDate || todayDateStr();
+            const todayStr = todayDateStr();
+
+            let html = '';
+            // 上月补齐
+            for (let i = firstDay - 1; i >= 0; i--) {
+                const d = prevMonthDays - i;
+                html += `<button type="button" class="ts-cal-day other-month" disabled>${d}</button>`;
+            }
+            // 当月日期
+            for (let d = 1; d <= daysInMonth; d++) {
+                const mStr = String(calViewMonth + 1).padStart(2, '0');
+                const dStr = String(d).padStart(2, '0');
+                const fullStr = `${calViewYear}-${mStr}-${dStr}`;
+                const cls = [
+                    'ts-cal-day',
+                    fullStr === selectedStr ? 'selected' : '',
+                    fullStr === todayStr ? 'today' : ''
+                ].filter(Boolean).join(' ');
+                html += `<button type="button" class="${cls}" data-date="${fullStr}">${d}</button>`;
+            }
+            // 下月补齐
+            const totalCells = firstDay + daysInMonth;
+            const remain = (7 - (totalCells % 7)) % 7;
+            for (let d = 1; d <= remain; d++) {
+                html += `<button type="button" class="ts-cal-day other-month" disabled>${d}</button>`;
+            }
+            daysEl.innerHTML = html;
+
+            daysEl.querySelectorAll('.ts-cal-day[data-date]').forEach(btn => {
+                btn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    const picked = btn.getAttribute('data-date');
+                    if (!picked) return;
+                    const popover = document.getElementById('ts-custom-cal-popover');
+                    if (popover) popover.classList.remove('open');
+                    if (rankDatePicker()) {
+                        rankDatePicker().value = picked;
+                        rankDatePicker().dispatchEvent(new Event('change'));
+                    }
+                });
+            });
+        }
+
         function bindEvents() {
             document.querySelectorAll('#ts-dist-switch button').forEach(btn => {
                 btn.addEventListener('click', async function () {
@@ -1612,11 +1925,64 @@
             if (rankDatePicker()) {
                 rankDatePicker().addEventListener('change', async function () {
                     state.rankDate = rankDatePicker().value || todayDateStr();
+                    syncCustomDateDisplay();
                     await loadRank();
                     if (nodeSelect()) nodeSelect().value = state.selectedNodeUUID;
                     updateSelectedBadge();
                     renderRank();
                     await loadSeriesAndRender();
+                });
+            }
+
+            // 绑定自定义圆润日历交互
+            const calTrigger = document.getElementById('ts-rank-date-trigger');
+            const calPopover = document.getElementById('ts-custom-cal-popover');
+            const calPrev = document.getElementById('ts-cal-prev');
+            const calNext = document.getElementById('ts-cal-next');
+            const calToday = document.getElementById('ts-cal-today');
+
+            if (calTrigger && calPopover) {
+                calTrigger.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    const isOpening = !calPopover.classList.contains('open');
+                    if (isOpening) {
+                        syncCustomDateDisplay();
+                        calPopover.classList.add('open');
+                    } else {
+                        calPopover.classList.remove('open');
+                    }
+                });
+                document.addEventListener('click', function (e) {
+                    if (!calTrigger.contains(e.target)) {
+                        calPopover.classList.remove('open');
+                    }
+                });
+            }
+            if (calPrev) {
+                calPrev.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    calViewMonth--;
+                    if (calViewMonth < 0) { calViewMonth = 11; calViewYear--; }
+                    renderCustomCalendarGrid();
+                });
+            }
+            if (calNext) {
+                calNext.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    calViewMonth++;
+                    if (calViewMonth > 11) { calViewMonth = 0; calViewYear++; }
+                    renderCustomCalendarGrid();
+                });
+            }
+            if (calToday) {
+                calToday.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    const t = todayDateStr();
+                    if (calPopover) calPopover.classList.remove('open');
+                    if (rankDatePicker()) {
+                        rankDatePicker().value = t;
+                        rankDatePicker().dispatchEvent(new Event('change'));
+                    }
                 });
             }
 
@@ -1649,6 +2015,7 @@
             try {
                 state.rankDate = todayDateStr();
                 if (rankDatePicker()) rankDatePicker().value = state.rankDate;
+                syncCustomDateDisplay();
 
                 await loadLandingNodes();
                 await window.trafficStatsRefresh();

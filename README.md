@@ -1,265 +1,102 @@
-> **WG 中转集成版**：新增两台 VPS 的 WireGuard 中转部署、检查和订阅导入。请先阅读 [WG 部署说明](WG-README.md)，使用 `compose.wg.yaml`，而不是下方原版镜像。
->
-> [下载整合包和 Linux 程序](https://github.com/aoomee/nodectl-wg/releases/latest) · [集成来源](WG-SOURCES.md)
+# NodeCtl WG 中转集成版
 
-﻿# 🎯 NodeCtl：你的个人节点管理神器
+基于 [hobin66/nodectl](https://github.com/hobin66/nodectl) 增加 WireGuard 双机中转部署，保留原有节点、订阅和 Agent 管理功能。
 
-> 一个轻量、高效、功能强大的个人节点与订阅管理面板
+**本项目镜像：`ghcr.io/aoomee/nodectl-wg:latest`**
 
-📢 **TG 频道**：https://t.me/nodectl
+[下载镜像离线包 / Linux 程序](https://github.com/aoomee/nodectl-wg/releases/latest) · [完整使用说明](WG-README.md) · [构建与验证记录](https://github.com/aoomee/nodectl-wg/actions/workflows/release-main.yml) · [集成来源](WG-SOURCES.md)
 
----
+## Docker 一键启动
 
-## 🤔 为什么选择 NodeCtl？
+先安装 Docker 和 Docker Compose，然后执行：
 
-如果你：
-- 有自建节点但管理起来很麻烦？
-- 只有手机不方便搭建节点？
-- 订阅了多个机场但切换配置很繁琐？
-- 想要一个简洁直观的面板来统一管理所有代理服务？
-- 拥有托管在 Cloudflare 的域名，想充分利用 CF 的能力？
-- 没有公网，不会配置tunnel隧道，没有双栈服务器？
-- 想用机场节点做中转，又不会配置？
+```bash
+mkdir -p /opt/nodectl-wg
+cd /opt/nodectl-wg
+curl -fL https://raw.githubusercontent.com/aoomee/nodectl-wg/main/compose.wg.yaml -o compose.yaml
+docker compose pull
+docker compose up -d
+```
 
-那么 **NodeCtl** 就是为你量身打造的解决方案！
+容器默认只绑定 **`127.0.0.1:7878`**，给同机 NGINX 的 HTTP 上游填写 `http://127.0.0.1:7878`，通过自己的 HTTPS 域名访问。反代需保留 Host 并支持 WebSocket；不需要给面板生成自签证书。
 
-![功能概览](https://nodectl-ipopt.hobin.net/Image/功能概述1.webp)
+尚未配置域名时，可以在自己的电脑执行 SSH 转发，再访问 `http://127.0.0.1:7878`：
 
----
+```bash
+ssh -L 7878:127.0.0.1:7878 root@你的面板服务器IP
+```
 
-## ✨ 核心亮点
+首次安装账号为 **`admin / admin`**，登录后先修改密码。已有数据卷沿用原来的账号密码。WG 页面会提交 VPS 登录密码，请通过 HTTPS 或 SSH 转发访问。
 
-### 体验完整功能需求
-
-- **一台服务器**：只要能安装，无需公网
-- **一个域名**：托管于CF的域名
-
-### 🚀 自建节点？一行命令搞定！
-
-NodeCtl 让自建节点管理变得前所未有的简单：
-
-- **一键部署**：VPS 上执行一行命令，自动完成安装并回传链接和IP到面板，覆盖所有常用协议。
-- **手动添加**：手动添加协议覆盖主流代理协议
-- **无需公网**：内置CF tunnel隧道管理，仅需配置token即可一键部署
-- **远程控制**：无需SSH登录，面板端直接重置链接、重装 Sing-box
-- **实时监控**：流量使用、在线状态一目了然
-- **离线告警**：节点掉线？可选 Telegram 推送离线通知
-- **流量告警**：服务器流量达到阈值，自动剔除订阅并重置singbox
-
-![节点管理1](https://nodectl-ipopt.hobin.net/Image/节点管理.webp)
-![节点管理2](https://nodectl-ipopt.hobin.net/Image/节点管理2.webp)
-![节点管理3](https://nodectl-ipopt.hobin.net/Image/节点管理3.webp)
-![节点管理4](https://nodectl-ipopt.hobin.net/Image/节点管理4.webp)
-
-### 🛩️ 机场订阅聚合，告别多端配置
-
-- **多格式支持**：Clash YAML、Base64 等格式一键导入
-- **智能过滤**：自动识别并剔除"到期提醒"等无效占位节点
-- **批量测速**：内置 Mihomo 核心，真连接并发测速，SSE 实时推送结果
-- **测速通知**：机场节点太多，测试太久，可选TG通知，完成即通知将无需等待。
-- **灵活调度**：机场节点可分配为直连、落地或禁用，按需组合
-
-![机场订阅](https://nodectl-ipopt.hobin.net/Image/机场管理.webp)
-
-### ☁️ Cloudflare 深度集成
-
-这是 NodeCtl 的一大特色功能：
-⚠️Cloudflare CDN 已明文禁止代理方式使用，对于代理套 CDN 的自行承担风险
-
-
-- **傻瓜式 Tunnel 隧道**：填入 CF Token，一键开启隧道，零配置
-- **节点隧道支持**：节点启用 Tunnel？只需找到开关，点一下
-- **自动 SSL 证书**：通过 CF API 自动签发续签，HTTP/HTTPS 热重载切换
-
-![Cloudflare集成](https://nodectl-ipopt.hobin.net/Image/Cloudflare集成.webp)
-
-### 🛡️ 强大的订阅分发能力
-
-- **多端兼容**：一键生成 Clash (Meta)、V2Ray/Sing-box 等格式订阅链接
-- **可视化分流**：直连/代理规则可视化编辑
-- **智能分流**：集成 GeoIP/Geosite 数据，国内外流量自动分流
-
-![订阅管理](https://nodectl-ipopt.hobin.net/Image/订阅管理.webp)
-
----
-
-### 🎛️ Clash 高级分流配置
-
-NodeCtl 内置了强大的 Clash Meta 分流配置系统：
-
-- **预置分流模块**：内置 AI（ChatGPT/Claude）、Apple、Microsoft、Telegram、YouTube、Netflix、Steam 等常用分流规则
-- **自定义分流组**：支持创建自定义代理组，自由配置域名、IP、进程规则
-- **可视化规则编辑**：无需手写 YAML，可视化界面轻松添加直连/代理规则
-- **GeoIP/Geosite 集成**：自动加载 MetaCubeX 维护的 mrs 规则集，国内外智能分流
-- **DNS 策略联动**：分流规则自动同步到 DNS 策略，确保解析与路由一致
-- **更新间隔可配置**：订阅、规则集更新频率均可自定义
-
-![Clash分流配置](https://nodectl-ipopt.hobin.net/Image/clash分流1.webp)
-![Clash分流配置](https://nodectl-ipopt.hobin.net/Image/clash分流2.webp)
-
-### 🤖 详细的系统设置
-
-NodeCTL 在为小白用户提供合理的默认参数的同时，为进阶用户留下了可自定义的空间
-
-![系统设置](https://nodectl-ipopt.hobin.net/Image/系统设置.webp)
-
-### 🤖 Agent 远程管控
-
-NodeCtl 采用 **Agent + 中心面板** 架构，为你的节点提供强大的远程管控能力：
-
-#### 📡 实时流量监控
-- **零分配采集**：Agent 采用常驻 FD + 固定栈缓冲设计，每秒采集流量数据零堆分配
-- **WebSocket 实时推送**：毫秒级流量速率上报，面板实时展示上传/下载速度
-- **精准计量**：自动处理计数器回绕、机器重启等边缘场景，流量统计精准可靠
-
-#### 🎮 远程命令执行
-通过 WebSocket 双向通道，面板可向 Agent 下发多种命令：
-- **重置链接**：一键重新生成节点订阅链接
-- **重装 Sing-box**：远程重新安装/更新代理内核
-- **Tunnel 管理**：远程启动/停止 Cloudflare Tunnel 隧道
-- **命令流式输出**：执行结果实时推送，SSE 流式展示进度
-
----
-
-## 🔥 技术特点
-
-| 特性 | 说明 |
-|------|------|
-| **零依赖** | 纯 Golang 后端 + 嵌入式 SQLite，无需安装额外依赖 |
-| **安全认证** | JWT 令牌鉴权 + 登录 IP 限流策略 |
-| **系统监控** | 实时 CPU、内存、Go 协程数及子进程状态看板 |
-| **数据库扩展** | 支持 PostgreSQL，可记录任意时长的流量使用记录 |
-
----
-
-## 🚀 三分钟快速部署
-
-写在前面：tunnel隧道原生支持IPV4和IPV6，如果你需要安装agnet，建议使用tunnel域名。（agnet会和安装singbox同步安装，并默认自动更新）
-
-### 方式一：Docker Run（推荐）
+也可以直接使用 Docker Run：
 
 ```bash
 docker run -d \
-  --name nodectl \
+  --name nodectl-wg \
   --restart unless-stopped \
-  -p 7878:8080 \
-  -v /opt/nodectl/data:/app/data \
-  ghcr.io/hobin66/nodectl:latest
+  --init \
+  --stop-timeout 75 \
+  -p 127.0.0.1:7878:8080 \
+  -v /opt/nodectl-wg/data:/app/data \
+  ghcr.io/aoomee/nodectl-wg:latest
 ```
 
-### 方式二：Docker Compose
+镜像支持 **Linux amd64 / arm64 面板机**，Docker 会自动选择架构。**被部署的 A/B VPS 目前只支持 x86_64**，与面板机架构无关。
 
-```yaml
-version: '3'
-services:
-  nodectl:
-    image: ghcr.io/hobin66/nodectl:latest
-    container_name: nodectl
-    restart: unless-stopped
-    ports:
-      - "7878:8080"
-    volumes:
-      - ./data:/app/data
-```
+## 新增的 WG 功能
 
-运行 `docker-compose up -d` 即可启动！
+在面板首页点击 **「WG 中转」**：
 
-### 方式三：二进制脚本安装
+| 模式 | 链路 | 客户端导入 |
+| --- | --- | --- |
+| Realm → VLESS（默认） | A Realm → WireGuard → B VLESS / REALITY | VLESS 链接 |
+| VLESS → SS | A VLESS / REALITY → WireGuard → B Shadowsocks | VLESS 链接 |
 
-适合不想使用 Docker 的用户，支持 Debian/Ubuntu 和 Alpine 系统：
+填写两端 IP、SSH 账号密码和空闲业务端口，先检查连接，再部署。支持进度日志、任务停止、SSH 指纹记录、端口冲突检查和失败回滚。验证成功后可以一键加入 NodeCtl 的 Clash / V2Ray 订阅。
+
+SSH 密码不写入任务文件。关闭页面后后台任务继续运行；同一面板同时执行一个部署任务。预检查通过不等于 WG 部署成功，只有最终业务验证成功才开放导入。
+
+A/B 要求：Debian / Ubuntu、x86_64、systemd、Python 3、公网 IPv4、内核 WireGuard，以及 root 或能 sudo 的登录账号。云安全组需要放行实际使用的 SSH、业务 TCP 和 WG UDP 端口。
+
+## 离线加载镜像
+
+从 [Releases](https://github.com/aoomee/nodectl-wg/releases/latest) 下载对应架构的 `.tar.gz`、`SHA256SUMS-*` 和 `compose.wg.yaml`。以 x86_64 的 `v0.1.1-wg` 为例：
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/hobin66/nodectl/main/install.sh)
+# 只校验镜像包（校验文件中也列出了单独程序）
+grep 'tar.gz$' SHA256SUMS-amd64 | sha256sum -c -
+docker load -i nodectl-wg-v0.1.1-wg-linux-amd64.tar.gz
+NODECTL_IMAGE=ghcr.io/aoomee/nodectl-wg:v0.1.1-wg \
+  docker compose -f compose.wg.yaml up -d --pull never
 ```
 
-安装完成后：
-- 二进制文件位于 `/opt/nodectl/nodectl`
-- 数据目录位于 `/opt/nodectl/data`
-- 可执行命令 `nt` 管理服务（如 `nt start`、`nt stop`、`nt status`）
+这是可直接 `docker load` 的镜像包，已包含面板和 Python 部署依赖。**部署 A/B 时，远端服务器仍需联网下载 Xray、Realm 等组件。** 旧版 `v0.1.0-wg` 的 ZIP 是源码与程序整合包，不是离线镜像。
 
-部署成功后访问 `http://你的IP:8080`，使用默认账号 `admin` / `admin` 登录。
+## 更新与迁移
 
----
+更新前等待 WG 任务结束并备份 `data/`：
 
-## 🗺️ 未来规划
+```bash
+cd /opt/nodectl-wg
+docker compose pull
+docker compose up -d
+docker compose logs --tail=80
+```
 
-NodeCtl 还在持续进化中，以下是已完成和计划中的功能：
+从原版 NodeCtl 迁移时，停止旧容器，将原数据目录挂载到新容器的 `/app/data`，不要让新旧容器同时操作同一份数据库。外置 PostgreSQL 需要另行备份。
 
-### ✅ 已完成功能
+删除自定义节点只影响订阅，不会卸载两端 VPS 服务。部署失败或取消时也可能保留已经安装的服务，恢复方法见 [完整说明](WG-README.md)。
 
-**节点管理**
-- ✅ 一键部署 Agent，自动回传节点信息
-- ✅ 支持主流代理协议（VMess、VLESS、Trojan、Shadowsocks、Hysteria2、Tuic 、AnyTls及变种等）
-- ✅ 节点实时状态监控与流量统计
-- ✅ 远程重置链接 远程添加删除协议
-- ✅ 节点离线 Telegram 告警通知
-- ✅ 流量阈值告警与自动剔除
-- ✅ 个性化端口协议端口设置
+## 自行构建
 
-**机场订阅**
-- ✅ 多格式机场订阅导入（Clash YAML、Base64）
-- ✅ 智能过滤无效占位节点
-- ✅ 内置 Mihomo 核心批量测速
-- ✅ 测速完成 Telegram 通知
-- ✅ 机场节点分配（直连/落地/禁用）
+```bash
+git clone https://github.com/aoomee/nodectl-wg.git
+cd nodectl-wg
+docker compose -f compose.wg.yaml -f compose.build.yaml up -d --build
+```
 
-**Cloudflare 集成**
-- ✅ CF Tunnel 隧道一键部署
-- ✅ 节点 Argo 一键开启
-- ✅ CF API 自动签发/续签 SSL 证书
-- ✅ HTTP/HTTPS 热重载切换
-- ✅ CF 优选 IP 集成
+发布流程先执行 Go 和 Python 测试，再分别在 amd64 / arm64 Linux 环境构建并启动镜像；登录、WG 页面、鉴权 API 和运行依赖检查通过后推送 GHCR，并生成离线包。实际结果以 [Actions](https://github.com/aoomee/nodectl-wg/actions/workflows/release-main.yml) 和 Release 为准。
 
-**订阅分发**
-- ✅ 多格式订阅链接生成（Clash Meta、V2Ray、Sing-box）
-- ✅ 可视化分流规则编辑
-- ✅ 预置分流模块（AI、Apple、Microsoft、Telegram、YouTube 等）
-- ✅ 自定义代理组与规则
+尚未完成真实 A/B VPS 的整合版端到端验证；实际线路的 UDP 可达性、WG 握手和客户端访问仍需部署时确认。
 
-### 🚧 计划中功能
-
-- [ ] CF Worker 节点加入
-- [ ] CF Warp 落地
-- [ ] 更个性化的订阅节点名称生成
-- [ ] 为不同区域节点提供不同区域的优选IP
-- [ ] 增加单节点临时测试
-- [ ] 提取机场节点链接的快捷复制
-
-
-### 🚧 考虑中的功能
-
-
-
-### 🚧 暂不考虑引入
-
-- [x] 是否引入延迟监控
-- [x] 是否引入探针面板
-
-
----
-
-## 🌟 写在最后
-
-NodeCtl 的定位很明确——**为个人用户提供一站式节点管理体验**。它不会做多用户、多订阅这些复杂功能，而是专注于让你用最简单的方式管理自己的代理服务。
-
-代码完全开源，欢迎 Star ⭐ 和 PR！
-
-![效果展示](https://nodectl-ipopt.hobin.net/Image/主页1.webp)
-![效果展示](https://nodectl-ipopt.hobin.net/Image/主页2.webp)
-
----
-
-## 🙏 致谢
-
-感谢以下优秀的开源项目：
-
-- [Mihomo 内核](https://github.com/MetaCubeX/mihomo)
-- [CloudflareSpeedTest](https://github.com/XIU2/CloudflareSpeedTest)
-- [MetaCubeX/meta-rules-dat](https://github.com/MetaCubeX/meta-rules-dat) - GeoIP/Geosite 规则集
-- [sing-box 内核](https://github.com/SagerNet/sing-box)
-
-以及其他未一一列举的开源项目，正是开源社区的无私贡献，让 NodeCtl 得以实现更多功能。
-
----
-
-> ⚠️ 请在遵守所在地法律法规的前提下使用本项目，作者不对任何滥用行为承担责任。
+原项目的完整功能介绍保存在 [上游说明存档](README-UPSTREAM.md)。部署本版本请使用本页的 `aoomee/nodectl-wg` 镜像。

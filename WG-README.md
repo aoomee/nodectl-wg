@@ -16,11 +16,20 @@ NodeCtl 首页新增「WG 中转」，复用原面板登录和自定义节点订
 
 ## 建议用 Docker 部署
 
-本目录包含完整源码。这里的整合包是**源码与预编译程序包，不是 Docker 离线镜像包**。首次构建需要联网下载基础镜像、Go 和 Python 依赖；目标 A/B 部署也需要联网下载 Xray、Realm 和系统依赖。
+推荐直接使用本项目预构建镜像 `ghcr.io/aoomee/nodectl-wg:latest`，支持 amd64 / arm64 面板机：
 
 ```bash
-docker compose -f compose.wg.yaml up -d --build
+docker compose -f compose.wg.yaml pull
+docker compose -f compose.wg.yaml up -d
 docker compose -f compose.wg.yaml logs --tail=80
+```
+
+Releases 中的 `.tar.gz` 为可 `docker load` 的离线镜像包；`v0.1.0-wg` 的 ZIP 仍是源码与程序包。离线加载、SSH 转发及 Docker Run 示例见 [首页](README.md)。目标 A/B 部署仍需联网下载代理组件。
+
+从源码构建则使用：
+
+```bash
+docker compose -f compose.wg.yaml -f compose.build.yaml up -d --build
 ```
 
 默认绑定 `127.0.0.1:7878`，通过自己的 HTTPS 反代或 SSH 转发访问。面板 HTTP 上游地址为 `http://127.0.0.1:7878`；反代需保留原始 Host，并支持原项目的 WebSocket。这个包不会生成自签证书。
@@ -79,7 +88,7 @@ A/B 要求：Debian / Ubuntu、x86_64、systemd、Python 3、支持内核 WireGu
 
 已做本地 Go 全量测试、Go vet、WG 模块与 HTTP 接口的 race 测试；Python 引擎测试覆盖两种模式、冲突检查、成功验收、失败回滚和脚本校验；浏览器测试覆盖模式选择、检查、部署、密码清空、结果导入及移动端布局。已构建 Linux amd64 程序。
 
-未在真实 A/B VPS 上进行本次整合版端到端部署，当前环境也没有 Docker 引擎，因此没有宣称 Docker 镜像已启动验证。首次上线仍需在两台测试 VPS 验证 SSH、UDP/WG 握手、重启自启及实际客户端访问。
+发布工作流在原生 amd64 / arm64 GitHub Linux runner 中启动容器，检查登录、WG 页面、鉴权 API 和 Python / Paramiko；通过后发布镜像，结果见仓库 Actions。未在真实 A/B VPS 上完成本次整合版端到端部署，首次上线仍需验证 SSH、UDP/WG 握手、重启自启及实际客户端访问。
 
 开发测试：
 

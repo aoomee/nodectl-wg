@@ -1,7 +1,7 @@
 FROM python:3.12-slim-bookworm
 
 # 安装基础证书和时区数据
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates tzdata && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates tzdata curl unzip && rm -rf /var/lib/apt/lists/*
 COPY requirements-wg.txt /tmp/requirements-wg.txt
 RUN pip install --no-cache-dir -r /tmp/requirements-wg.txt
 
@@ -18,7 +18,9 @@ COPY --chmod=755 ./bin/nodectl-linux-${TARGETARCH} /app/nodectl
 VOLUME ["/app/data"]
 
 # 暴露 Web 端口
+ENV TZ=Asia/Shanghai
 EXPOSE 8080
+STOPSIGNAL SIGTERM
 
 # 启动程序
 ENTRYPOINT ["/app/nodectl"]

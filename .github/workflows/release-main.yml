@@ -1,195 +1,152 @@
-name: Build, Release and Publish Docker
+name: Build and publish WG images
 
-# 触发条件：手动触发 (workflow_dispatch)
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: '发布版本号'
+        description: 'Image and release version (e.g. v0.1.1-wg)'
         required: true
-        default: 'v0.4.0'
-      agent_version:
-        description: 'Agent 版本号'
-        required: true
-        default: 'v0.2.0'
+        default: 'v0.1.1-wg'
 
 permissions:
-  contents: write
-  packages: write
+  contents: read
+
+concurrency:
+  group: publish-wg
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/aoomee/nodectl-wg
+  VERSION: ${{ inputs.version }}
 
 jobs:
-  # ==========================================
-  # 阶段 1: 交叉编译 Go 二进制文件并注入版本号
-  # ==========================================
-  build:
-    name: Build Binaries
-    runs-on: ubuntu-latest
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate version
+        run: '[[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-wg([.][0-9]+)?$ ]]'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements-wg.txt
+      - run: go test ./...
+      - run: go vet ./...
+      - run: go test -race ./internal/wgrelay ./internal/server
+      - run: python -m unittest discover -s tests -v
+      - run: bash -n scripts/smoke-docker.sh internal/wgrelay/engine/vendor/wg-multi-relay.sh
+
+  image:
+    needs: test
+    permissions:
+      contents: read
+      packages: write
     strategy:
+      fail-fast: false
       matrix:
         include:
-          - goos: linux
-            goarch: amd64
-            ext: ''
-          - goos: linux
-            goarch: arm64
-            ext: ''
-          - goos: windows
-            goarch: amd64
-            ext: '.exe'
-          - goos: windows
-            goarch: arm64
-            ext: '.exe'
-    
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    env:
+      ARCH: ${{ matrix.arch }}
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          go-version-file: 'go.mod'
-          cache: true # 开启缓存以加速依赖下载和编译
-
-      - name: Build Binary
-        env:
-          CGO_ENABLED: 0 
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-        run: |
-          mkdir -p bin
-          # 动态注入版本号到 internal/version.Version 变量中
-          go build -trimpath -ldflags="-s -w -X 'nodectl/internal/version.Version=${{ github.event.inputs.version }}'" -o bin/nodectl-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }} ./main.go
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: binary-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: bin/nodectl-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
-
-  # ==========================================
-  # 阶段 1b: 交叉编译 Agent 二进制文件
-  # ==========================================
-  build-agent:
-    name: Build Agent Binaries
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        goos: [linux]
-        goarch: [amd64, arm64]
-    
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: 'go.mod'
+          go-version-file: go.mod
           cache: true
-
-      - name: Build Agent Binary
+      - name: Build native Linux panel
         env:
-          CGO_ENABLED: 0 
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: '0'
         run: |
-          mkdir -p bin
-          AGENT_VERSION="${{ github.event.inputs.agent_version || github.event.inputs.version }}"
-          BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          GIT_SHA=$(echo "${{ github.sha }}" | cut -c1-8)
-          go build -trimpath -ldflags="-s -w \
-            -X 'nodectl/internal/agent.AgentVersion=${AGENT_VERSION}' \
-            -X 'nodectl/internal/agent.GitCommit=${GIT_SHA}' \
-            -X 'nodectl/internal/agent.BuildTime=${BUILD_TIME}'" \
-            -o bin/nodectl-agent-${{ matrix.goos }}-${{ matrix.goarch }}-${AGENT_VERSION} \
-            ./cmd/nodectl-agent/main.go
-
-      - name: Generate Agent SHA256
-        run: |
-          cd bin
-          for f in nodectl-agent-*; do sha256sum "$f" > "${f}.sha256"; done
-
-      - name: Upload Agent Artifact
-        uses: actions/upload-artifact@v4
+          mkdir -p bin dist
+          go build -trimpath -ldflags="-s -w -X nodectl/internal/version.Version=$VERSION" -o "bin/nodectl-linux-$ARCH" .
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image for native smoke test
+        uses: docker/build-push-action@v6
         with:
-          name: agent-binary-${{ matrix.goarch }}
-          path: bin/nodectl-agent-*
-
-  # ==========================================
-  # 阶段 2: 发布到 GitHub Releases
-  # ==========================================
-  release:
-    name: Create GitHub Release
-    needs: [build, build-agent]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download all compiled binaries
-        uses: actions/download-artifact@v4
-        with:
-          pattern: binary-*
-          path: bin
-          merge-multiple: true
-
-      - name: Download all agent binaries
-        uses: actions/download-artifact@v4
-        with:
-          pattern: agent-binary-*
-          path: bin
-          merge-multiple: true
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.event.inputs.version }}
-          name: Release ${{ github.event.inputs.version }}
-          files: bin/*
-          generate_release_notes: true
-
-  # ==========================================
-  # 阶段 3: 打包并推送到 GitHub Packages (GHCR)
-  # ==========================================
-  docker:
-    name: Build and Push Docker Image
-    needs: build # 优化：改为依赖 build，与 release 任务并行执行
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Download all compiled binaries
-        uses: actions/download-artifact@v4
-        with:
-          pattern: binary-linux-*
-          path: bin
-          merge-multiple: true
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+          context: .
+          file: .github/Dockerfile
+          platforms: linux/${{ matrix.arch }}
+          load: true
+          tags: ${{ env.IMAGE }}:${{ env.VERSION }}-${{ matrix.arch }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/aoomee/nodectl-wg
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ env.VERSION }}
+      - name: Verify running container
+        run: bash scripts/smoke-docker.sh "$IMAGE:$VERSION-$ARCH"
+      - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }} # 使用自带的 TOKEN，免配置
-
-      - name: Convert Repository Name to Lowercase
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push tested image and create offline archive
         run: |
-          echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
-
-      - name: Build and Push
-        uses: docker/build-push-action@v5
+          docker push "$IMAGE:$VERSION-$ARCH"
+          docker tag "$IMAGE:$VERSION-$ARCH" "$IMAGE:$VERSION"
+          docker save "$IMAGE:$VERSION" | gzip -1 > "dist/nodectl-wg-$VERSION-linux-$ARCH.tar.gz"
+          cp "bin/nodectl-linux-$ARCH" dist/
+          cp compose.wg.yaml dist/
+          cd dist
+          sha256sum "nodectl-wg-$VERSION-linux-$ARCH.tar.gz" "nodectl-linux-$ARCH" > "SHA256SUMS-$ARCH"
+      - uses: actions/upload-artifact@v4
         with:
-          context: . 
-          file: .github/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ghcr.io/${{ env.REPO_LC }}:latest
-            ghcr.io/${{ env.REPO_LC }}:${{ github.event.inputs.version }}
-          # 添加 OCI 标签，向 GHCR 声明此镜像与本仓库绑定，从而放行 GITHUB_TOKEN 写入权限
-          labels: |
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          name: release-${{ matrix.arch }}
+          path: dist/*
+          compression-level: 0
+          retention-days: 7
+
+  publish:
+    needs: image
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish multi-architecture tags
+        run: |
+          docker buildx imagetools create --tag "$IMAGE:$VERSION" --tag "$IMAGE:latest" "$IMAGE:$VERSION-amd64" "$IMAGE:$VERSION-arm64"
+          docker buildx imagetools inspect "$IMAGE:$VERSION"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+      - name: Publish release downloads
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cp WG-README.md dist/WG-README.md
+          cat > dist/release-notes.md <<'NOTES'
+          Docker 镜像和离线包发布，支持 Linux amd64 / arm64 面板机。
+
+          - 在线部署：`ghcr.io/aoomee/nodectl-wg:latest`，也可使用本发布版本标签。
+          - 离线部署：下载对应架构 `.tar.gz`，执行 `docker load -i 文件名`。
+          - 下载 `compose.wg.yaml` 或按仓库首页部署。
+          - `SHA256SUMS-amd64` / `SHA256SUMS-arm64` 提供镜像包与程序校验值。
+
+          两种架构均在原生 GitHub Linux runner 启动容器，检查登录、WG 页面、鉴权 API 和 Python / Paramiko 依赖后发布。Go 测试、vet、race 和 Python 引擎测试已通过。
+
+          远端 A/B 仍要求 Debian/Ubuntu x86_64，本发布没有声称已完成真实 VPS 的端到端 WG 验证。镜像包含面板和部署依赖；远端部署仍需联网下载代理组件。
+          NOTES
+          if gh release view "$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "$VERSION" --repo "$GITHUB_REPOSITORY" --title "NodeCtl WG $VERSION · Docker 镜像" --notes-file dist/release-notes.md
+          else
+            gh release create "$VERSION" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "NodeCtl WG $VERSION · Docker 镜像" --notes-file dist/release-notes.md --latest
+          fi
+          gh release upload "$VERSION" dist/*.tar.gz dist/nodectl-linux-* dist/SHA256SUMS-* dist/compose.wg.yaml dist/WG-README.md --repo "$GITHUB_REPOSITORY" --clobber

@@ -1,9 +1,6 @@
 services:
   nodectl:
-    build:
-      context: .
-      dockerfile: Dockerfile.wg
-    image: nodectl-wg:local
+    image: ${NODECTL_IMAGE:-ghcr.io/aoomee/nodectl-wg:latest}
     restart: unless-stopped
     init: true
     ports:

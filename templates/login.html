@@ -4,131 +4,172 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>登录 - Nodectl</title>
-    
+
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23007aff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='2' y='2' width='20' height='8' rx='2' ry='2'></rect><rect x='2' y='14' width='20' height='8' rx='2' ry='2'></rect><line x1='6' y1='6' x2='6.01' y2='6'></line><line x1='6' y1='18' x2='6.01' y2='18'></line></svg>">
-    
+
     <style>
         :root {
-            --apple-bg: #f5f5f7;          /* 苹果经典的高级灰背景 */
-            --apple-card: #ffffff;
-            --apple-text: #1d1d1f;        /* 苹果标准的深灰色非纯黑字体 */
+            --apple-bg: #f5f5f7;
+            --apple-card: rgba(255, 255, 255, 0.92);
+            --apple-text: #1d1d1f;
             --apple-text-sec: #86868b;
-            --apple-blue: #0071e3;        /* 经典的 Apple Blue */
-            --apple-blue-hover: #0077ed;
-            --apple-input-bg: rgba(0, 0, 0, 0.04);
-            --apple-error-bg: #fff0f0;
-            --apple-error-text: #e30000;
+            --apple-blue: #007aff;
+            --apple-blue-hover: #0066d6;
+            --apple-input-bg: #f5f5f7;
+            --apple-error-bg: #fff1f0;
+            --apple-error-text: #d70015;
+            --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            /* 强制开启苹果设备的字体抗锯齿，让文字更平滑 */
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
 
         body {
-            /* 优先调用苹果系统原生的 SF Pro 字体 */
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
             background-color: var(--apple-bg);
+            background-image:
+                radial-gradient(at 20% 20%, rgba(0, 122, 255, 0.06) 0px, transparent 50%),
+                radial-gradient(at 80% 80%, rgba(52, 199, 89, 0.04) 0px, transparent 50%);
             color: var(--apple-text);
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+            padding: 20px;
         }
 
         .login-card {
             background: var(--apple-card);
+            backdrop-filter: saturate(180%) blur(24px);
+            -webkit-backdrop-filter: saturate(180%) blur(24px);
             width: 100%;
-            max-width: 380px;
-            padding: 48px 40px;
-            border-radius: 24px;
-            /* 极度细腻的多层阴影，模拟真实物理光源 */
-            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.04);
+            max-width: 390px;
+            padding: 46px 40px;
+            border-radius: 28px;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.03);
             text-align: center;
+            animation: cardFloatIn 0.55s var(--ease-spring) forwards;
+        }
+
+        @keyframes cardFloatIn {
+            from {
+                opacity: 0;
+                transform: translateY(16px) scale(0.97);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .brand-logo {
+            width: 52px;
+            height: 52px;
+            margin: 0 auto 18px;
+            background: linear-gradient(145deg, #f0f7ff, #e6f2ff);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.12);
+        }
+
+        .brand-logo svg {
+            width: 30px;
+            height: 30px;
         }
 
         .header {
-            margin-bottom: 36px;
+            margin-bottom: 32px;
         }
 
         .header h1 {
-            font-size: 28px;
-            font-weight: 600;
-            letter-spacing: -0.01em;
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
             margin-bottom: 8px;
+            color: var(--apple-text);
         }
 
         .header p {
-            font-size: 15px;
+            font-size: 14.5px;
             color: var(--apple-text-sec);
             font-weight: 400;
         }
 
         .input-group {
-            margin-bottom: 16px;
+            margin-bottom: 14px;
         }
 
-        /* 苹果风输入框：无边框，浅灰底，聚焦时变白并带蓝色光晕 */
         .input-group input {
             width: 100%;
-            padding: 16px 18px;
-            font-size: 17px;
+            padding: 15px 18px;
+            font-size: 15.5px;
             background-color: var(--apple-input-bg);
-            border: 1px solid transparent;
+            border: 1px solid rgba(0, 0, 0, 0.04);
             border-radius: 14px;
             color: var(--apple-text);
-            transition: all 0.25s ease;
+            transition: all 0.25s var(--ease-spring);
             outline: none;
         }
 
         .input-group input::placeholder {
-            color: var(--apple-text-sec);
+            color: #a1a1a6;
+        }
+
+        .input-group input:hover {
+            background-color: #efeff4;
         }
 
         .input-group input:focus {
             background-color: #ffffff;
             border-color: var(--apple-blue);
-            box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.15);
+            box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.14);
         }
 
         .btn-submit {
             width: 100%;
-            padding: 16px;
-            font-size: 17px;
-            font-weight: 500;
-            background-color: var(--apple-blue);
+            padding: 15px;
+            font-size: 16px;
+            font-weight: 600;
+            background: linear-gradient(180deg, #148eff 0%, #007aff 100%);
             color: white;
             border: none;
             border-radius: 14px;
             cursor: pointer;
-            margin-top: 12px;
-            transition: background-color 0.2s ease, transform 0.1s ease;
+            margin-top: 10px;
+            box-shadow: 0 4px 14px rgba(0, 122, 255, 0.25);
+            transition: all 0.25s var(--ease-spring);
         }
 
         .btn-submit:hover {
-            background-color: var(--apple-blue-hover);
+            background: linear-gradient(180deg, #007aff 0%, #0062cc 100%);
+            box-shadow: 0 6px 20px rgba(0, 122, 255, 0.34);
+            transform: translateY(-1px);
         }
 
         .btn-submit:active {
-            transform: scale(0.98); /* 点击时的微小回弹效果 */
+            transform: translateY(0) scale(0.98);
         }
 
         .error-msg {
             background-color: var(--apple-error-bg);
             color: var(--apple-error-text);
-            padding: 14px;
-            border-radius: 12px;
-            font-size: 15px;
+            border: 1px solid rgba(255, 59, 48, 0.15);
+            padding: 13px 16px;
+            border-radius: 14px;
+            font-size: 14px;
             font-weight: 500;
-            margin-bottom: 24px;
+            margin-bottom: 22px;
             animation: shake 0.4s ease-in-out;
         }
 
-        /* 密码错误时的苹果式经典左右抖动动画 */
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
             20% { transform: translateX(-6px); }
@@ -137,19 +178,25 @@
             80% { transform: translateX(4px); }
         }
 
-        /* ✨ 移动端适配：统一弹窗宽度留白 */
         @media (max-width: 768px) {
-            .login-card { 
-                max-width: 95%; /* 强制两边留出 2.5% 的呼吸空间 */
-                padding: 40px 24px; /* 移动端适当减小内边距，防止内容过于拥挤 */
+            .login-card {
+                max-width: 100%;
+                padding: 38px 26px;
+                border-radius: 24px;
             }
         }
     </style>
 </head>
 <body>
     <div class="login-card">
+        <div class="brand-logo">
+            <svg viewBox="0 0 1051 1024">
+                <path d="M727.204 714.609m-135.255 0a135.255 135.255 0 1 0 270.511 0 135.255 135.255 0 1 0-270.511 0Z" fill="#b8d4f8"></path>
+                <path d="M779.225 492.834h-163.73c-50.378 0-91.995-41.069-91.995-91.995V237.655c0-50.378 41.069-91.995 91.995-91.995h163.73c50.378 0 91.995 41.069 91.995 91.995v163.73c-0.547 50.379-41.617 91.448-91.995 91.448z m-163.73-300.081c-24.641 0-44.902 20.261-44.902 44.902v163.73c0 24.642 20.261 44.903 44.902 44.903h163.73c24.642 0 44.903-20.261 44.903-44.903v-163.73c0-24.641-20.261-44.902-44.903-44.902h-163.73zM398.1 867.935H234.37c-50.378 0-91.995-41.069-91.995-91.995v-163.73c0-50.379 41.069-91.996 91.995-91.996h163.73c50.379 0 91.996 41.07 91.996 91.996v163.73c0 50.926-41.07 91.995-91.996 91.995z m-163.73-300.628c-24.642 0-44.903 20.261-44.903 44.902v163.73c0 24.642 20.261 44.903 44.903 44.903h163.73c24.642 0 44.903-20.261 44.903-44.903v-163.73c0-24.641-20.261-44.902-44.903-44.902H234.37z" fill="#007aff"></path>
+            </svg>
+        </div>
         <div class="header">
-            <h1>Nodectl</h1>
+            <h1>NodeCTL</h1>
             <p>登录以管理您的节点网络</p>
         </div>
 

@@ -3,27 +3,27 @@
     /* ================= 统一弹窗基础框架 ================= */
     .pwd-modal-overlay {
         display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+        background: rgba(15, 15, 20, 0.36); backdrop-filter: saturate(180%) blur(12px); -webkit-backdrop-filter: saturate(180%) blur(12px);
         z-index: 2000; align-items: center; justify-content: center;
-        opacity: 0; transition: opacity 0.3s ease;
+        opacity: 0; transition: opacity 0.28s ease;
     }
     .pwd-modal-overlay.active { display: flex; opacity: 1; }
-    
+
     /* 统一尺寸：定宽 420px */
     .pwd-modal-card {
-        background: #ffffff; width: 100%; max-width: 420px; border-radius: 12px; 
-        box-shadow: 0 20px 40px rgba(0,0,0,0.15); display: flex; flex-direction: column; overflow: hidden;
-        transform: scale(0.95); transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        background: #ffffff; width: 100%; max-width: 420px; border-radius: 22px;
+        box-shadow: 0 24px 56px rgba(0,0,0,0.16), 0 2px 8px rgba(0,0,0,0.04); display: flex; flex-direction: column; overflow: hidden;
+        transform: scale(0.96); transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
     }
     .pwd-modal-overlay.active .pwd-modal-card { transform: scale(1); }
 
     /* 统一 Header 样式与指示器 */
-    .pwd-header { 
-        background: #f5f5f7; border-bottom: 1px solid #e5e5ea; 
-        padding: 15px 25px; display: flex; align-items: center; justify-content: space-between; 
+    .pwd-header {
+        background: rgba(248, 248, 250, 0.9); border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        padding: 16px 26px; display: flex; align-items: center; justify-content: space-between;
     }
-    .pwd-title { font-size: 15px; font-weight: 600; color: #333; margin: 0; }
-    
+    .pwd-title { font-size: 16px; font-weight: 700; color: #1d1d1f; margin: 0; }
+
     /* 右上角状态指示器 */
     .pwd-save-indicator {
         font-size: 12px; font-weight: 600; color: #34c759; opacity: 0; transition: opacity 0.3s;
@@ -31,41 +31,42 @@
     }
 
     /* 主内容区 */
-    .pwd-body { padding: 30px 25px; background: #fff; }
+    .pwd-body { padding: 26px; background: #fff; }
 
     /* 表单输入组 */
-    .pwd-input-group { margin-bottom: 20px; }
+    .pwd-input-group { margin-bottom: 18px; }
     .pwd-input-group:last-child { margin-bottom: 0; }
-    .pwd-input-group label { 
-        display: block; font-size: 12px; font-weight: 600; color: #86868b; 
-        margin-bottom: 8px; text-transform: uppercase;
+    .pwd-input-group label {
+        display: block; font-size: 12px; font-weight: 600; color: #6e6e73;
+        margin-bottom: 7px; text-transform: uppercase;
     }
     .pwd-input {
-        width: 100%; padding: 10px 12px; border: 1px solid #d1d1d6; border-radius: 8px;
-        font-size: 14px; color: #1d1d1f; outline: none; transition: 0.2s; background: #fafbfc; box-sizing: border-box;
+        width: 100%; padding: 11px 14px; border: 1px solid rgba(0, 0, 0, 0.1); border-radius: 12px;
+        font-size: 14px; color: #1d1d1f; outline: none; transition: all 0.22s ease; background: #f9f9fb; box-sizing: border-box;
     }
-    .pwd-input:focus { border-color: #007aff; background: #fff; box-shadow: 0 0 0 2px rgba(0,122,255,0.1); }
+    .pwd-input:focus { border-color: #007aff; background: #fff; box-shadow: 0 0 0 3.5px rgba(0,122,255,0.12); }
 
     /* 统一 Footer 样式 */
-    .pwd-footer { 
-        padding: 15px 25px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 12px; background: #fff;
+    .pwd-footer {
+        padding: 15px 26px; border-top: 1px solid rgba(0, 0, 0, 0.05); display: flex; justify-content: flex-end; gap: 10px; background: #fff;
     }
-    .btn-pwd-cancel { 
-        background: #f5f5f7; border: none; color: #333; padding: 8px 22px; border-radius: 8px; 
-        cursor: pointer; font-size: 13px; font-weight: 600; transition: 0.2s;
+    .btn-pwd-cancel {
+        background: #f2f2f7; border: none; color: #1d1d1f; padding: 9px 22px; border-radius: 999px;
+        cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
     }
-    .btn-pwd-cancel:hover { background: #e5e5ea; }
-    .btn-pwd-submit { 
-        background: #007aff; border: none; color: white; padding: 8px 22px; border-radius: 8px; 
-        cursor: pointer; font-size: 13px; font-weight: 600; transition: 0.2s;
+    .btn-pwd-cancel:hover { background: #e5e5ea; transform: translateY(-1px); }
+    .btn-pwd-submit {
+        background: linear-gradient(180deg, #148eff 0%, #007aff 100%); border: none; color: white; padding: 9px 22px; border-radius: 999px;
+        cursor: pointer; font-size: 13px; font-weight: 600; box-shadow: 0 3px 10px rgba(0, 122, 255, 0.25); transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
     }
-    .btn-pwd-submit:hover { background: #0062cc; }
-    .btn-pwd-submit:disabled { background: #aacdfa; cursor: not-allowed; }
+    .btn-pwd-submit:hover { background: linear-gradient(180deg, #007aff 0%, #0062cc 100%); transform: translateY(-1px); }
+    .btn-pwd-submit:disabled { background: #aacdfa; cursor: not-allowed; box-shadow: none; transform: none; }
 
     /* ✨ 移动端适配：统一弹窗宽度留白 */
     @media (max-width: 768px) {
-        .pwd-modal-card { 
-            max-width: 95%; /* 强制两边留出 2.5% 的呼吸空间 */
+        .pwd-modal-card {
+            max-width: 95%;
+            border-radius: 20px;
         }
     }
 </style>

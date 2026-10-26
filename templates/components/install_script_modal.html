@@ -7,14 +7,14 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0, 0, 0, 0.4);
-        backdrop-filter: blur(4px);
-        -webkit-backdrop-filter: blur(4px);
+        background: rgba(15, 15, 20, 0.36);
+        backdrop-filter: saturate(180%) blur(12px);
+        -webkit-backdrop-filter: saturate(180%) blur(12px);
         z-index: 3000;
         align-items: center;
         justify-content: center;
         opacity: 0;
-        transition: opacity 0.2s ease;
+        transition: opacity 0.25s ease;
     }
 
     .script-modal-overlay.active {
@@ -27,12 +27,12 @@
         width: 100%;
         max-width: 600px;
         padding: 0;
-        border-radius: 12px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-        transform: scale(0.95);
-        transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        border-radius: 22px;
+        box-shadow: 0 24px 56px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.04);
+        transform: scale(0.96);
+        transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
         overflow: hidden;
-        border: 1px solid #e5e5ea;
+        border: 1px solid rgba(255, 255, 255, 0.8);
     }
 
     .script-modal-overlay.active .script-modal-card {
@@ -40,25 +40,25 @@
     }
 
     .script-header {
-        padding: 16px 20px;
-        border-bottom: 1px solid #f0f0f5;
+        padding: 16px 24px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
         display: flex;
         justify-content: space-between;
         align-items: center;
-        background: #fafbfc;
+        background: rgba(248, 248, 250, 0.9);
     }
 
     .script-title {
         font-size: 16px;
         color: #1d1d1f;
-        font-weight: 600;
+        font-weight: 700;
         display: flex;
         align-items: center;
         gap: 8px;
     }
 
     .script-body {
-        padding: 20px;
+        padding: 22px 24px;
         background: #ffffff;
         overflow-y: auto;
         max-height: calc(85vh - 140px);
@@ -70,36 +70,36 @@
         align-items: center;
         gap: 5px;
         cursor: pointer;
-        padding: 4px 10px;
-        border-radius: 6px;
+        padding: 5px 12px;
+        border-radius: 999px;
         font-size: 12px;
-        font-weight: 500;
-        color: #444;
-        background: #f4f5f7;
-        border: 1px solid #e1e4e8;
-        transition: all 0.15s;
+        font-weight: 600;
+        color: #48484a;
+        background: #f2f2f7;
+        border: 1px solid transparent;
+        transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
         user-select: none;
     }
 
     .variant-check-item:hover {
-        background: #eef4ff;
-        border-color: #b3d1ff;
-        color: #0062cc;
+        background: #e8f2ff;
+        border-color: rgba(0, 122, 255, 0.25);
+        color: #007aff;
     }
 
     /* 代码框样式 */
     .cmd-box {
-        background: #f6f8fa;
-        border-radius: 8px;
+        background: #f9f9fb;
+        border-radius: 14px;
         padding: 18px;
-        border: 1px solid #e1e4e8;
+        border: 1px solid rgba(0, 0, 0, 0.06);
         position: relative;
     }
 
     .cmd-text {
-        font-family: "JetBrains Mono", Consolas, Monaco, monospace;
+        font-family: "SF Mono", "JetBrains Mono", Consolas, Monaco, monospace;
         font-size: 13px;
-        line-height: 1.6;
+        line-height: 1.65;
         color: #24292e;
         word-break: break-all;
         white-space: pre-wrap;
@@ -135,47 +135,51 @@
     /* Install ID */
 
     .script-footer {
-        padding: 16px 20px;
-        border-top: 1px solid #f0f0f5;
+        padding: 16px 24px;
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
         display: flex;
         justify-content: flex-end;
-        gap: 12px;
-        background: #fafbfc;
+        gap: 10px;
+        background: #ffffff;
     }
 
     .btn-script-copy {
-        background: #007aff;
+        background: linear-gradient(180deg, #148eff 0%, #007aff 100%);
         color: #fff;
         border: none;
-        padding: 8px 20px;
-        border-radius: 6px;
+        padding: 9px 22px;
+        border-radius: 999px;
         font-size: 13px;
-        font-weight: 500;
+        font-weight: 600;
         cursor: pointer;
-        transition: 0.2s;
+        box-shadow: 0 3px 10px rgba(0, 122, 255, 0.25);
+        transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
         display: flex;
         align-items: center;
         gap: 6px;
     }
 
     .btn-script-copy:hover {
-        background: #0062cc;
+        background: linear-gradient(180deg, #007aff 0%, #0062cc 100%);
+        transform: translateY(-1px);
     }
 
     .btn-script-cancel {
-        background: #fff;
-        color: #555;
-        border: 1px solid #d1d5da;
-        padding: 8px 20px;
-        border-radius: 6px;
+        background: #f2f2f7;
+        color: #1d1d1f;
+        border: none;
+        padding: 9px 22px;
+        border-radius: 999px;
         font-size: 13px;
+        font-weight: 600;
         cursor: pointer;
-        transition: 0.2s;
+        transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     .btn-script-cancel:hover {
-        background: #f6f8fa;
-        color: #333;
+        background: #e5e5ea;
+        color: #1d1d1f;
+        transform: translateY(-1px);
     }
 
     /* 回调地址说明 Tooltip（样式参考 system_settings_modal） */

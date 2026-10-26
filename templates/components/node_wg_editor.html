@@ -1,6 +1,17 @@
 {{define "node_wg_editor.html"}}
 <style>
-.node-wg-outbound, .node-wg-setup { padding:14px; margin:12px 0; background:#f2f7ff; border:1px solid #c8ddff; border-radius:12px; min-width:0; overflow-wrap:anywhere; }
+.node-wg-outbound, .node-wg-setup { box-sizing:border-box; padding:16px; margin:12px 0; background:#f7faff; border:1px solid #dce7f5; border-radius:12px; min-width:0; overflow-wrap:anywhere; }
+.node-wg-outbound > strong { display:block; font-size:13px; }
+.node-wg-outbound details, .node-wg-setup details { margin-top:10px; }
+.node-wg-outbound summary, .node-wg-setup summary { cursor:pointer; font-size:12px; font-weight:600; color:#52647c; padding:6px 0; }
+.node-wg-setup { background:#fafbfc; border-color:#e5e8ed; }
+.node-wg-setup-head, .node-wg-actions { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.node-wg-setup-head { justify-content:space-between; }
+.node-wg-setup-head strong { font-size:13px; }
+.node-wg-actions { margin-top:12px; }
+.node-wg-outbound [hidden], .node-wg-setup [hidden] { display:none !important; }
+#nodeWGStatus, #nodeWGSetupStatus { margin:8px 0 0; }
+@media (max-width:768px) { .node-wg-outbound, .node-wg-setup { padding:12px; } }
 .node-wg-outbound label { display:block; margin:10px 0 5px; font-size:13px; }
 .node-wg-outbound select { width:100%; max-width:100%; box-sizing:border-box; padding:10px; border:1px solid #c8ddff; border-radius:10px; background:white; }
 .node-wg-outbound p, .node-wg-setup p { font-size:12px; line-height:1.6; color:#555; }
@@ -87,10 +98,15 @@ function renderNodeWGCard() {
     let setup = document.getElementById('nodeWGSetup');
     if (!setup) {
         setup = document.createElement('div'); setup.id = 'nodeWGSetup'; setup.className = 'node-wg-setup';
-        setup.innerHTML = `<strong>Agent 与落地准备</strong><p id="nodeWGSetupStatus" role="status"></p>
-            <p>B 必须选择“落地”角色并启用 SS，先保存、推送普通配置并等待执行成功；A 使用已部署的 REALITY。两端需升级并安全绑定 Agent，使用受信任 HTTPS/WSS、Linux/systemd、root、ip/wg 工具及可达 UDP。下面的绑定操作仅针对当前机器。</p>
-            <button type="button" id="nodeWGBind">生成当前机器绑定令牌</button> <button type="button" id="nodeWGRefresh">刷新就绪状态</button>
-            <pre id="nodeWGBinding" hidden></pre>`;
+        setup.innerHTML = `<div class="node-wg-setup-head"><strong>机器连接</strong><button type="button" id="nodeWGRefresh">刷新状态</button></div>
+            <p id="nodeWGSetupStatus" role="status"></p>
+            <details id="nodeWGSetupDetails"><summary>首次授权与部署条件</summary>
+                <p>先部署 A 的 REALITY 和 B 的 SS，再选择 WG 出站。两端需支持新版 Agent、Linux/systemd、root、ip/wg 工具及可达 UDP。</p>
+                <p>首次授权用于确认机器身份，不是 WG 密钥，也不需要每次建隧道都操作。已完成授权的机器无需重复绑定。</p>
+                <p>当前版本仍需在服务器终端完成一次确认，连接使用受信任 HTTPS/WSS。面板后端也需 HTTPS，不能仅依赖反向代理传入的 HTTPS 标记。</p>
+                <div class="node-wg-actions"><button type="button" id="nodeWGBind">授权当前机器</button></div>
+                <pre id="nodeWGBinding" hidden></pre>
+            </details>`;
         list.insertAdjacentElement('afterend', setup);
         setup.querySelector('#nodeWGRefresh').onclick = () => loadNodeWGEditor(nodeWGEditor.uuid);
         setup.querySelector('#nodeWGBind').onclick = async () => {
@@ -107,8 +123,9 @@ function renderNodeWGCard() {
         };
     }
     setup.querySelector('#nodeWGSetupStatus').textContent = nodeWGEditor.error || (landing
-        ? '当前角色：落地 B · SS 普通配置推送成功后，在入口 A 的 REALITY 出站中选择本机；最终就绪以服务端检查为准。'
-        : `当前角色：${document.getElementById('editNodeUIState').value === '1' ? '直连 / 入口 A' : '已屏蔽'} · ${!nodeWGEditor.loaded ? '正在检查就绪状态' : nodeWGEditor.ready ? 'REALITY 与 Agent 就绪' : '未就绪：检查 REALITY、Agent 绑定、在线状态与直连角色'}`);
+        ? '落地 B · 部署 SS 后，在入口 A 中选择本机。'
+        : `${document.getElementById('editNodeUIState').value === '1' ? '入口 A' : '已屏蔽'} · ${!nodeWGEditor.loaded ? '检查中…' : nodeWGEditor.ready ? '已就绪' : '未就绪，请检查协议、在线状态和首次授权'}`);
+    const helpOpen = document.getElementById('nodeWGUsage')?.open || false;
     document.getElementById('nodeWGCard')?.remove();
     // Outside a REALITY card, only an existing pair's cleanup panel is allowed.
     if ((!reality || landing) && !p) return;
@@ -116,18 +133,24 @@ function renderNodeWGCard() {
     card.innerHTML = `<strong>${reality && !landing ? 'REALITY 出站' : '已有配对清理'}</strong>
         <p id="nodeWGTopology"></p>
         <div id="nodeWGChoices"><label for="nodeWGMode">出站方式</label><select id="nodeWGMode"><option value="direct">直连</option><option value="wg">经 WG → B 的 SS 出站</option></select>
-        <label for="nodeWGPeer">落地 B（已部署 SS 并安全绑定）</label><select id="nodeWGPeer"></select></div>
+        <div id="nodeWGPeerField"><label for="nodeWGPeer">SS 落地节点</label><select id="nodeWGPeer"></select></div></div>
         <p id="nodeWGStatus" role="status" aria-live="polite"></p>
-        <p>使用底部“推送配置”。新配对仅允许已部署且未修改的 A REALITY / B SS。若普通配置待部署，请明确选择直连，先推送并等待执行成功，再选择 WG；准备阶段为直连，不属于无泄漏部署。服务端尚不支持在普通配置应用前安装保护，不能一次安全应用混合变更。</p>
-        <button type="button" id="nodeWGCleanup">停用配对并清理 / 明确恢复直连</button>`;
+        <details id="nodeWGUsage"><summary>部署步骤与注意事项</summary>
+            <p>① B 推送 SS 成功 → ② A 推送 REALITY 成功 → ③ 选择 WG 与落地节点，点击底部“推送配置”。</p>
+            <p>普通协议有修改时，需先在直连模式完成部署，再启用 WG；两步不是原子部署，准备期间为直连。应用出站可能短暂重启 A 的 sing-box。</p>
+            <p>配对期间修改协议或落地前需先停用清理；故障不会自动改为直连。首次授权说明位于下方“机器连接”。</p>
+        </details>
+        <div class="node-wg-actions" id="nodeWGCleanupRow"><button type="button" id="nodeWGCleanup">停用 WG 并恢复直连</button></div>`;
     if (reality && !landing) reality.appendChild(card); else list.insertAdjacentElement('afterend', card);
     card.querySelector('#nodeWGChoices').hidden = !reality || landing;
     card.querySelector('#nodeWGTopology').textContent = p && p.topology_version !== 2
         ? '检测到旧版配对。必须先停用并等待清理完成，随后才可部署 REALITY → WG → SS。'
-        : '客户端连接 A 的现有 REALITY 端口；A 经 WG 使用落地 B 的 SS 出站。无需新增入口端口。';
+        : '客户端 → A REALITY → WG 隧道 → B SS → 互联网';
+    card.querySelector('#nodeWGUsage').open = helpOpen;
     const mode = card.querySelector('#nodeWGMode'), select = card.querySelector('#nodeWGPeer');
     mode.value = nodeWGEditor.mode || 'direct';
-    mode.onchange = () => { nodeWGEditor.mode = mode.value; select.disabled = mode.value !== 'wg'; };
+    const syncPeerVisibility = () => { select.disabled = mode.value !== 'wg'; card.querySelector('#nodeWGPeerField').hidden = mode.value !== 'wg'; };
+    mode.onchange = () => { nodeWGEditor.mode = mode.value; syncPeerVisibility(); };
     const placeholder = document.createElement('option'); placeholder.value = ''; placeholder.textContent = '请选择已就绪的 SS 落地'; select.appendChild(placeholder);
     for (const peer of nodeWGEditor.peers) {
         const option = document.createElement('option'); option.value = peer.uuid; option.textContent = peer.name + (peer.ready ? '' : '（未就绪）'); option.disabled = !peer.ready; select.appendChild(option);
@@ -135,13 +158,14 @@ function renderNodeWGCard() {
     if (nodeWGEditor.peer && !Array.from(select.options).some(o => o.value === nodeWGEditor.peer)) {
         const option = document.createElement('option'); option.value = nodeWGEditor.peer; option.textContent = nodeWGEditor.peer + '（当前选择，需重新检查就绪）'; select.appendChild(option);
     }
-    select.value = nodeWGEditor.peer || ''; select.disabled = mode.value !== 'wg';
+    select.value = nodeWGEditor.peer || ''; syncPeerVisibility();
     select.onchange = () => { nodeWGEditor.peer = select.value; };
     const blocked = p?.topology_version === 2 && !p.enabled && !p.restore_direct;
     card.querySelector('#nodeWGStatus').textContent = nodeWGEditor.error || (p
         ? `状态：${p.status} / ${p.phase} · 修订 ${p.revision}${blocked ? ' · REALITY 仍被阻断；需明确恢复直连' : ''}${p.error ? ' · '+p.error : ''}${nodeWGBlocksOrdinary() ? ' · 普通配置已锁定，变更前须先停用清理' : ''}`
         : (nodeWGEditor.ready ? '入口就绪；选择出站后使用推送配置' : '等待入口 REALITY / Agent 就绪'));
     const cleanup = card.querySelector('#nodeWGCleanup'); cleanup.hidden = !nodeWGBlocksOrdinary(); cleanup.disabled = nodeWGEditor.busy;
+    card.querySelector('#nodeWGCleanupRow').hidden = cleanup.hidden;
     cleanup.onclick = () => pushNodeWGConfig(true);
 }
 function nodeWGRealityPort() {

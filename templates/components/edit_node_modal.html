@@ -347,31 +347,38 @@
     /* ================= 右侧协议配置面板 ================= */
     .edit-right-col {
         flex: 1;
+        min-width: 0;
+        min-height: 0;
         padding: 25px 30px;
         display: none;
         flex-direction: column;
         background: #fff;
-        overflow: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+        scrollbar-color: #c7cbd1 transparent;
     }
+
+    .edit-right-col > * { flex-shrink: 0; }
+    .edit-right-col.showing-command-log > :not(#cmdLogPanel) { display: none !important; }
+    .edit-right-col.showing-command-log { overflow: hidden; }
 
     .edit-modal-card.has-content .edit-right-col {
         display: flex;
         animation: fadeIn 0.3s ease;
     }
 
-    /* 协议列表区域可滚动，按钮固定在底部 */
+    /* 整个右栏统一滚动，帮助区不再压缩协议列表。 */
     #protocolListContainer {
-        flex: 1;
+        flex: 0 0 auto;
         min-height: 0;
-        overflow-y: auto;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
+        overflow: visible;
     }
     #protocolListContainer::-webkit-scrollbar {
         display: none;
     }
 
-    /* 添加协议按钮固定在右栏底部 */
+    /* 添加协议按钮随右栏内容滚动，底部操作区保持独立。 */
     .edit-right-col #addProtocolSection {
         flex-shrink: 0;
         padding-top: 12px;
@@ -1519,6 +1526,7 @@
         protoList.style.display = 'none';
         if (addSection) addSection.style.display = 'none';
         panel.classList.add('active');
+        panel.closest('.edit-right-col').classList.add('showing-command-log');
         // 确保右栏展开
         document.getElementById('editModalCard').classList.add('has-content');
     }
@@ -1589,6 +1597,7 @@
         const protoList = document.getElementById('protocolListContainer');
         const addSection = document.getElementById('addProtocolSection');
         panel.classList.remove('active');
+        panel.closest('.edit-right-col').classList.remove('showing-command-log');
         protoList.style.display = '';
         if (addSection) addSection.style.display = '';
         if (_cmdLogEventSource) {

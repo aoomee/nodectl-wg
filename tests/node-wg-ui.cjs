@@ -54,11 +54,25 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
    await page.evaluate(()=>document.getElementById('protoSelectOverlay').style.display='none');
    const box=await page.locator('#nodeWGCard').boundingBox();assert.ok(box.x>=-1 && box.x+box.width<=width+1,'outbound must fit viewport');
 
+   // Help uses progressive disclosure; one scroll area never squeezes protocols.
+   assert.equal(await page.locator('#nodeWGPeerField').isVisible(),false,'direct must hide landing controls');
+   assert.equal(await page.locator('#nodeWGSetupDetails').evaluate(e=>e.open),false);
+   assert.equal(await page.locator('#nodeWGUsage').evaluate(e=>e.open),false);
+   if(width>768){
+    const before=await page.locator('#protocolListContainer').boundingBox();
+    await page.locator('#nodeWGSetupDetails > summary').click();
+    const after=await page.locator('#protocolListContainer').boundingBox();
+    assert.ok(Math.abs(after.height-before.height)<2,'expanding authorization must not shrink protocols');
+    assert.equal(await page.locator('#protocolListContainer').evaluate(e=>getComputedStyle(e).overflowY),'visible');
+    assert.equal(await page.locator('.edit-right-col').evaluate(e=>getComputedStyle(e).overflowY),'auto');
+    await page.locator('#nodeWGSetupDetails > summary').click();
+   }
+
    // Direct retains the ordinary endpoint and awaits a real command result.
    await push();await page.waitForFunction(()=>streams.length===1);
    assert.deepEqual(ordinary[0],{uuid:'a',protocols:['reality'],ports:{reality:443}});assert.equal(requests.length,0);
-   await page.evaluate(()=>{document.getElementById('protocolListContainer').style.display='';});
-   await selectWG();await page.evaluate(()=>pushConfigToAgent());assert.equal(requests.length,0,'accepted is not success');
+   assert.equal(await page.locator('#nodeWGSetup').isVisible(),false,'help must not crowd the command log');
+   await page.evaluate(()=>{nodeWGEditor.mode='wg';nodeWGEditor.peer='b';pushConfigToAgent();});assert.equal(requests.length,0,'accepted is not success');
    await complete();await page.evaluate(()=>closeCmdLogPanel());
    await selectWG();await push();await page.waitForFunction(()=>nodeWGEditor.pair?.status==='active');
    assert.deepEqual(requests[0],{uuid:'a',peer_uuid:'b',entry_port:443,revision:1,enabled:true});
@@ -115,7 +129,7 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
    optionDelay=180;await page.evaluate(()=>{window.oldOptions=loadNodeWGEditor('a')});
    await page.waitForTimeout(30);optionDelay=0;pair={uuid:'a',peer_uuid:'b',entry_port:443,revision:9,enabled:true,status:'active',phase:'active',topology_version:2};
    await page.evaluate(()=>loadNodeWGEditor('a'));await page.evaluate(()=>window.oldOptions);assert.equal(await page.evaluate(()=>nodeWGEditor.pair.revision),9);
-   bindDelay=180;await page.locator('#nodeWGBind').click();await page.evaluate(()=>closeEditModal());await page.waitForTimeout(230);
+   bindDelay=180;await page.locator('#nodeWGSetupDetails > summary').click();await page.locator('#nodeWGBind').click();await page.evaluate(()=>closeEditModal());await page.waitForTimeout(230);
    assert.equal(await page.locator('#nodeWGSetup').count(),0);assert.equal(await page.evaluate(()=>nodeWGEditor.timer),null);assert.ok(!(await page.locator('body').innerText()).includes('SECRET-TEST-TOKEN'));bindDelay=0;
 
    // Legacy pair without REALITY exposes cleanup only, not a fake protocol.
@@ -129,7 +143,7 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
    // Landing has setup/token controls without any fake WG protocol/card.
    await page.evaluate(()=>closeEditModal());await open('b');
    assert.equal(await page.locator('#nodeWGCard').count(),0);assert.match(await page.locator('#nodeWGSetupStatus').innerText(),/落地 B/);
-   await page.locator('#nodeWGBind').click();await page.waitForFunction(()=>document.getElementById('nodeWGBinding').textContent.includes('SECRET-TEST-TOKEN'));
+   await page.locator('#nodeWGSetupDetails > summary').click();await page.locator('#nodeWGBind').click();await page.waitForFunction(()=>document.getElementById('nodeWGBinding').textContent.includes('SECRET-TEST-TOKEN'));
    await page.evaluate(()=>closeEditModal());assert.equal(await page.locator('#nodeWGBinding').count(),0);
    assert.deepEqual(errors,[]);await page.close();
   }

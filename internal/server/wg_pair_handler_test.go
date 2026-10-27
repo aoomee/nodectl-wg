@@ -46,9 +46,14 @@ func TestWGPairOptionsContract(t *testing.T) {
 	var result struct {
 		Status string `json:"status"`
 		Data   struct {
-			Pair  any   `json:"pair"`
-			Peers []any `json:"peers"`
-			Ready bool  `json:"ready"`
+			Pair      any   `json:"pair"`
+			Peers     []any `json:"peers"`
+			Ready     bool  `json:"ready"`
+			Readiness struct {
+				Role           string `json:"role"`
+				Checks         []any  `json:"checks"`
+				EnrollmentMode string `json:"enrollment_mode"`
+			} `json:"readiness"`
 		} `json:"data"`
 	}
 	if e := json.Unmarshal(w.Body.Bytes(), &result); e != nil {
@@ -56,6 +61,9 @@ func TestWGPairOptionsContract(t *testing.T) {
 	}
 	if result.Status != "success" || result.Data.Pair != nil || result.Data.Peers == nil || result.Data.Ready {
 		t.Fatal(w.Body.String())
+	}
+	if result.Data.Readiness.Role != "entry" || len(result.Data.Readiness.Checks) != 4 || result.Data.Readiness.EnrollmentMode != "initial" {
+		t.Fatal("missing readiness contract")
 	}
 }
 func TestWGPairHandlerRejectsInvalidRequests(t *testing.T) {

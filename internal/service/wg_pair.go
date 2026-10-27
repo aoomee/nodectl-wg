@@ -72,14 +72,16 @@ type WGPairDTO struct {
 	Error           string `json:"error,omitempty"`
 }
 type WGPeerDTO struct {
-	UUID  string `json:"uuid"`
-	Name  string `json:"name"`
-	Ready bool   `json:"ready"`
+	UUID      string         `json:"uuid"`
+	Name      string         `json:"name"`
+	Ready     bool           `json:"ready"`
+	Readiness WGReadinessDTO `json:"readiness"`
 }
 type WGPairOptionsDTO struct {
-	Pair  *WGPairDTO  `json:"pair"`
-	Peers []WGPeerDTO `json:"peers"`
-	Ready bool        `json:"ready"`
+	Pair      *WGPairDTO     `json:"pair"`
+	Peers     []WGPeerDTO    `json:"peers"`
+	Ready     bool           `json:"ready"`
+	Readiness WGReadinessDTO `json:"readiness"`
 }
 
 func wgDTO(p database.WGPair) WGPairDTO {
@@ -94,6 +96,7 @@ func wgDTO(p database.WGPair) WGPairDTO {
 type wgPairCoordinator struct {
 	db          *gorm.DB
 	ready       func(string) bool
+	agentStatus func(string) string
 	legacyReady func(string) bool
 	send        func(context.Context, string, string, interface{}) (json.RawMessage, error)
 	now         func() time.Time
@@ -105,7 +108,7 @@ type wgPairCoordinator struct {
 	generation uint64
 }
 
-var wgDefault = &wgPairCoordinator{ready: WGAgentV2Ready, legacyReady: WGAgentReady, send: SendWGCommand, now: time.Now, timeout: 20 * time.Second, confirmed: map[string]uint64{}}
+var wgDefault = &wgPairCoordinator{ready: WGAgentV2Ready, agentStatus: WGAgentV2Status, legacyReady: WGAgentReady, send: SendWGCommand, now: time.Now, timeout: 20 * time.Second, confirmed: map[string]uint64{}}
 
 func (c *wgPairCoordinator) database() *gorm.DB {
 	if c.db != nil {
@@ -345,37 +348,46 @@ func (c *wgPairCoordinator) options(id string) (WGPairOptionsDTO, error) {
 	if db.First(&a, "uuid = ?", id).Error != nil {
 		return out, ErrWGUnavailable
 	}
-	_, e := c.identity(db, a)
-	_, _, realityErr := wgReality(a)
-	out.Ready = e == nil && realityErr == nil && wgNodeEligible(a, "entry")
 	var p database.WGPair
-	e = db.First(&p, "entry_uuid = ?", id).Error
+	e := db.First(&p, "entry_uuid = ?", id).Error
 	if e == nil {
 		dto := wgDTO(p)
 		out.Pair = &dto
 	} else if !errors.Is(e, gorm.ErrRecordNotFound) {
 		return out, e
 	}
+	role := "entry"
+	if a.RoutingType == 2 {
+		role = "landing"
+	}
+	out.Readiness, e = c.nodeReadiness(db, a, role)
+	if e != nil {
+		return out, e
+	}
+	out.Ready = role == "entry" && out.Readiness.Ready
 	var nodes []database.NodePool
 	if e = db.Where("routing_type = ?", 2).Order("name, uuid").Find(&nodes).Error; e != nil {
 		return out, e
 	}
 	for _, b := range nodes {
-		if b.UUID == id || !wgNodeEligible(b, "landing") {
+		if b.UUID == id {
 			continue
 		}
 		var count int64
 		if e = db.Model(&database.WGPairNode{}).Where("node_uuid = ? AND pair_id <> ?", b.UUID, p.ID).Count(&count).Error; e != nil {
 			return out, e
 		}
+		readiness, err := c.nodeReadiness(db, b, "landing")
+		if err != nil {
+			return out, err
+		}
 		if count != 0 {
-			continue
+			readiness.add("available", "配对占用", false, "已被其他 WG 配对占用，请先在对应入口停用并完成清理。")
 		}
-		if _, _, e = wgSS(b); e != nil {
-			continue
+		if a.InstallID == b.InstallID || a.IPV4 == b.IPV4 {
+			readiness.add("distinct", "双机条件", false, "入口和落地需使用不同的机器身份和 IPv4 地址。")
 		}
-		_, e = c.identity(db, b)
-		out.Peers = append(out.Peers, WGPeerDTO{b.UUID, b.Name, e == nil})
+		out.Peers = append(out.Peers, WGPeerDTO{UUID: b.UUID, Name: b.Name, Ready: readiness.Ready, Readiness: readiness})
 	}
 	return out, nil
 }

@@ -513,7 +513,7 @@ func TestWGPairV2RejectsWrongEntryPortAndProtocols(t *testing.T) {
 			if e != nil {
 				t.Fatal(e)
 			}
-			if id == "entry" && options.Ready || id == "landing" && len(options.Peers) != 0 {
+			if id == "entry" && options.Ready || id == "landing" && (len(options.Peers) != 1 || options.Peers[0].Ready) {
 				t.Fatalf("bad readiness %+v", options)
 			}
 		})

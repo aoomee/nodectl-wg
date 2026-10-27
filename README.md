@@ -89,6 +89,8 @@ SSH 密码不写入任务文件。关闭页面后后台任务继续运行；同�
 
 A/B 要求：Debian / Ubuntu、x86_64、systemd、Python 3、公网 IPv4、内核 WireGuard，以及 root 或能 sudo 的登录账号。云安全组需要放行实际使用的 SSH、业务 TCP 和 WG UDP 端口。
 
+新版 Agent 的节点编辑页会分别显示节点条件、REALITY / SS 配置、机器授权和 Agent 连接状态；不可选的 SS 落地保留在列表中，可展开查看原因。已授权机器无需重复绑定；授权被撤销后，可明确确认“重新授权”再到服务器终端绑定。页面检查以已保存配置和当前连接为准，实际协议、服务器工具及 UDP 连通性仍需部署时核验。
+
 ## 离线加载镜像
 
 从 [Releases](https://github.com/aoomee/nodectl-wg/releases/latest) 下载对应架构的 `.tar.gz`、`SHA256SUMS-*` 和 `compose.wg.yaml`。以 x86_64 的 `v0.1.1-wg` 为例：

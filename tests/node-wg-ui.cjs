@@ -9,7 +9,7 @@ window.allNodesData={}; function loadNodesList(){};
 window.streams=[]; window.EventSource=class { constructor(url){this.url=url;streams.push(this)} close(){this.closed=true} };
 </script>${template('edit_node_modal.html')}${template('node_wg_editor.html')}`;
 const reality='vless://11111111-1111-4111-8111-111111111111@203.0.113.1:443?security=reality&pbk=test&sni=example.com&type=tcp';
-const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B',routing_type:landing?2:1,ipv4:landing?'203.0.113.2':'203.0.113.1',links:landing?{ss:'ss://mock@203.0.113.2:8388'}:{reality},link_ports:landing?{ss:8388}:{reality:443},disabled_links:[],created_at:'2026-10-01',agent_version:'test'});
+const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B',routing_type:landing?2:1,ipv4:landing?'203.0.113.2':'203.0.113.1',ipv6:landing?'2001:db8::2':'2001:db8::1',links:landing?{ss:'ss://mock@203.0.113.2:8388'}:{reality},link_ports:landing?{ss:8388}:{reality:443},disabled_links:[],created_at:'2026-10-01',agent_version:'test'});
 (async()=>{
  const browser=await chromium.launch(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{channel:'chrome'});
  try {
@@ -49,6 +49,10 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
    const selectWG=async(peer='b')=>{await page.locator('#nodeWGMode').selectOption('wg');await page.locator('#nodeWGPeer').selectOption(peer);};
    const complete=async(status='ok')=>{await page.waitForFunction(()=>streams.length>0);await page.evaluate(status=>streams.at(-1).onmessage({data:JSON.stringify({type:'result',status})}),status);};
    await page.goto('https://wg-editor.test/');await open();
+   await page.locator('.segment-option[data-type="1"]').focus();await page.keyboard.press('Space');
+   assert.equal(await page.locator('.segment-option[data-type="1"]').getAttribute('aria-pressed'),'true');
+   assert.equal(await page.locator('.segment-option[data-ipmode="0"]').getAttribute('aria-pressed'),'true','routing selection must preserve the independent IP mode');
+   assert.equal(await page.locator('#editNodeIPModeControl .active').count(),1);
    assert.equal(await page.locator('.protocol-card[data-proto="reality"] #nodeWGCard').count(),1);
    assert.equal(await page.locator('#nodeWGPort').count(),0);
    assert.equal(await page.locator('#protocolListContainer .protocol-card').count(),1);

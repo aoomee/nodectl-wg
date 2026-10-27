@@ -1,0 +1,16 @@
+[
+  {
+    "file": "sortable-1.15.7.bf4241bc73fe.min.js",
+    "source": "https://github.com/SortableJS/Sortable/blob/031649b8116565e02419e8aa2d252d7d8c82b9da/Sortable.min.js",
+    "sha256": "bf4241bc73fef7f11c59a283a69fe8051cdd31c6d8ff5a2b9ba219e7831fcf76",
+    "integrity": "sha384-DgmC6Xe2bSN2WjTDXzWYbUbxyhNP+NNkGDR/g78pCXV7E7rcVTGxVg0uIVCUUcBc",
+    "license": "sortable-1.15.7.LICENSE.txt"
+  },
+  {
+    "file": "qrcode-04f46c6.c541ef063278.min.js",
+    "source": "https://github.com/davidshimjs/qrcodejs/blob/04f46c6a0708418cb7b96fc563eacae0fbf77674/qrcode.min.js",
+    "sha256": "c541ef06327885a8415bca8df6071e14189b4855336def4f36db54bde8484f36",
+    "integrity": "sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU",
+    "license": "qrcode-04f46c6.LICENSE.txt"
+  }
+]

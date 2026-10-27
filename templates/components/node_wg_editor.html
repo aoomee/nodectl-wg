@@ -1,22 +1,37 @@
 {{define "node_wg_editor.html"}}
 <style>
-.node-wg-outbound, .node-wg-setup { box-sizing:border-box; padding:16px; margin:12px 0; background:#f7faff; border:1px solid #dce7f5; border-radius:12px; min-width:0; overflow-wrap:anywhere; }
-.node-wg-outbound > strong { display:block; font-size:13px; }
-.node-wg-outbound details, .node-wg-setup details { margin-top:10px; }
-.node-wg-outbound summary, .node-wg-setup summary { cursor:pointer; font-size:12px; font-weight:600; color:#52647c; padding:6px 0; }
-.node-wg-setup { background:#fafbfc; border-color:#e5e8ed; }
+.node-wg-outbound, .node-wg-setup { box-sizing:border-box; padding:16px; margin:0 0 12px; background:var(--editor-paper); border:1px solid var(--editor-border); border-radius:var(--editor-radius); min-width:0; overflow-wrap:anywhere; }
+.protocol-card > .node-wg-outbound { margin:0; border:0; border-top:1px solid var(--editor-border); border-radius:0; background:var(--editor-surface); }
+.node-wg-outbound details, .node-wg-setup details { margin-top:14px; border-top:1px solid var(--editor-border); padding-top:6px; }
+.node-wg-outbound summary, .node-wg-setup summary { cursor:pointer; font-size:12px; font-weight:600; color:var(--editor-muted); padding:8px 0; }
 .node-wg-setup-head, .node-wg-actions { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
 .node-wg-setup-head { justify-content:space-between; }
-.node-wg-setup-head strong { font-size:13px; }
-.node-wg-actions { margin-top:12px; }
+.node-wg-setup-head strong { font-size:14px; line-height:1.5; font-weight:650; }
+.node-wg-actions { margin-top:14px; }
+.node-wg-badge { display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.5; font-weight:600; color:var(--editor-muted); }
+.node-wg-badge::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; }
+.node-wg-badge[data-tone="success"] { color:#23744b; }
+.node-wg-badge[data-tone="warning"] { color:#8a5800; }
+.node-wg-badge[data-tone="danger"] { color:#b42318; }
+.node-wg-badge[data-tone="progress"] { color:var(--editor-accent); }
+.node-wg-route { display:flex; align-items:center; flex-wrap:wrap; gap:7px; margin:12px 0; color:var(--editor-muted); font-size:12px; line-height:1.6; }
+.node-wg-route b { color:var(--editor-ink); font-family:ui-monospace, SFMono-Regular, Consolas, monospace; font-size:12px; font-weight:600; }
+.node-wg-route span { display:inline-flex; align-items:center; gap:4px; }
+.node-wg-route i { font-style:normal; color:#7a8ba0; }
+.node-wg-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:12px; }
+.node-wg-fields[data-mode="direct"] { grid-template-columns:minmax(0,1fr); }
 .node-wg-outbound [hidden], .node-wg-setup [hidden] { display:none !important; }
-#nodeWGStatus, #nodeWGSetupStatus { margin:8px 0 0; }
-@media (max-width:768px) { .node-wg-outbound, .node-wg-setup { padding:12px; } }
-.node-wg-outbound label { display:block; margin:10px 0 5px; font-size:13px; }
-.node-wg-outbound select { width:100%; max-width:100%; box-sizing:border-box; padding:10px; border:1px solid #c8ddff; border-radius:10px; background:white; }
-.node-wg-outbound p, .node-wg-setup p { font-size:12px; line-height:1.6; color:#555; }
-.node-wg-outbound button, .node-wg-setup button { padding:8px 12px; border-radius:10px; border:1px solid #c8ddff; background:white; cursor:pointer; }
-.node-wg-setup pre { white-space:pre-wrap; overflow-wrap:anywhere; font-size:12px; }
+#nodeWGStatus, #nodeWGSetupStatus { margin:10px 0 0; }
+.node-wg-outbound label { display:block; margin:0 0 6px; font-size:12px; font-weight:600; color:var(--editor-muted); }
+.node-wg-outbound select { width:100%; min-width:0; max-width:100%; min-height:40px; box-sizing:border-box; padding:8px; border:1px solid var(--editor-border); border-radius:var(--editor-radius); background:var(--editor-paper); color:var(--editor-ink); font:inherit; font-size:13px; }
+.node-wg-outbound p, .node-wg-setup p { font-size:12px; line-height:1.75; color:var(--editor-muted); }
+.node-wg-outbound details p, .node-wg-setup details p { margin:6px 0 10px; }
+.node-wg-setup pre { white-space:pre-wrap; overflow-wrap:anywhere; font:12px/1.75 ui-monospace, SFMono-Regular, Consolas, monospace; margin:12px 0 0; padding:12px; border:1px solid var(--editor-border); border-radius:var(--editor-radius); background:var(--editor-surface); }
+@media (max-width:768px) {
+    .node-wg-outbound, .node-wg-setup { padding:14px; }
+    .node-wg-fields { grid-template-columns:minmax(0,1fr); }
+    .node-wg-actions > button { flex:1 1 auto; }
+}
 </style>
 <script>
 let nodeWGEditor = {uuid:'', pair:null, peers:[], ready:false, timer:null, generation:0, request:0, loaded:false, mode:null, peer:null, busy:false, baseline:null};
@@ -74,7 +89,8 @@ async function loadNodeWGEditor(uuid) {
     } catch (error) {
         if (generation === nodeWGEditor.generation && request === nodeWGEditor.request) {
             nodeWGEditor.loaded = false;
-            nodeWGMessage(error.message);
+            nodeWGEditor.error = error.message;
+            renderNodeWGCard();
             scheduleNodeWGPoll();
         }
         return false;
@@ -98,14 +114,17 @@ function renderNodeWGCard() {
     let setup = document.getElementById('nodeWGSetup');
     if (!setup) {
         setup = document.createElement('div'); setup.id = 'nodeWGSetup'; setup.className = 'node-wg-setup';
-        setup.innerHTML = `<div class="node-wg-setup-head"><strong>机器连接</strong><button type="button" id="nodeWGRefresh">刷新状态</button></div>
-            <p id="nodeWGSetupStatus" role="status"></p>
+        setup.innerHTML = `<div class="node-wg-setup-head"><strong>机器连接</strong><span id="nodeWGSetupBadge" class="node-wg-badge"></span></div>
+            <p id="nodeWGSetupStatus" role="status" aria-live="polite"></p>
+            <div class="node-wg-actions">
+                <button type="button" id="nodeWGBind" class="node-editor-button node-editor-button-primary">授权当前机器</button>
+                <button type="button" id="nodeWGRefresh" class="node-editor-button">刷新状态</button>
+            </div>
+            <pre id="nodeWGBinding" role="status" hidden></pre>
             <details id="nodeWGSetupDetails"><summary>首次授权与部署条件</summary>
                 <p>先部署 A 的 REALITY 和 B 的 SS，再选择 WG 出站。两端需支持新版 Agent、Linux/systemd、root、ip/wg 工具及可达 UDP。</p>
                 <p>首次授权用于确认机器身份，不是 WG 密钥，也不需要每次建隧道都操作。已完成授权的机器无需重复绑定。</p>
                 <p>首次授权需在服务器终端确认，连接使用有效的 HTTPS/WSS。支持 NGINX HTTPS → 本机 HTTP 回源，反代部署需先配置面板的可信代理地址。</p>
-                <div class="node-wg-actions"><button type="button" id="nodeWGBind">授权当前机器</button></div>
-                <pre id="nodeWGBinding" hidden></pre>
             </details>`;
         list.insertAdjacentElement('afterend', setup);
         setup.querySelector('#nodeWGRefresh').onclick = () => loadNodeWGEditor(nodeWGEditor.uuid);
@@ -122,34 +141,43 @@ function renderNodeWGCard() {
             finally { if (generation === nodeWGEditor.generation) button.disabled = false; }
         };
     }
+    const setupBadge = setup.querySelector('#nodeWGSetupBadge');
+    setupBadge.textContent = !nodeWGEditor.loaded ? '待检查' : landing ? '落地节点' : nodeWGEditor.ready ? '入口已就绪' : '待就绪';
+    setupBadge.dataset.tone = !nodeWGEditor.loaded || landing ? '' : nodeWGEditor.ready ? 'success' : 'warning';
     setup.querySelector('#nodeWGSetupStatus').textContent = nodeWGEditor.error || (landing
-        ? '落地 B · 部署 SS 后，在入口 A 中选择本机。'
-        : `${document.getElementById('editNodeUIState').value === '1' ? '入口 A' : '已屏蔽'} · ${!nodeWGEditor.loaded ? '检查中…' : nodeWGEditor.ready ? '已就绪' : '未就绪，请检查协议、在线状态和首次授权'}`);
+        ? '落地 B · 部署 SS 后，在入口 A 中选择本机。首次使用需完成机器授权。'
+        : `${document.getElementById('editNodeUIState').value === '1' ? '入口 A' : '已屏蔽'} · ${!nodeWGEditor.loaded ? '正在检查连接与协议…' : nodeWGEditor.ready ? '可配置 WG 出站；已授权的机器无需重复绑定。' : '未就绪。请检查 Agent 在线、机器授权和 REALITY 部署。'}`);
     const helpOpen = document.getElementById('nodeWGUsage')?.open || false;
+    const focusedControl = document.activeElement?.closest('#nodeWGCard') ? document.activeElement.id : '';
     document.getElementById('nodeWGCard')?.remove();
     // Outside a REALITY card, only an existing pair's cleanup panel is allowed.
     if ((!reality || landing) && !p) return;
     const card = document.createElement('div'); card.id = 'nodeWGCard'; card.className = 'node-wg-outbound';
-    card.innerHTML = `<strong>${reality && !landing ? 'REALITY 出站' : '已有配对清理'}</strong>
-        <p id="nodeWGTopology"></p>
-        <div id="nodeWGChoices"><label for="nodeWGMode">出站方式</label><select id="nodeWGMode"><option value="direct">直连</option><option value="wg">经 WG → B 的 SS 出站</option></select>
+    card.innerHTML = `<div class="node-wg-setup-head"><strong>${reality && !landing ? 'REALITY 出站' : '已有配对清理'}</strong><span id="nodeWGPairBadge" class="node-wg-badge"></span></div>
+        <div id="nodeWGTopology" class="node-wg-route"></div>
+        <div id="nodeWGChoices" class="node-wg-fields"><div><label for="nodeWGMode">出站方式</label><select id="nodeWGMode"><option value="direct">直连</option><option value="wg">经 WG → SS 出站</option></select></div>
         <div id="nodeWGPeerField"><label for="nodeWGPeer">SS 落地节点</label><select id="nodeWGPeer"></select></div></div>
         <p id="nodeWGStatus" role="status" aria-live="polite"></p>
-        <details id="nodeWGUsage"><summary>部署步骤与注意事项</summary>
+        <details id="nodeWGUsage"><summary id="nodeWGUsageSummary">部署步骤与注意事项</summary>
             <p>① B 推送 SS 成功 → ② A 推送 REALITY 成功 → ③ 选择 WG 与落地节点，点击底部“推送配置”。</p>
             <p>普通协议有修改时，需先在直连模式完成部署，再启用 WG；两步不是原子部署，准备期间为直连。应用出站可能短暂重启 A 的 sing-box。</p>
             <p>配对期间修改协议或落地前需先停用清理；故障不会自动改为直连。首次授权说明位于下方“机器连接”。</p>
         </details>
-        <div class="node-wg-actions" id="nodeWGCleanupRow"><button type="button" id="nodeWGCleanup">停用 WG 并恢复直连</button></div>`;
+        <div class="node-wg-actions" id="nodeWGCleanupRow"><button type="button" id="nodeWGCleanup" class="node-editor-button node-editor-button-danger">停用 WG 并恢复直连</button></div>`;
     if (reality && !landing) reality.appendChild(card); else list.insertAdjacentElement('afterend', card);
     card.querySelector('#nodeWGChoices').hidden = !reality || landing;
-    card.querySelector('#nodeWGTopology').textContent = p && p.topology_version !== 2
-        ? '检测到旧版配对。必须先停用并等待清理完成，随后才可部署 REALITY → WG → SS。'
-        : '客户端 → A REALITY → WG 隧道 → B SS → 互联网';
+    const topology = card.querySelector('#nodeWGTopology');
+    if (p && p.topology_version !== 2) topology.textContent = '检测到旧版配对。必须先停用并等待清理完成，随后才可部署 REALITY → WG → SS。';
+    else topology.innerHTML = '<span>客户端</span><i aria-hidden="true">→</i><span><b>A</b> REALITY</span><i aria-hidden="true">→</i><span><b>WG</b> 隧道</span><i aria-hidden="true">→</i><span><b>B</b> SS</span><i aria-hidden="true">→</i><span>互联网</span>';
     card.querySelector('#nodeWGUsage').open = helpOpen;
     const mode = card.querySelector('#nodeWGMode'), select = card.querySelector('#nodeWGPeer');
     mode.value = nodeWGEditor.mode || 'direct';
-    const syncPeerVisibility = () => { select.disabled = mode.value !== 'wg'; card.querySelector('#nodeWGPeerField').hidden = mode.value !== 'wg'; };
+    const syncPeerVisibility = () => {
+        select.disabled = mode.value !== 'wg'; card.querySelector('#nodeWGPeerField').hidden = mode.value !== 'wg';
+        card.querySelector('#nodeWGChoices').dataset.mode = mode.value;
+        // Keep the live pair's path visible while the user drafts a direct change.
+        topology.hidden = !p && mode.value !== 'wg';
+    };
     mode.onchange = () => { nodeWGEditor.mode = mode.value; syncPeerVisibility(); };
     const placeholder = document.createElement('option'); placeholder.value = ''; placeholder.textContent = '请选择已就绪的 SS 落地'; select.appendChild(placeholder);
     for (const peer of nodeWGEditor.peers) {
@@ -161,15 +189,20 @@ function renderNodeWGCard() {
     select.value = nodeWGEditor.peer || ''; syncPeerVisibility();
     select.onchange = () => { nodeWGEditor.peer = select.value; };
     const blocked = p?.topology_version === 2 && !p.enabled && !p.restore_direct;
+    const pairBadge = card.querySelector('#nodeWGPairBadge');
+    const labels = {active:'运行中', pending:'部署中', applying:'部署中', recovering:'恢复核验', cleanup_pending:'清理中', disabled:blocked ? '已阻断' : '已停用', failed:'需处理'};
+    pairBadge.textContent = p ? (labels[p.status] || '处理中') : '未启用 WG';
+    pairBadge.dataset.tone = blocked || p?.status === 'failed' ? 'danger' : p?.status === 'active' ? 'success' : p && p.status !== 'disabled' ? 'progress' : '';
     const stateLabel = p?.status === 'recovering'
         ? '面板重启后正在核验双端连接，核验通过后恢复订阅；失败会保持阻断'
-        : `${p?.status} / ${p?.phase}`;
+        : `${labels[p?.status] || '处理中'}${p?.status === 'pending' ? '，请等待双端配置完成' : ''}`;
     card.querySelector('#nodeWGStatus').textContent = nodeWGEditor.error || (p
         ? `状态：${stateLabel} · 修订 ${p.revision}${blocked ? ' · REALITY 仍被阻断；需明确恢复直连' : ''}${p.error && p.status !== 'recovering' ? ' · '+p.error : ''}${nodeWGBlocksOrdinary() ? ' · 普通配置已锁定，变更前须先停用清理' : ''}`
         : (nodeWGEditor.ready ? '入口就绪；选择出站后使用推送配置' : '等待入口 REALITY / Agent 就绪'));
     const cleanup = card.querySelector('#nodeWGCleanup'); cleanup.hidden = !nodeWGBlocksOrdinary(); cleanup.disabled = nodeWGEditor.busy;
     card.querySelector('#nodeWGCleanupRow').hidden = cleanup.hidden;
     cleanup.onclick = () => pushNodeWGConfig(true);
+    if (focusedControl) card.querySelector('#'+focusedControl)?.focus({preventScroll:true});
 }
 function nodeWGRealityPort() {
     const card = document.querySelector('#protocolListContainer .protocol-card[data-proto="reality"]');

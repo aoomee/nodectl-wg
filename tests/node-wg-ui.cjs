@@ -2,8 +2,9 @@
 const {chromium}=require('playwright');
 const fs=require('fs'),path=require('path'),assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'..');
+const baseStyles=fs.readFileSync(path.join(root,'templates/index.html'),'utf8').match(/<style>([\s\S]*?)<\/style>/)[1];
 const template=name=>fs.readFileSync(path.join(root,'templates/components',name),'utf8').replace(/\{\{define[^}]+\}\}/,'').replace(/\{\{end\}\}\s*$/,'').replace('{{.Protocols}}',JSON.stringify(['reality','ss','hy2']));
-const html=`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script>
+const html=`<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${baseStyles}</style><script>
 window.allNodesData={}; function loadNodesList(){};
 window.streams=[]; window.EventSource=class { constructor(url){this.url=url;streams.push(this)} close(){this.closed=true} };
 </script>${template('edit_node_modal.html')}${template('node_wg_editor.html')}`;
@@ -12,10 +13,10 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
 (async()=>{
  const browser=await chromium.launch(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{channel:'chrome'});
  try {
-  for(const width of [1280,375]) {
+  for(const width of [1280,375,320]) {
    const page=await browser.newPage({viewport:{width,height:1000}});
    const errors=[],requests=[],ordinary=[],saves=[],alerts=[];
-   let pair=null,ready=true,saveFailure=false,optionDelay=0,bindDelay=0,saveDelay=0;
+   let pair=null,ready=true,saveFailure=false,optionFailure=false,optionDelay=0,bindDelay=0,saveDelay=0;
    let nodes=[makeNode('a'),makeNode('b',true)];
    page.on('pageerror',e=>errors.push(e.message));
    page.on('dialog',async d=>{alerts.push(d.message());await d.accept();});
@@ -24,6 +25,7 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
     if(url.pathname==='/')return route.fulfill({contentType:'text/html; charset=utf-8',body:html});
     if(url.pathname==='/api/get-nodes')return route.fulfill({json:{status:'success',data:{direct_nodes:[nodes[0]],land_nodes:[nodes[1]]}}});
     if(url.pathname==='/api/node/wg/options') {
+     if(optionFailure)return route.fulfill({status:503,json:{status:'error',message:'连接检查暂时失败，请刷新重试'}});
      const data={pair:url.searchParams.get('uuid')==='a'?pair:null,ready,peers:[{uuid:'b',name:'落地 B',ready:true},{uuid:'c',name:'落地 C',ready:true}]};
      const delay=optionDelay; if(delay)await new Promise(r=>setTimeout(r,delay));
      return route.fulfill({json:{status:'success',data}});
@@ -58,6 +60,20 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
    assert.equal(await page.locator('#nodeWGPeerField').isVisible(),false,'direct must hide landing controls');
    assert.equal(await page.locator('#nodeWGSetupDetails').evaluate(e=>e.open),false);
    assert.equal(await page.locator('#nodeWGUsage').evaluate(e=>e.open),false);
+   assert.equal(await page.locator('#nodeWGBind').isVisible(),true,'authorization must be reachable with help closed');
+   await page.locator('#nodeWGBind').focus();await page.keyboard.press('Tab');
+   assert.equal(await page.evaluate(()=>document.activeElement.id),'nodeWGRefresh','authorization and refresh must have a predictable keyboard order');
+   const snapshot=async(name,label=name)=>{
+    if(!process.env.NODECTL_UI_SCREENSHOT_DIR)return;
+    fs.mkdirSync(process.env.NODECTL_UI_SCREENSHOT_DIR,{recursive:true});
+    await page.locator('#'+name).screenshot({path:path.join(process.env.NODECTL_UI_SCREENSHOT_DIR,`${label}-${width}.png`)});
+   };
+   await page.locator('#nodeWGRefresh').evaluate(e=>e.blur());
+   await snapshot('nodeWGSetup');await snapshot('nodeWGCard','direct');
+   if(process.env.NODECTL_UI_SCREENSHOT_DIR){
+    await page.evaluate(()=>document.querySelectorAll('.edit-right-col,.edit-body').forEach(e=>e.scrollTop=0));
+    await snapshot('editModalCard','editor');
+   }
    if(width>768){
     const before=await page.locator('#protocolListContainer').boundingBox();
     await page.locator('#nodeWGSetupDetails > summary').click();
@@ -68,6 +84,11 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
     await page.locator('#nodeWGSetupDetails > summary').click();
    }
 
+   optionFailure=true;await page.evaluate(()=>loadNodeWGEditor('a'));
+   assert.equal(await page.locator('#nodeWGSetupBadge').innerText(),'待检查','failed refresh must not retain a green ready badge');
+   assert.match(await page.locator('#nodeWGSetupStatus').innerText(),/刷新重试/);
+   optionFailure=false;await page.locator('#nodeWGRefresh').click();await page.waitForFunction(()=>nodeWGEditor.loaded);
+
    // Direct retains the ordinary endpoint and awaits a real command result.
    await push();await page.waitForFunction(()=>streams.length===1);
    assert.deepEqual(ordinary[0],{uuid:'a',protocols:['reality'],ports:{reality:443}});assert.equal(requests.length,0);
@@ -75,12 +96,14 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
    await page.evaluate(()=>{nodeWGEditor.mode='wg';nodeWGEditor.peer='b';pushConfigToAgent();});assert.equal(requests.length,0,'accepted is not success');
    await complete();await page.evaluate(()=>closeCmdLogPanel());
    await selectWG();await push();await page.waitForFunction(()=>nodeWGEditor.pair?.status==='active');
+   await snapshot('nodeWGCard','active');
    assert.deepEqual(requests[0],{uuid:'a',peer_uuid:'b',entry_port:443,revision:1,enabled:true});
    await push();assert.equal(requests.length,1,'unchanged active is a no-op');assert.equal(ordinary.length,1);
 
    // Refresh/poll preserves both unsaved mode and peer, even while pair is active.
-   await page.locator('#nodeWGPeer').selectOption('c');await page.evaluate(()=>loadNodeWGEditor('a'));
+   await page.locator('#nodeWGPeer').selectOption('c');await page.locator('#nodeWGPeer').focus();await page.evaluate(()=>loadNodeWGEditor('a'));
    assert.equal(await page.locator('#nodeWGPeer').inputValue(),'c');
+   assert.equal(await page.evaluate(()=>document.activeElement.id),'nodeWGPeer','poll must preserve the focused selection');
    await page.locator('#nodeWGMode').selectOption('direct');await page.evaluate(()=>loadNodeWGEditor('a'));
    assert.equal(await page.locator('#nodeWGMode').inputValue(),'direct');await selectWG('b');
 
@@ -106,8 +129,11 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
 
    // Restart recovery polls without replaying deployment, retaining the user's draft.
    pair={...pair,status:'recovering',phase:'verify_active'};await page.evaluate(()=>loadNodeWGEditor('a'));
+   assert.equal(await page.locator('#nodeWGPairBadge').innerText(),'恢复核验');
    assert.match(await page.locator('#nodeWGStatus').innerText(),/面板重启后正在核验双端连接/);
    assert.equal(await page.locator('#nodeWGCleanup').isVisible(),true);
+   await page.locator('#nodeWGUsageSummary').focus();await page.evaluate(()=>loadNodeWGEditor('a'));
+   assert.equal(await page.evaluate(()=>document.activeElement.id),'nodeWGUsageSummary','poll must preserve keyboard focus in help');
    await push();assert.equal(requests.length,3);assert.equal(ordinary.length,3);
    await page.locator('#nodeWGPeer').selectOption('c');await page.locator('#nodeWGMode').selectOption('direct');
    const pollRequest=await page.evaluate(()=>nodeWGEditor.request);
@@ -118,6 +144,8 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
 
    // Failed/disabled fail-closed pair still requires explicit restore direct.
    pair={...pair,enabled:false,status:'disabled',phase:'blocked',restore_direct:false};await page.evaluate(()=>loadNodeWGEditor('a'));
+   assert.equal(await page.locator('#nodeWGPairBadge').innerText(),'已阻断');
+   await snapshot('nodeWGCard');
    assert.match(await page.locator('#nodeWGStatus').innerText(),/仍被阻断/);await page.locator('#nodeWGCleanup').click();await page.waitForFunction(()=>nodeWGEditor.pair?.restore_direct);
    assert.equal(requests.at(-1).enabled,false);
 
@@ -127,12 +155,14 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
    await selectWG();const before=requests.length;await push();assert.equal(requests.length,before);assert.match(await page.locator('#nodeWGStatus').innerText(),/保存失败/);
    saveFailure=false;await page.evaluate(()=>triggerNodeAutoSave(true));await page.waitForFunction(()=>!editNodeSaveFailed && editNodeSaveRunning===0 && editNodeAutoSaveTimer===null);
    ready=false;await push();assert.equal(requests.length,before);assert.match(await page.locator('#nodeWGStatus').innerText(),/未就绪/);ready=true;
+   assert.equal(await page.locator('#nodeWGSetupBadge').innerText(),'待就绪');
+   await snapshot('nodeWGSetup','not-ready');
 
    // Superseded options and close during enrollment cannot resurrect state/tokens.
    optionDelay=180;await page.evaluate(()=>{window.oldOptions=loadNodeWGEditor('a')});
    await page.waitForTimeout(30);optionDelay=0;pair={uuid:'a',peer_uuid:'b',entry_port:443,revision:9,enabled:true,status:'active',phase:'active',topology_version:2};
    await page.evaluate(()=>loadNodeWGEditor('a'));await page.evaluate(()=>window.oldOptions);assert.equal(await page.evaluate(()=>nodeWGEditor.pair.revision),9);
-   bindDelay=180;await page.locator('#nodeWGSetupDetails > summary').click();await page.locator('#nodeWGBind').click();await page.evaluate(()=>closeEditModal());await page.waitForTimeout(230);
+   bindDelay=180;await page.locator('#nodeWGBind').click();await page.evaluate(()=>closeEditModal());await page.waitForTimeout(230);
    assert.equal(await page.locator('#nodeWGSetup').count(),0);assert.equal(await page.evaluate(()=>nodeWGEditor.timer),null);assert.ok(!(await page.locator('body').innerText()).includes('SECRET-TEST-TOKEN'));bindDelay=0;
 
    // Legacy pair without REALITY exposes cleanup only, not a fake protocol.
@@ -146,10 +176,14 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
    // Landing has setup/token controls without any fake WG protocol/card.
    await page.evaluate(()=>closeEditModal());await open('b');
    assert.equal(await page.locator('#nodeWGCard').count(),0);assert.match(await page.locator('#nodeWGSetupStatus').innerText(),/落地 B/);
-   await page.locator('#nodeWGSetupDetails > summary').click();await page.locator('#nodeWGBind').click();await page.waitForFunction(()=>document.getElementById('nodeWGBinding').textContent.includes('SECRET-TEST-TOKEN'));
+   assert.equal(await page.locator('#nodeWGSetupDetails').evaluate(e=>e.open),false);
+   await page.locator('#nodeWGBind').click();await page.waitForFunction(()=>document.getElementById('nodeWGBinding').textContent.includes('SECRET-TEST-TOKEN'));
+   assert.equal(await page.locator('#nodeWGBinding').isVisible(),true,'token must be visible without opening help');
+   const overflow=await page.locator('#editNodeModal').evaluate(e=>Array.from(e.querySelectorAll('#nodeWGSetup, #nodeWGBinding, .edit-footer')).some(el=>el.scrollWidth>el.clientWidth+1));
+   assert.equal(overflow,false,'authorization and footer must fit narrow screens');
    await page.evaluate(()=>closeEditModal());assert.equal(await page.locator('#nodeWGBinding').count(),0);
    assert.deepEqual(errors,[]);await page.close();
   }
-  console.log('PASS: real modal desktop/mobile, ordinary SSE staging, fail-closed guards, cleanup, readiness, autosave, revision, stale options, token cleanup, SS landing and legacy migration.');
+  console.log('PASS: real modal at 1280/375/320px, keyboard focus across polling, visible authorization, ordinary SSE staging, fail-closed guards, cleanup, readiness, autosave, revision, stale options, token cleanup, SS landing and legacy migration.');
  } finally {await browser.close();}
 })().catch(e=>{console.error(e);process.exit(1)});

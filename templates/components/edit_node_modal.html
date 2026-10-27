@@ -1,6 +1,18 @@
 {{define "edit_node_modal.html"}}
 
 <style>
+    #editNodeModal {
+        --editor-ink: #1d2939;
+        --editor-muted: #52647c;
+        --editor-border: #dce3ec;
+        --editor-surface: #f6f8fb;
+        --editor-paper: #ffffff;
+        --editor-accent: #0066d6;
+        --editor-radius: 12px;
+        font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+        color: var(--editor-ink);
+    }
+
     /* ================= 统一弹窗基础框架 ================= */
     .edit-modal-overlay {
         display: none;
@@ -204,10 +216,11 @@
         width: 100%;
         box-sizing: border-box;
         padding: 8px 12px;
-        font-size: 15px;
+        min-height: 40px;
+        font-size: 14px;
         font-weight: 600;
-        border: 1px solid #d1d1d6;
-        border-radius: 8px;
+        border: 1px solid var(--editor-border);
+        border-radius: var(--editor-radius);
         outline: none;
         transition: border 0.2s;
         color: #1d1d1f;
@@ -294,8 +307,9 @@
         font-size: 13px;
         font-weight: 500;
         font-family: monospace;
-        border: 1px solid #d1d1d6;
-        border-radius: 8px;
+        min-height: 40px;
+        border: 1px solid var(--editor-border);
+        border-radius: var(--editor-radius);
         outline: none;
         transition: border 0.2s;
         color: #333;
@@ -397,8 +411,8 @@
 
     /* 协议卡片容器 */
     .protocol-card {
-        border: 1px solid #e5e5ea;
-        border-radius: 10px;
+        border: 1px solid var(--editor-border);
+        border-radius: var(--editor-radius);
         background: #fff;
         margin-bottom: 12px;
         overflow: hidden;
@@ -743,6 +757,46 @@
         background: #e5e5ea;
     }
 
+    #editNodeModal :is(.node-editor-button, .btn-footer-close, .btn-add-protocol-left) {
+        box-sizing: border-box;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 40px;
+        padding: 8px 12px;
+        border: 1px solid var(--editor-border);
+        border-radius: var(--editor-radius);
+        background: var(--editor-paper);
+        color: var(--editor-ink);
+        font: 600 13px/1.5 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+        cursor: pointer;
+        transition: background-color .15s, border-color .15s;
+    }
+    #editNodeModal :is(.node-editor-button, .btn-footer-close, .btn-add-protocol-left):hover:not(:disabled) {
+        background: var(--editor-surface);
+        border-color: #b4c4d8;
+    }
+    #editNodeModal .node-editor-button-primary {
+        color: white;
+        background: var(--editor-accent);
+        border-color: var(--editor-accent);
+    }
+    #editNodeModal .node-editor-button-primary:hover:not(:disabled) { background: #0055b3; border-color: #0055b3; }
+    #editNodeModal .node-editor-button-danger { color: #b42318; border-color: #e8bcb8; }
+    #editNodeModal .node-editor-button-danger:hover:not(:disabled) { background: #fff2f0; border-color: #b42318; }
+    #editNodeModal #btnPushConfig[data-confirm="true"] { background: #8a5800; border-color: #8a5800; color: white; }
+    #editNodeModal #btnResetNodeLinks[data-confirm="true"] { background: #b42318; border-color: #b42318; color: white; }
+    #editNodeModal :is(.node-editor-button, .btn-footer-close, .btn-add-protocol-left):disabled { opacity: .5; cursor: not-allowed; }
+    #editNodeModal :is(button, select, input, textarea, summary):focus-visible {
+        outline: 2px solid var(--editor-accent);
+        outline-offset: 3px;
+    }
+    #editNodeModal .btn-add-protocol-left { border-style: dashed; color: var(--editor-accent); }
+    @media (prefers-reduced-motion: reduce) {
+        #editNodeModal, #editNodeModal * { animation: none !important; transition: none !important; }
+    }
+
     /* 移动端 */
     @media (max-width: 768px) {
         .edit-left-col, .edit-right-col { box-sizing: border-box; min-width: 0; }
@@ -791,6 +845,8 @@
             padding: 8px 10px;
             font-size: 12px;
         }
+        #editNodeModal .edit-footer { flex-wrap: wrap; }
+        #editNodeModal .edit-footer .btn-footer-close { flex: 1 1 auto; padding: 8px; }
     }
 
     /* ================= 内嵌命令日志面板（右栏） ================= */
@@ -1028,7 +1084,7 @@
 
             <div class="edit-footer">
                 <button type="button" class="btn-footer-close" onclick="closeEditModal()">关闭</button>
-                <button type="button" class="btn-footer-close" id="btnResetNodeLinks" style="background:#ff3b30; color:#fff; display:flex; align-items:center; gap:5px; transition: all 0.2s;" onclick="handleResetLinksClick()" title="远程重置节点协议链接，将重写 sing-box 配置并重启服务">
+                <button type="button" class="btn-footer-close node-editor-button-danger" id="btnResetNodeLinks" onclick="handleResetLinksClick()" title="远程重置节点协议链接，将重写 sing-box 配置并重启服务">
                     <svg id="btnResetLinksIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="1 4 1 10 7 10"></polyline>
                         <polyline points="23 20 23 14 17 14"></polyline>
@@ -1036,7 +1092,7 @@
                     </svg>
                     <span id="btnResetLinksText">重置链接</span>
                 </button>
-                <button type="button" class="btn-footer-close" id="btnPushConfig" style="background:#007aff; color:#fff; display:flex; align-items:center; gap:5px; transition: all 0.2s;" onclick="handlePushConfigClick()" title="推送当前启用的协议及端口配置给 Agent，Agent 将重新配置 sing-box">
+                <button type="button" class="btn-footer-close node-editor-button-primary" id="btnPushConfig" onclick="handlePushConfigClick()" title="推送当前启用的协议及端口配置给 Agent，Agent 将重新配置 sing-box">
                     <svg id="btnPushConfigIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M22 2L11 13"></path>
                         <path d="M22 2L15 22L11 13L2 9L22 2Z"></path>
@@ -1652,7 +1708,7 @@
         } else {
             // 第一次点击：进入确认状态
             _resetLinksInConfirm = true;
-            btn.style.background = '#cc0000';
+            btn.dataset.confirm = 'true';
             textEl.textContent = '确认重置';
             // 3秒后自动恢复
             _resetLinksConfirmTimer = setTimeout(() => {
@@ -1665,7 +1721,7 @@
         _resetLinksInConfirm = false;
         const btn = document.getElementById('btnResetNodeLinks');
         const textEl = document.getElementById('btnResetLinksText');
-        if (btn) btn.style.background = '#ff3b30';
+        if (btn) delete btn.dataset.confirm;
         if (textEl) textEl.textContent = '重置链接';
     }
 
@@ -2106,7 +2162,7 @@
         } else {
             // 第一次点击：进入确认状态
             _pushConfigInConfirm = true;
-            btn.style.background = '#ff9500';
+            btn.dataset.confirm = 'true';
             textEl.textContent = '确定推送';
             // 3秒后自动恢复
             _pushConfigConfirmTimer = setTimeout(() => {
@@ -2119,7 +2175,7 @@
         _pushConfigInConfirm = false;
         const btn = document.getElementById('btnPushConfig');
         const textEl = document.getElementById('btnPushConfigText');
-        if (btn) btn.style.background = '#007aff';
+        if (btn) delete btn.dataset.confirm;
         if (textEl) textEl.textContent = '推送配置';
     }
 

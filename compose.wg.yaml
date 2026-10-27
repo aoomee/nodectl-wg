@@ -4,6 +4,8 @@ services:
     restart: unless-stopped
     init: true
     environment:
+      # 仅首次创建账号时读取；留空则生成随机密码文件。
+      NODECTL_INITIAL_ADMIN_PASSWORD: ${NODECTL_INITIAL_ADMIN_PASSWORD:-}
       NODECTL_TRUSTED_PROXIES: ${NODECTL_TRUSTED_PROXIES:-}
     ports:
       - "${NODECTL_BIND:-127.0.0.1}:${NODECTL_PORT:-7878}:8080"

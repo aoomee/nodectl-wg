@@ -3,10 +3,10 @@ package database
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"os"
+	"path/filepath"
 
 	"nodectl/internal/logger"
-
-	"golang.org/x/crypto/bcrypt"
 )
 
 // SupportedProtocols 定义系统支持的节点协议列表 (全局变量，供前端和逻辑使用)
@@ -19,15 +19,16 @@ var SupportedProtocols = []string{
 }
 
 // initDefaultConfigs 初始化默认的系统配置参数
-func initDefaultConfigs() {
-	// 1. 初始化普通基础设置
+func initDefaultConfigs() error {
+	if err := initAuthSettings(); err != nil {
+		return err
+	}
+	// 初始化普通基础设置
 	initBasicSettings()
 
-	// 2. 初始化核心安全设置 (加密密钥、默认账号密码)
-	initAuthSettings()
-
-	// 3. 初始化singbox安装脚本模板参数
+	// 初始化 sing-box 安装脚本模板参数
 	initProxySettings()
+	return nil
 }
 
 func initBasicSettings() {
@@ -120,42 +121,19 @@ func initBasicSettings() {
 
 }
 
-func initAuthSettings() {
-	// 1. 初始化随机加密密钥 (JWT Secret / Session Key)
-	var secretConfig SysConfig
-	if tx := DB.Select("key", "value").Where("key = ?", "jwt_secret").Limit(1).Find(&secretConfig); tx.Error == nil && tx.RowsAffected == 0 {
-		// 只有当密钥不存在时才生成
-		secureBytes := make([]byte, 32)
-		if _, err := rand.Read(secureBytes); err != nil {
-			panic("无法生成安全随机密钥: " + err.Error())
-		}
-		randomSecret := hex.EncodeToString(secureBytes)
-
-		DB.Create(&SysConfig{
-			Key:         "jwt_secret",
-			Value:       randomSecret,
-			Description: "系统核心加密密钥 (请勿泄露)",
-		})
-		logger.Log.Info("已生成全新的系统加密密钥")
+func initAuthSettings() error {
+	created, err := initializeAuth(DB, "data", os.Getenv(InitialAdminPasswordEnv))
+	if err != nil {
+		return err
 	}
-
-	// 2. 初始化默认管理员账号和密码
-	var adminUser SysConfig
-	if tx := DB.Select("key", "value").Where("key = ?", "admin_username").Limit(1).Find(&adminUser); tx.Error == nil && tx.RowsAffected == 0 {
-		// 生成 bcrypt 哈希密码 (默认密码设为 admin)
-		defaultPassword := "admin"
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(defaultPassword), bcrypt.DefaultCost)
-		if err != nil {
-			panic("默认密码加密失败: " + err.Error())
+	if created {
+		if os.Getenv(InitialAdminPasswordEnv) == "" {
+			logger.ConsoleAndLog.Warn("已创建管理员账号，请在服务器终端读取初始密码并登录后修改", "username", "admin", "password_file", filepath.Join("data", InitialAdminPasswordFile))
+		} else {
+			logger.ConsoleAndLog.Info("已使用首次安装配置创建管理员账号", "username", "admin")
 		}
-
-		// 存入用户名
-		DB.Create(&SysConfig{Key: "admin_username", Value: "admin", Description: "管理员登录账号"})
-		// 存入密码哈希值
-		DB.Create(&SysConfig{Key: "admin_password", Value: string(hashedPassword), Description: "管理员密码(Bcrypt加密)"})
-
-		logger.ConsoleAndLog.Warn("已创建默认管理员账号！", "用户名", "admin", "密码", "admin", "提示", "请登录后尽快修改！")
 	}
+	return nil
 }
 
 func initProxySettings() {

@@ -100,12 +100,12 @@
                 
                 <div class="pwd-input-group">
                     <label>新密码（可选）</label>
-                    <input type="password" id="newPwd" class="pwd-input" placeholder="不修改可留空；如需修改至少 5 位" autocomplete="new-password" minlength="5">
+                    <input type="password" id="newPwd" class="pwd-input" placeholder="不修改可留空；新密码至少 12 个字符" autocomplete="new-password" minlength="12">
                 </div>
                 
                 <div class="pwd-input-group">
                     <label>确认新密码（可选）</label>
-                    <input type="password" id="confirmPwd" class="pwd-input" placeholder="如修改密码请再次输入" autocomplete="new-password" minlength="5">
+                    <input type="password" id="confirmPwd" class="pwd-input" placeholder="如修改密码请再次输入" autocomplete="new-password" minlength="12">
                 </div>
 
                 <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
@@ -237,8 +237,8 @@
                 indicator.style.opacity = '1';
                 return;
             }
-            if (newPwd.length < 5) {
-                indicator.innerHTML = `<span style="color:#ff3b30;">新密码长度不能小于 5 位</span>`;
+            if (Array.from(newPwd).length < 12 || new TextEncoder().encode(newPwd).length > 72) {
+                indicator.innerHTML = `<span style="color:#ff3b30;">密码至少 12 个字符，且不能超过 72 字节</span>`;
                 indicator.style.opacity = '1';
                 return;
             }

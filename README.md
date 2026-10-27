@@ -45,7 +45,19 @@ docker compose up -d
 ssh -L 7878:127.0.0.1:7878 root@你的面板服务器IP
 ```
 
-首次安装账号为 **`admin / admin`**，登录后先修改密码。已有数据卷沿用原来的账号密码。WG 页面会提交 VPS 登录密码，请通过 HTTPS 或 SSH 转发访问。
+包含本修复的版本首次安装使用账号 **`admin`**，密码自动随机生成。服务启动成功后，在面板服务器终端领取：
+
+```bash
+docker compose exec nodectl cat /app/data/initial-admin-password
+# 使用 compose.wg.yaml 时：
+# docker compose -f compose.wg.yaml exec nodectl cat /app/data/initial-admin-password
+```
+
+直接运行程序时读取工作目录下的 `data/initial-admin-password`。文件权限为 0600，密码不会打印到日志；登录后修改密码会清理对应的初始密码文件。新密码至少 12 个字符，且不超过 72 字节。
+
+已有数据卷沿用原账号密码，升级和重启不会重置；如果旧实例仍使用 `admin/admin`，请登录后修改。自动化部署可在首次启动时通过 `NODECTL_INITIAL_ADMIN_PASSWORD` 指定符合要求的密码，此时不生成密码文件；该变量对已有账号无效，不是密码重置开关。旧镜像仍按旧版行为运行。
+
+输入 VPS 密码时请使用 HTTPS 或可信的 SSH 本地转发。
 
 也可以直接使用 Docker Run：
 

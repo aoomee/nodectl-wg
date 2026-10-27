@@ -104,8 +104,11 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
    await page.locator('#nodeWGMode').selectOption('direct');await push();await page.waitForFunction(()=>streams.length===3);await complete();await page.evaluate(()=>closeCmdLogPanel());
    await selectWG();await push();await page.waitForFunction(()=>nodeWGEditor.pair?.status==='active');assert.equal(requests.length,3);assert.equal(ordinary.length,3);
 
-   // Actual scheduled polling retains a draft peer and mode and stops at terminal state.
-   pair={...pair,status:'applying',phase:'prepare_b'};await page.evaluate(()=>loadNodeWGEditor('a'));
+   // Restart recovery polls without replaying deployment, retaining the user's draft.
+   pair={...pair,status:'recovering',phase:'verify_active'};await page.evaluate(()=>loadNodeWGEditor('a'));
+   assert.match(await page.locator('#nodeWGStatus').innerText(),/面板重启后正在核验双端连接/);
+   assert.equal(await page.locator('#nodeWGCleanup').isVisible(),true);
+   await push();assert.equal(requests.length,3);assert.equal(ordinary.length,3);
    await page.locator('#nodeWGPeer').selectOption('c');await page.locator('#nodeWGMode').selectOption('direct');
    const pollRequest=await page.evaluate(()=>nodeWGEditor.request);
    pair={...pair,status:'active',phase:'active'};

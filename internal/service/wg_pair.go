@@ -27,8 +27,8 @@ import (
 var ErrWGConflict = errors.New("pair revision or node reservation conflict")
 var ErrWGUnavailable = errors.New("WireGuard dependencies unavailable")
 
-// A single bounded critical section intentionally serializes pair operations and
-// parent node mutations. Callers MUST unlock after mutation; do not nest locks.
+// This lock covers local snapshots/commits and parent node mutations only.
+// Never hold it while waiting for an Agent. Callers must not nest locks.
 var wgNodeMu sync.Mutex
 
 func WGAcquireNodeLocks(uuids ...string) func() { wgNodeMu.Lock(); return wgNodeMu.Unlock }
@@ -100,6 +100,9 @@ type wgPairCoordinator struct {
 	timeout     time.Duration
 	// Proof is process-local: persisted active alone can never publish a link.
 	confirmed map[string]uint64
+	// Protected by wgNodeMu; only one remote transition per pair may run.
+	inflight   map[string]context.CancelFunc
+	generation uint64
 }
 
 var wgDefault = &wgPairCoordinator{ready: WGAgentV2Ready, legacyReady: WGAgentReady, send: SendWGCommand, now: time.Now, timeout: 20 * time.Second, confirmed: map[string]uint64{}}
@@ -164,22 +167,28 @@ func wgSS(n database.NodePool) (string, int, error) {
 	return link, port, nil
 }
 func (c *wgPairCoordinator) identity(db *gorm.DB, n database.NodePool) (string, error) {
+	return c.identityState(db, n, true)
+}
+func (c *wgPairCoordinator) identityState(db *gorm.DB, n database.NodePool, online bool) (string, error) {
 	var i database.AgentIdentity
-	if db.Where("node_uuid = ? AND install_id = ?", n.UUID, n.InstallID).First(&i).Error != nil || !i.Bound || i.SecretHash == "" || !c.ready(n.InstallID) {
+	if db.Where("node_uuid = ? AND install_id = ?", n.UUID, n.InstallID).First(&i).Error != nil || !i.Bound || i.SecretHash == "" || (online && !c.ready(n.InstallID)) {
 		return "", ErrWGUnavailable
 	}
 	return wgHash(i.SecretHash), nil
 }
 func (c *wgPairCoordinator) dependencies(db *gorm.DB, aID, bID string) (a, b database.NodePool, ah, bh, link string, port int, err error) {
+	return c.dependencyState(db, aID, bID, true)
+}
+func (c *wgPairCoordinator) dependencyState(db *gorm.DB, aID, bID string, online bool) (a, b database.NodePool, ah, bh, link string, port int, err error) {
 	err = ErrWGUnavailable
 	if aID == bID || db.First(&a, "uuid = ?", aID).Error != nil || db.First(&b, "uuid = ?", bID).Error != nil || !wgNodeEligible(a, "entry") || !wgNodeEligible(b, "landing") || a.InstallID == b.InstallID || a.IPV4 == b.IPV4 {
 		return
 	}
-	ah, err = c.identity(db, a)
+	ah, err = c.identityState(db, a, online)
 	if err != nil {
 		return
 	}
-	bh, err = c.identity(db, b)
+	bh, err = c.identityState(db, b, online)
 	if err != nil {
 		return
 	}
@@ -190,20 +199,28 @@ func (c *wgPairCoordinator) dependencies(db *gorm.DB, aID, bID string) (a, b dat
 	return
 }
 func (c *wgPairCoordinator) valid(p database.WGPair) bool {
-	a, b, ah, bh, link, port, e := c.dependencies(c.database(), p.EntryUUID, p.PeerUUID)
+	return c.validState(p, true)
+}
+func (c *wgPairCoordinator) validState(p database.WGPair, online bool) bool {
+	var owners int64
+	if c.database().Model(&database.WGPairNode{}).Where("pair_id = ? AND node_uuid IN ?", p.ID, []string{p.EntryUUID, p.PeerUUID}).Count(&owners).Error != nil || owners != 2 {
+		return false
+	}
+	a, b, ah, bh, link, port, e := c.dependencyState(c.database(), p.EntryUUID, p.PeerUUID, online)
 	source, entryPort, sourceErr := wgReality(a)
 	return p.TopologyVersion == 2 && sourceErr == nil && entryPort == p.EntryPort && wgHash(source) == p.LinkHash && e == nil && a.InstallID == p.EntryInstallID && b.InstallID == p.PeerInstallID && a.IPV4 == p.EntryIP && b.IPV4 == p.PeerIP && ah == p.EntryIdentityHash && bh == p.PeerIdentityHash && wgHash(link) == p.TargetLinkHash && port == p.TargetPort
 }
 func SaveWGPair(ctx context.Context, r WGPairPush) (WGPairDTO, error) {
-	unlock := WGAcquireNodeLocks(r.UUID, r.PeerUUID)
-	defer unlock()
 	return wgDefault.save(ctx, r)
 }
 func (c *wgPairCoordinator) save(ctx context.Context, r WGPairPush) (WGPairDTO, error) {
+	unlock := WGAcquireNodeLocks(r.UUID, r.PeerUUID)
+	defer unlock()
 	if c.database() == nil || r.UUID == "" || len(r.UUID) > 36 || r.Revision < 1 || r.Revision > 1<<63-1 {
 		return WGPairDTO{}, ErrWGConflict
 	}
 	var p database.WGPair
+	changed := false
 	err := c.database().WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		e := tx.First(&p, "entry_uuid = ?", r.UUID).Error
 		exists := e == nil
@@ -234,6 +251,7 @@ func (c *wgPairCoordinator) save(ctx context.Context, r WGPairPush) (WGPairDTO, 
 				p.NextRetryAt = time.Time{}
 				p.RetryCount = 0
 				p.Error = ""
+				changed = true
 				return tx.Save(&p).Error
 			}
 		} else if !r.Enabled || r.Revision != 1 {
@@ -290,6 +308,7 @@ func (c *wgPairCoordinator) save(ctx context.Context, r WGPairPush) (WGPairDTO, 
 		p.RetryCount = 0
 		p.NextRetryAt = time.Time{}
 		p.HealthCheckedAt = time.Time{}
+		p.RecoveryDeadline = time.Time{}
 		p.EntryPublicKey = ""
 		p.RealityDigest = ""
 		p.SSDigest = ""
@@ -300,19 +319,23 @@ func (c *wgPairCoordinator) save(ctx context.Context, r WGPairPush) (WGPairDTO, 
 		if e = tx.Create(&database.WGPairNode{NodeUUID: b.UUID, PairID: p.ID}).Error; e != nil {
 			return ErrWGConflict
 		}
+		changed = true
 		return tx.Save(&p).Error
 	})
-	if err == nil && p.Status != "active" {
+	if err == nil && changed {
 		delete(c.confirmed, p.ID)
+		if cancel := c.inflight[p.ID]; cancel != nil {
+			cancel()
+		}
 	}
 	return wgDTO(p), err
 }
 func WGPairOptions(id string) (WGPairOptionsDTO, error) {
-	unlock := WGAcquireNodeLocks(id)
-	defer unlock()
 	return wgDefault.options(id)
 }
 func (c *wgPairCoordinator) options(id string) (WGPairOptionsDTO, error) {
+	unlock := WGAcquireNodeLocks()
+	defer unlock()
 	out := WGPairOptionsDTO{Peers: []WGPeerDTO{}}
 	db := c.database()
 	if db == nil {
@@ -400,6 +423,9 @@ type wgRouteRequest struct {
 }
 
 func (c *wgPairCoordinator) request(ctx context.Context, p database.WGPair, entry bool, action string, payload interface{}) (json.RawMessage, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	id := p.PeerInstallID
 	if entry {
 		id = p.EntryInstallID
@@ -420,6 +446,9 @@ func (c *wgPairCoordinator) request(ctx context.Context, p database.WGPair, entr
 	raw, err := c.send(cmdCtx, id, action, payload)
 	if err != nil {
 		return nil, ErrWGUnavailable
+	}
+	if err := cmdCtx.Err(); err != nil {
+		return nil, err
 	}
 	return raw, nil
 }
@@ -496,7 +525,7 @@ func (c *wgPairCoordinator) command(ctx context.Context, p database.WGPair, entr
 			return s, ErrWGUnavailable
 		}
 	case "wg-v2-route", "wg-v2-status":
-		if s.Phase != "active" || !s.RouteActive || !s.TargetTCPVerified || s.ProxyListening {
+		if s.Phase != "active" || !s.RouteActive || !s.TargetTCPVerified || s.ProxyListening || p.RealityDigest == "" || s.SourceDigest != p.RealityDigest {
 			return s, ErrWGUnavailable
 		}
 	case "wg-status":
@@ -508,9 +537,16 @@ func (c *wgPairCoordinator) command(ctx context.Context, p database.WGPair, entr
 	}
 	return s, nil
 }
-func (c *wgPairCoordinator) persist(p *database.WGPair) error { return c.database().Save(p).Error }
-func (c *wgPairCoordinator) fail(p *database.WGPair) error {
-	delete(c.confirmed, p.ID)
+
+const (
+	wgStepTimeout    = 20 * time.Second
+	wgRecoveryWindow = 30 * time.Second
+	wgHealthInterval = 10 * time.Second
+	wgWorkerCount    = 8
+)
+
+// failWG changes only a work snapshot; persistence requires the revision fence.
+func failWG(p *database.WGPair) {
 	p.Status = "cleanup_pending"
 	p.Phase = "remove_a"
 	if p.TopologyVersion == 2 {
@@ -519,10 +555,12 @@ func (c *wgPairCoordinator) fail(p *database.WGPair) error {
 	p.RestoreDirect = false
 	p.Error = "WireGuard operation or dependency failed; cleanup required"
 	p.NextRetryAt = time.Time{}
+	p.RecoveryDeadline = time.Time{}
 	p.RetryCount = 0
-	return c.persist(p)
 }
-func (c *wgPairCoordinator) cleanup(ctx context.Context, p *database.WGPair) error {
+
+// advanceCleanup issues one command and mutates only its private snapshot.
+func (c *wgPairCoordinator) advanceCleanup(ctx context.Context, p *database.WGPair) {
 	entry, action := true, "wg-remove"
 	switch p.Phase {
 	case "block_a":
@@ -532,92 +570,80 @@ func (c *wgPairCoordinator) cleanup(ctx context.Context, p *database.WGPair) err
 		entry = false
 	case "direct_a":
 		if p.TopologyVersion != 2 || !p.RestoreDirect {
-			return c.fail(p)
+			failWG(p)
+			return
 		}
 		action = "wg-v2-direct"
 	default:
-		return c.fail(p)
+		failWG(p)
+		return
 	}
 	if _, err := c.command(ctx, *p, entry, action); err != nil {
 		p.RetryCount++
 		p.NextRetryAt = c.now().Add(time.Second << min(p.RetryCount, 6))
 		p.Error = "cleanup pending; authenticated agent acknowledgement required"
-		return c.persist(p)
+		return
 	}
 	p.RetryCount = 0
 	p.NextRetryAt = time.Time{}
 	switch p.Phase {
 	case "block_a":
 		p.Phase = "remove_a"
-		return c.persist(p)
+		return
 	case "remove_a":
 		p.Phase = "remove_b"
-		return c.persist(p)
+		return
 	case "remove_b":
 		if p.TopologyVersion == 2 && p.RestoreDirect {
 			p.Phase = "direct_a"
-			return c.persist(p)
+			return
 		}
 	}
-	return c.database().Transaction(func(tx *gorm.DB) error {
-		p.Status = "disabled"
-		p.Phase = "disabled"
-		p.Enabled = false
-		p.RealityLink = ""
-		if p.TopologyVersion == 2 && !p.RestoreDirect {
-			p.Phase = "blocked"
-			p.Error = "REALITY remains blocked; explicitly disable to restore direct routing"
-		} else {
-			p.Error = ""
-		}
-		if err := tx.Save(p).Error; err != nil {
-			return err
-		}
-		// Keep node mutations fenced while a fail-closed guard remains installed.
-		if p.TopologyVersion == 2 && !p.RestoreDirect {
-			return nil
-		}
-		return tx.Where("pair_id = ?", p.ID).Delete(&database.WGPairNode{}).Error
-	})
+	p.Status = "disabled"
+	p.Phase = "disabled"
+	p.Enabled = false
+	p.RealityLink = ""
+	if p.TopologyVersion == 2 && !p.RestoreDirect {
+		p.Phase = "blocked"
+		p.Error = "REALITY remains blocked; explicitly disable to restore direct routing"
+	} else {
+		p.Error = ""
+	}
 }
 
-// step performs at most two bounded commands, persisting
-// the next stage before returning. No command runs inside a database transaction.
-func (c *wgPairCoordinator) step(ctx context.Context, id string) error {
-	var p database.WGPair
-	if e := c.database().First(&p, "id = ?", id).Error; e != nil {
-		return e
+// checkActive verifies the landing first and renews A only after its dependencies
+// pass. It never sends activation, direct-routing, or configuration commands.
+func (c *wgPairCoordinator) checkActive(ctx context.Context, p database.WGPair) error {
+	if p.DesiredRevision == 0 || p.AppliedRevision != p.DesiredRevision || p.RealityDigest == "" {
+		return ErrWGUnavailable
 	}
-	if p.Status == "disabled" || c.now().Before(p.NextRetryAt) {
-		return nil
+	secret, err := c.canonicalSS(ctx, p)
+	if err != nil || p.SSDigest == "" || secret.Digest != p.SSDigest {
+		return ErrWGUnavailable
 	}
+	landing, err := c.command(ctx, p, false, "wg-verify")
+	if err != nil || p.PeerPublicKey == "" || landing.PublicKey != p.PeerPublicKey {
+		return ErrWGUnavailable
+	}
+	_, err = c.command(ctx, p, true, "wg-v2-status")
+	return err
+}
+
+func (c *wgPairCoordinator) advance(ctx context.Context, p *database.WGPair) {
 	if p.Status == "cleanup_pending" {
-		return c.cleanup(ctx, &p)
+		c.advanceCleanup(ctx, p)
+		return
 	}
-	if p.TopologyVersion != 2 || !p.Enabled || !c.valid(p) {
-		return c.fail(&p)
-	}
-	if p.Status == "active" {
-		delete(c.confirmed, p.ID)
-		secret, e := c.canonicalSS(ctx, p)
-		if e != nil || secret.Digest != p.SSDigest {
-			return c.fail(&p)
+	if p.Status == "active" || p.Status == "recovering" {
+		if err := c.checkActive(ctx, *p); err != nil {
+			failWG(p)
+			return
 		}
-		if _, e := c.command(ctx, p, true, "wg-v2-status"); e != nil {
-			return c.fail(&p)
-		}
-		if _, e := c.command(ctx, p, false, "wg-status"); e != nil {
-			return c.fail(&p)
-		}
-		if !c.valid(p) {
-			return c.fail(&p)
-		}
+		p.Status, p.Phase, p.Error = "active", "active", ""
 		p.HealthCheckedAt = c.now()
-		if e := c.persist(&p); e != nil {
-			return c.fail(&p)
-		}
-		c.confirmed[p.ID] = p.DesiredRevision
-		return nil
+		p.RecoveryDeadline = time.Time{}
+		p.NextRetryAt = time.Time{}
+		return
 	}
 	stages := map[string]struct {
 		entry        bool
@@ -630,70 +656,182 @@ func (c *wgPairCoordinator) step(ctx context.Context, id string) error {
 	}
 	stage, ok := stages[p.Phase]
 	if !ok {
-		return c.fail(&p)
+		failWG(p)
+		return
 	}
 	if p.Phase == "prepare_a" {
-		secret, e := c.canonicalSS(ctx, p)
-		if e != nil {
-			return c.fail(&p)
+		secret, err := c.canonicalSS(ctx, *p)
+		if err != nil {
+			failWG(p)
+			return
 		}
 		p.SSDigest = secret.Digest
 	}
-	s, e := c.command(ctx, p, stage.entry, stage.action)
-	if e != nil {
-		return c.fail(&p)
-	}
-	if !c.valid(p) {
-		return c.fail(&p)
+	result, err := c.command(ctx, *p, stage.entry, stage.action)
+	if err != nil {
+		failWG(p)
+		return
 	}
 	if stage.action == "wg-v2-guard" {
-		if s.SourceDigest == "" {
-			return c.fail(&p)
+		if result.SourceDigest == "" {
+			failWG(p)
+			return
 		}
-		p.RealityDigest = s.SourceDigest
+		p.RealityDigest = result.SourceDigest
 	}
 	if stage.action == "wg-prepare" {
 		if stage.entry {
-			p.EntryPublicKey = s.PublicKey
+			p.EntryPublicKey = result.PublicKey
 		} else {
-			p.PeerPublicKey = s.PublicKey
+			p.PeerPublicKey = result.PublicKey
 			if p.PeerPublicKey == p.EntryPublicKey {
-				return c.fail(&p)
+				failWG(p)
+				return
 			}
 		}
 	}
-	p.Phase = stage.next
-	p.Status = "pending"
+	p.Phase, p.Status = stage.next, "pending"
 	if p.Phase == "active" {
 		p.Status = "active"
 		p.AppliedRevision = p.DesiredRevision
 		p.HealthCheckedAt = c.now()
 	}
-	if e = c.persist(&p); e != nil {
-		return c.fail(&p)
+}
+
+// step snapshots under the node lock, runs all remote I/O outside it, and then
+// commits only if the user's intent and coordinator generation still match.
+func (c *wgPairCoordinator) step(parent context.Context, id string) error {
+	if err := parent.Err(); err != nil {
+		return err
 	}
-	if p.Status == "active" {
-		c.confirmed[p.ID] = p.DesiredRevision
+	wgNodeMu.Lock()
+	if c.inflight[id] != nil {
+		wgNodeMu.Unlock()
+		return nil
+	}
+	db := c.database()
+	var before database.WGPair
+	if db == nil {
+		wgNodeMu.Unlock()
+		return ErrWGUnavailable
+	}
+	if err := db.WithContext(parent).First(&before, "id = ?", id).Error; err != nil {
+		wgNodeMu.Unlock()
+		return err
+	}
+	if before.Status == "disabled" || c.now().Before(before.NextRetryAt) {
+		wgNodeMu.Unlock()
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(parent, wgStepTimeout)
+	if c.inflight == nil {
+		c.inflight = make(map[string]context.CancelFunc)
+	}
+	c.inflight[id] = cancel
+	generation := c.generation
+	next := before
+	skipRemote := false
+	if next.Status != "cleanup_pending" {
+		if next.TopologyVersion != 2 || !next.Enabled || next.RestoreDirect || !c.validState(next, false) {
+			failWG(&next)
+			skipRemote = true
+		} else if next.Status == "recovering" && (next.RecoveryDeadline.IsZero() || !c.now().Before(next.RecoveryDeadline)) {
+			failWG(&next)
+			skipRemote = true
+		} else if !c.valid(next) {
+			if next.Status == "recovering" {
+				next.NextRetryAt = c.now().Add(time.Second)
+				next.Error = "waiting for authenticated agents after panel restart"
+			} else {
+				failWG(&next)
+			}
+			skipRemote = true
+		}
+	}
+	wgNodeMu.Unlock()
+	defer func() { cancel(); wgNodeMu.Lock(); delete(c.inflight, id); wgNodeMu.Unlock() }()
+	if !skipRemote {
+		c.advance(ctx, &next)
+	}
+	wgNodeMu.Lock()
+	defer wgNodeMu.Unlock()
+	if err := parent.Err(); err != nil {
+		return err
+	}
+	if generation != c.generation || db != c.database() {
+		return ErrWGConflict
+	}
+	var current database.WGPair
+	if err := db.First(&current, "id = ?", id).Error; err != nil {
+		return err
+	}
+	if current.DesiredRevision != before.DesiredRevision || current.Status != before.Status || current.Phase != before.Phase || current.Enabled != before.Enabled || current.RestoreDirect != before.RestoreDirect || !current.UpdatedAt.Equal(before.UpdatedAt) {
+		return ErrWGConflict
+	}
+	// Revocation or protocol drift during the remote command invalidates success.
+	if next.Status == "active" || next.Status == "pending" {
+		if ctx.Err() != nil || !c.valid(next) {
+			failWG(&next)
+		}
+	}
+	if before.Status == "recovering" && next.Status == "active" && !c.now().Before(before.RecoveryDeadline) {
+		failWG(&next)
+	}
+	// Shutdown can arrive during dependency checks, after the earlier fence.
+	// It must not turn a cancelled worker into a persisted failure transition.
+	if err := parent.Err(); err != nil {
+		return err
+	}
+	err := db.WithContext(parent).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Save(&next).Error; err != nil {
+			return err
+		}
+		if next.Status == "disabled" && (next.TopologyVersion != 2 || next.RestoreDirect) {
+			return tx.Where("pair_id = ?", id).Delete(&database.WGPairNode{}).Error
+		}
+		return nil
+	})
+	if err != nil {
+		delete(c.confirmed, id)
+		return err
+	}
+	if next.Status == "active" {
+		if c.confirmed == nil {
+			c.confirmed = make(map[string]uint64)
+		}
+		c.confirmed[id] = next.DesiredRevision
+	} else {
+		delete(c.confirmed, id)
 	}
 	return nil
 }
+
 func (c *wgPairCoordinator) recover() error {
-	c.confirmed = map[string]uint64{}
-	// A crash can occur after an agent acted but before its acknowledgement was
-	// persisted. Never infer success or reopen a listener from saved stage alone.
+	wgNodeMu.Lock()
+	defer wgNodeMu.Unlock()
+	c.generation++
+	for _, cancel := range c.inflight {
+		cancel()
+	}
+	c.confirmed = make(map[string]uint64)
 	return c.database().Transaction(func(tx *gorm.DB) error {
-		for _, version := range []bool{false, true} {
-			phase := "remove_a"
-			if version {
-				phase = "block_a"
-			}
+		// Only fully acknowledged v2 pairs are candidates for a live status check.
+		// Recovery never replays an activation command or trusts persisted active.
+		if err := tx.Model(&database.WGPair{}).Where("topology_version = ? AND status = ? AND enabled = ? AND restore_direct = ? AND applied_revision = desired_revision AND reality_digest <> '' AND ss_digest <> '' AND peer_public_key <> ''", 2, "active", true, false).
+			Updates(map[string]interface{}{"status": "recovering", "phase": "verify_active", "recovery_deadline": c.now().Add(wgRecoveryWindow), "health_checked_at": time.Time{}, "next_retry_at": time.Time{}, "error": "verifying active agents after panel restart"}).Error; err != nil {
+			return err
+		}
+		// Do not extend an already-persisted recovery deadline on repeated restarts.
+		for _, v2 := range []bool{false, true} {
 			query := tx.Model(&database.WGPair{}).Where("status NOT IN ?", []string{"disabled", "cleanup_pending"})
-			if version {
-				query = query.Where("topology_version = ?", 2)
+			phase := "remove_a"
+			if v2 {
+				phase = "block_a"
+				query = query.Where("topology_version = ? AND status <> ?", 2, "recovering")
 			} else {
 				query = query.Where("topology_version <> ? OR topology_version IS NULL", 2)
 			}
-			if err := query.Updates(map[string]interface{}{"status": "cleanup_pending", "phase": phase, "restore_direct": false, "error": "coordinator restarted; cleanup required", "next_retry_at": time.Time{}}).Error; err != nil {
+			if err := query.Updates(map[string]interface{}{"status": "cleanup_pending", "phase": phase, "restore_direct": false, "error": "coordinator restarted during an incomplete operation; cleanup required", "next_retry_at": time.Time{}}).Error; err != nil {
 				return err
 			}
 		}
@@ -703,38 +841,65 @@ func (c *wgPairCoordinator) recover() error {
 
 var wgReconcilerMu sync.Mutex
 
-// StartWGPairReconciler blocks until cancellation; launch once from server startup.
-// On every process start all interrupted/active pairs are conservatively removed.
+// StartWGPairReconciler runs a bounded dispatcher. Slow/offline pairs occupy only
+// their own worker; there is no network I/O under the global node lock.
 func StartWGPairReconciler(ctx context.Context) {
 	wgReconcilerMu.Lock()
 	defer wgReconcilerMu.Unlock()
 	if ctx.Err() != nil || wgDefault.database() == nil {
 		return
 	}
-	unlock := WGAcquireNodeLocks()
-	e := wgDefault.recover()
-	unlock()
-	if e != nil {
+	if err := wgDefault.recover(); err != nil {
 		return
 	}
-	ticker := time.NewTicker(time.Second)
+	wgDefault.run(ctx, time.Second, wgWorkerCount)
+}
+
+func (c *wgPairCoordinator) run(ctx context.Context, interval time.Duration, workers int) {
+	if workers < 1 {
+		workers = 1
+	}
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
-	for {
-		var pairs []database.WGPair
-		if wgDefault.database().Where("status <> ? AND (next_retry_at <= ? OR next_retry_at IS NULL)", "disabled", time.Now()).Order("updated_at ASC, id").Limit(64).Find(&pairs).Error == nil {
-			for _, p := range pairs {
-				if ctx.Err() != nil {
-					return
-				}
-				unlock = WGAcquireNodeLocks(p.EntryUUID, p.PeerUUID)
-				_ = wgDefault.step(ctx, p.ID)
-				unlock()
-			}
+	running := make(map[string]bool)
+	done := make(chan string, workers)
+	var group sync.WaitGroup
+	defer group.Wait()
+	dispatch := func() {
+		capacity := workers - len(running)
+		if capacity == 0 || ctx.Err() != nil {
+			return
 		}
+		ids := make([]string, 0, len(running))
+		for id := range running {
+			ids = append(ids, id)
+		}
+		var pairs []database.WGPair
+		query := c.database().WithContext(ctx).Where("status <> ? AND (next_retry_at <= ? OR next_retry_at IS NULL)", "disabled", c.now()).
+			Where("status <> ? OR health_checked_at <= ? OR health_checked_at IS NULL", "active", c.now().Add(-wgHealthInterval))
+		if len(ids) > 0 {
+			query = query.Where("id NOT IN ?", ids)
+		}
+		// Oldest due work first; active checks are cooled down after successful renewal.
+		if query.Order("updated_at ASC, id").Limit(capacity).Find(&pairs).Error != nil {
+			return
+		}
+		for _, p := range pairs {
+			id := p.ID
+			running[id] = true
+			group.Add(1)
+			go func() { defer group.Done(); _ = c.step(ctx, id); done <- id }()
+		}
+	}
+	dispatch()
+	for {
 		select {
 		case <-ctx.Done():
 			return
+		case id := <-done:
+			delete(running, id)
 		case <-ticker.C:
+			dispatch()
 		}
 	}
 }
@@ -742,11 +907,11 @@ func StartWGPairReconciler(ctx context.Context) {
 // wgSubscriptionLinks never publishes a persisted-only claim of activation.
 // Dependency checks run on each request, independently of reconciler cadence.
 func wgSubscriptionLinks(routingType int) []string {
-	unlock := WGAcquireNodeLocks()
-	defer unlock()
 	return wgDefault.subscriptionLinks(routingType)
 }
 func (c *wgPairCoordinator) subscriptionLinks(routingType int) []string {
+	unlock := WGAcquireNodeLocks()
+	defer unlock()
 	if routingType != 0 && routingType != 1 || c.database() == nil {
 		return nil
 	}
@@ -769,11 +934,11 @@ func (c *wgPairCoordinator) subscriptionLinks(routingType int) []string {
 // WGRealitySubscriptionAllowed fences ordinary REALITY publication whenever a
 // pair owns A. Active v2 links are emitted once by subscriptionLinks instead.
 func WGRealitySubscriptionAllowed(id string) bool {
-	unlock := WGAcquireNodeLocks(id)
-	defer unlock()
 	return wgDefault.realitySubscriptionAllowed(id)
 }
 func (c *wgPairCoordinator) realitySubscriptionAllowed(id string) bool {
+	unlock := WGAcquireNodeLocks()
+	defer unlock()
 	if c.database() == nil {
 		return false
 	}

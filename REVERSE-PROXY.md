@@ -81,7 +81,7 @@ NGINX 的 HTTP 端口只重定向到 HTTPS。面板宿主机映射继续保留 `
 
 若出现 `HTTPS required`，检查运行版本、可信代理地址和 NGINX 的 `X-Forwarded-Proto $scheme`。若是来源拒绝，检查 Host 是否保留，以及是否通过同一 HTTPS 域名打开页面。若 Agent 连接失败，检查有效证书、外部 HTTPS/WSS 地址和 WebSocket Upgrade 配置。
 
-更改配置前应了解：当前 Agent WG 的进程重启恢复策略会触发配对清理；已有运行中的配对请安排维护时间。可信代理修复没有改变该策略。
+更改配置前请安排维护时间。面板短暂重启后，已完整应用的 v2 配对会等待双端认证重连并核验，最长 30 秒；核验通过后才恢复订阅。未完成的部署、Agent 重启或租约过期、授权和配置变化、核验超时仍会触发阻断清理，不保证零中断。详见 [恢复机制](WG-AGENT-INTEGRATION.md#调度与面板重启恢复)。
 
 本机 SSH 转发 HTTP 仍可用于页面管理，但不能替代远端 Agent 的有效 HTTPS/WSS 连接。未配置代理、代理未声明 HTTPS、含多个 scheme 的转发头，均不会被当作 HTTPS。
 

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 )
 
 type wgFake struct {
+	mu             sync.Mutex
 	db             *gorm.DB
 	calls          []string
 	states         map[string]wgrelay.Status
@@ -31,8 +33,10 @@ type wgFake struct {
 	secretRequests []wgRouteRequest
 }
 
-func (f *wgFake) ready(id string) bool { return !f.offline[id] }
+func (f *wgFake) ready(id string) bool { f.mu.Lock(); defer f.mu.Unlock(); return !f.offline[id] }
 func (f *wgFake) send(ctx context.Context, id, action string, v interface{}) (json.RawMessage, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	if _, ok := ctx.Deadline(); !ok {
 		return nil, errors.New("unbounded command")
 	}
@@ -283,7 +287,7 @@ func TestWGPairFailureAtEveryStageAndCleanup(t *testing.T) {
 func TestWGPairCleanupOfflineRetryAndRestart(t *testing.T) {
 	c, f := newWGTest(t)
 	p := createWG(t, c)
-	wgSteps(t, c, p.ID, 8)
+	wgSteps(t, c, p.ID, 7)
 	if e := c.recover(); e != nil {
 		t.Fatal(e)
 	}
@@ -322,7 +326,7 @@ func TestWGPairCleanupOfflineRetryAndRestart(t *testing.T) {
 	}
 }
 func TestWGPairRestartEveryStage(t *testing.T) {
-	for stage := 0; stage <= 8; stage++ {
+	for stage := 0; stage < 8; stage++ {
 		t.Run(fmt.Sprint(stage), func(t *testing.T) {
 			c, _ := newWGTest(t)
 			p := createWG(t, c)
@@ -578,7 +582,7 @@ func TestWGPairV2ActiveHealthAndSourceDrift(t *testing.T) {
 			wgSteps(t, c, p.ID, 8)
 			before := len(f.calls)
 			wgSteps(t, c, p.ID, 1)
-			if fmt.Sprint(f.calls[before:]) != "[bbbbbbbbbbbb:wg-v2-ss aaaaaaaaaaaa:wg-v2-status bbbbbbbbbbbb:wg-status]" {
+			if fmt.Sprint(f.calls[before:]) != "[bbbbbbbbbbbb:wg-v2-ss bbbbbbbbbbbb:wg-verify aaaaaaaaaaaa:wg-v2-status]" {
 				t.Fatal(f.calls[before:])
 			}
 			switch change {

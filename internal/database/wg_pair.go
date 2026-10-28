@@ -36,6 +36,7 @@ type WGPair struct {
 	RetryCount        uint
 	NextRetryAt       time.Time
 	HealthCheckedAt   time.Time
+	RecoveryDeadline  time.Time `json:"-"`
 	EntryPublicKey    string
 	PeerPublicKey     string
 	DesiredRevision   uint64

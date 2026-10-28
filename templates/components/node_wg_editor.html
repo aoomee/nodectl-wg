@@ -161,8 +161,11 @@ function renderNodeWGCard() {
     select.value = nodeWGEditor.peer || ''; syncPeerVisibility();
     select.onchange = () => { nodeWGEditor.peer = select.value; };
     const blocked = p?.topology_version === 2 && !p.enabled && !p.restore_direct;
+    const stateLabel = p?.status === 'recovering'
+        ? '面板重启后正在核验双端连接，核验通过后恢复订阅；失败会保持阻断'
+        : `${p?.status} / ${p?.phase}`;
     card.querySelector('#nodeWGStatus').textContent = nodeWGEditor.error || (p
-        ? `状态：${p.status} / ${p.phase} · 修订 ${p.revision}${blocked ? ' · REALITY 仍被阻断；需明确恢复直连' : ''}${p.error ? ' · '+p.error : ''}${nodeWGBlocksOrdinary() ? ' · 普通配置已锁定，变更前须先停用清理' : ''}`
+        ? `状态：${stateLabel} · 修订 ${p.revision}${blocked ? ' · REALITY 仍被阻断；需明确恢复直连' : ''}${p.error && p.status !== 'recovering' ? ' · '+p.error : ''}${nodeWGBlocksOrdinary() ? ' · 普通配置已锁定，变更前须先停用清理' : ''}`
         : (nodeWGEditor.ready ? '入口就绪；选择出站后使用推送配置' : '等待入口 REALITY / Agent 就绪'));
     const cleanup = card.querySelector('#nodeWGCleanup'); cleanup.hidden = !nodeWGBlocksOrdinary(); cleanup.disabled = nodeWGEditor.busy;
     card.querySelector('#nodeWGCleanupRow').hidden = cleanup.hidden;

@@ -19,6 +19,7 @@ import (
 
 	"nodectl/internal/database"
 	"nodectl/internal/logger"
+	"nodectl/internal/requestmeta"
 
 	"github.com/go-acme/lego/v4/certcrypto"
 	"github.com/go-acme/lego/v4/certificate"
@@ -173,13 +174,7 @@ func buildCertInfoFromX509(x509Cert *x509.Certificate) CertInfo {
 
 // CheckRequestSecure 检查请求是否安全 (HTTPS)
 func CheckRequestSecure(r *http.Request) bool {
-	if r.TLS != nil {
-		return true
-	}
-	if r.Header.Get("X-Forwarded-Proto") == "https" {
-		return true
-	}
-	return false
+	return requestmeta.IsSecure(r)
 }
 
 // HasValidLocalCertificate 检查本地证书文件是否存在且有效（未过期）

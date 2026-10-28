@@ -32,7 +32,7 @@ Releases 中的 `.tar.gz` 为可 `docker load` 的离线镜像包；`v0.1.0-wg` 
 docker compose -f compose.wg.yaml -f compose.build.yaml up -d --build
 ```
 
-默认绑定 `127.0.0.1:7878`，通过自己的 HTTPS 反代或 SSH 转发访问。面板 HTTP 上游地址为 `http://127.0.0.1:7878`；反代需保留原始 Host，并支持原项目的 WebSocket。这个包不会生成自签证书。
+默认绑定 `127.0.0.1:7878`，通过自己的 HTTPS 反代或 SSH 转发访问。面板 HTTP 上游地址为 `http://127.0.0.1:7878`；反代需保留原始 Host、支持 WebSocket，并配置面板的可信代理 IP，见 [NGINX 反代说明](REVERSE-PROXY.md)。这个包不会生成自签证书。SSH 本地转发适用于页面管理和旧 SSH 部署流程；新版 Agent 授权仍要求对外 HTTPS/WSS。
 
 首次安装沿用 NodeCtl 的 `admin / admin`，请先修改密码，再开放访问。输入 VPS 密码时使用 HTTPS 或可信的 SSH 本地转发。
 

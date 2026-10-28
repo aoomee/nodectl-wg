@@ -16,6 +16,8 @@ services:
     image: ghcr.io/aoomee/nodectl-wg:latest
     restart: unless-stopped
     init: true
+    environment:
+      NODECTL_TRUSTED_PROXIES: "" # 按下方反代说明填写实际代理 IP
     ports:
       - "127.0.0.1:7878:8080"
     volumes:
@@ -33,7 +35,9 @@ docker compose pull
 docker compose up -d
 ```
 
-容器默认只绑定 **`127.0.0.1:7878`**，给同机 NGINX 的 HTTP 上游填写 `http://127.0.0.1:7878`，通过自己的 HTTPS 域名访问。反代需保留 Host 并支持 WebSocket；不需要给面板生成自签证书。
+容器默认只绑定 **`127.0.0.1:7878`**，给同机 NGINX 的 HTTP 上游填写 `http://127.0.0.1:7878`，通过自己的 HTTPS 域名访问。配置 **`NODECTL_TRUSTED_PROXIES` 为面板实际看到的代理 IP**，并让 NGINX 覆盖转发头、保留 Host 和支持 WebSocket，机器授权与 WG 即可使用 HTTP 回源；不需要给面板生成自签证书。[完整 NGINX 配置与 Docker 代理地址说明](REVERSE-PROXY.md)。
+
+可信代理功能需要包含该修复的新版本或自行构建；旧镜像不会因为添加环境变量就自动获得支持。默认不信任任何转发头，包括来自本机或 Docker 网关的头。
 
 尚未配置域名时，可以在自己的电脑执行 SSH 转发，再访问 `http://127.0.0.1:7878`：
 

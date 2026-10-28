@@ -15,6 +15,7 @@ import (
 
 	"nodectl/internal/database"
 	"nodectl/internal/logger"
+	"nodectl/internal/requestmeta"
 
 	"nhooyr.io/websocket"
 )
@@ -61,22 +62,7 @@ func hasRecentTrafficSignal(lastLiveAt, now time.Time) bool {
 
 // getClientIP 从请求中提取真实客户端 IP（支持反向代理场景）
 func getClientIP(r *http.Request) string {
-	if ip := strings.TrimSpace(r.Header.Get("X-Real-IP")); ip != "" {
-		return ip
-	}
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		if ip := strings.TrimSpace(strings.Split(xff, ",")[0]); ip != "" {
-			return ip
-		}
-	}
-	ip := r.RemoteAddr
-	if idx := strings.LastIndex(ip, ":"); idx != -1 {
-		if bracketIdx := strings.LastIndex(ip, "]"); bracketIdx != -1 {
-			return strings.Trim(ip[:bracketIdx+1], "[]")
-		}
-		return ip[:idx]
-	}
-	return ip
+	return requestmeta.ClientIP(r)
 }
 
 // ============================================================

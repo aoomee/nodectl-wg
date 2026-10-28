@@ -176,13 +176,12 @@ func GracefulShutdown(ctx context.Context) {
 
 // ------------------- [中间件包装函数] -------------------
 
-// withSecure 仅强制 HTTPS (用于登录页、订阅链接、公开接口)
+// withSecure 保留历史路由包装；传输判断由 requestmeta 和具体接口负责。
 func withSecure(h http.HandlerFunc) http.HandlerFunc {
 	return middleware.ForceHTTPS(h)
 }
 
-// withAuthAndSecure 强制 HTTPS + 登录鉴权 (用于后台管理接口)
-// 功能：保护核心 API，必须登录且在安全协议下才能访问
+// withAuthAndSecure 保护后台登录态。需要 HTTPS 的接口另做显式传输检查。
 func withAuthAndSecure(h http.HandlerFunc) http.HandlerFunc {
 	return middleware.ForceHTTPS(middleware.Auth(h))
 }

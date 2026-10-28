@@ -14,6 +14,7 @@ import (
 
 	"nodectl/internal/database"
 	"nodectl/internal/logger"
+	"nodectl/internal/requestmeta"
 	"nodectl/internal/service"
 	"nodectl/internal/version"
 )
@@ -191,7 +192,7 @@ func apiNewInstallScript(w http.ResponseWriter, r *http.Request) {
 
 	// 获取面板 URL
 	panelURL := loadSysConfigValue("panel_url")
-	isSecure := r.TLS != nil || strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https")
+	isSecure := requestmeta.IsSecure(r)
 	panelURL = getPanelURLForScript(panelURL, r.Host, isSecure)
 
 	// 读取 BBR 优化开关

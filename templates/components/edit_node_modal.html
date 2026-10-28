@@ -1,6 +1,20 @@
 {{define "edit_node_modal.html"}}
 
 <style>
+    #editNodeModal {
+        --editor-ink: #1d2939;
+        --editor-muted: #52647c;
+        --editor-border: #dce3ec;
+        --editor-surface: #f6f8fb;
+        --editor-paper: #ffffff;
+        --editor-accent: #0066d6;
+        --editor-radius: 16px;
+        --editor-card-radius: 18px;
+        --editor-pill: 999px;
+        font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+        color: var(--editor-ink);
+    }
+
     /* ================= 统一弹窗基础框架 ================= */
     .edit-modal-overlay {
         display: none;
@@ -48,7 +62,7 @@
         flex: 1;
         align-items: center;
         border: 1px solid rgba(0, 0, 0, 0.1);
-        border-radius: 12px;
+        border-radius: var(--editor-radius);
         background: #f9f9fb;
         transition: all 0.22s ease;
         overflow: hidden;
@@ -204,10 +218,11 @@
         width: 100%;
         box-sizing: border-box;
         padding: 8px 12px;
-        font-size: 15px;
+        min-height: 40px;
+        font-size: 14px;
         font-weight: 600;
-        border: 1px solid #d1d1d6;
-        border-radius: 8px;
+        border: 1px solid var(--editor-border);
+        border-radius: var(--editor-radius);
         outline: none;
         transition: border 0.2s;
         color: #1d1d1f;
@@ -220,70 +235,36 @@
         box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.1);
     }
 
-    /* 分段控制器 */
-    .segmented-control {
+    /* 灰色底槽与白色胶囊，选中态不依赖颜色区分。 */
+    #editNodeModal .segmented-control {
         width: 100%;
         box-sizing: border-box;
-        background: #f5f5f7;
-        padding: 4px;
-        border-radius: 8px;
         display: flex;
+        padding: 5px;
         gap: 4px;
-        border: 1px solid #e5e5ea;
+        border: 0;
+        border-radius: var(--editor-pill);
+        background: #f3f3f4;
     }
-
-    .segment-option {
+    #editNodeModal .segment-option {
         flex: 1;
-        text-align: center;
+        min-width: 0;
+        min-height: 36px;
         padding: 8px 0;
-        font-size: 13px;
-        color: #666;
+        border: 0;
+        border-radius: var(--editor-pill);
+        background: transparent;
+        color: #6b6b73;
+        font: 600 13px/1.5 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+        text-align: center;
         cursor: pointer;
-        border-radius: 6px;
-        transition: all 0.2s;
-        font-weight: 600;
+        transition: background-color .15s, box-shadow .15s;
     }
-
-    .segment-option:hover {
-        color: #333;
-    }
-
-    .segment-option.active {
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        color: #fff;
-    }
-
-    .segment-option.active[data-type="1"] {
-        background: #34c759;
-    }
-
-    .segment-option.active[data-type="2"] {
-        background: #f5a623;
-    }
-
-    .segment-option.active[data-type="3"] {
-        background: #d74242;
-    }
-
-    /* IP 模式分段控制器特定颜色 (节点级) */
-    .segment-option.active[data-ipmode="0"] {
-        background: #8e8e93;
-        /* 跟随系统 */
-    }
-
-    .segment-option.active[data-ipmode="1"] {
-        background: #007aff;
-        /* 仅IPv4 */
-    }
-
-    .segment-option.active[data-ipmode="2"] {
-        background: #af52de;
-        /* 仅IPv6 */
-    }
-
-    .segment-option.active[data-ipmode="3"] {
-        background: #34c759;
-        /* 双栈 */
+    #editNodeModal .segment-option:hover { color: var(--editor-ink); }
+    #editNodeModal .segment-option.active {
+        background: var(--editor-paper);
+        color: var(--editor-ink);
+        box-shadow: 0 2px 5px rgba(20, 30, 45, .07);
     }
 
     /* IP 输入 */
@@ -294,8 +275,9 @@
         font-size: 13px;
         font-weight: 500;
         font-family: monospace;
-        border: 1px solid #d1d1d6;
-        border-radius: 8px;
+        min-height: 40px;
+        border: 1px solid var(--editor-border);
+        border-radius: var(--editor-radius);
         outline: none;
         transition: border 0.2s;
         color: #333;
@@ -397,8 +379,8 @@
 
     /* 协议卡片容器 */
     .protocol-card {
-        border: 1px solid #e5e5ea;
-        border-radius: 10px;
+        border: 1px solid var(--editor-border);
+        border-radius: var(--editor-card-radius);
         background: #fff;
         margin-bottom: 12px;
         overflow: hidden;
@@ -678,7 +660,7 @@
         width: 100%;
         box-sizing: border-box;
         border: 1px solid #e5e5ea;
-        border-radius: 8px;
+        border-radius: var(--editor-radius);
         padding: 8px 12px;
         font-family: monospace;
         font-size: 12px;
@@ -743,6 +725,46 @@
         background: #e5e5ea;
     }
 
+    #editNodeModal :is(.node-editor-button, .btn-footer-close, .btn-add-protocol-left) {
+        box-sizing: border-box;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 40px;
+        padding: 8px 12px;
+        border: 1px solid var(--editor-border);
+        border-radius: var(--editor-pill);
+        background: var(--editor-paper);
+        color: var(--editor-ink);
+        font: 600 13px/1.5 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+        cursor: pointer;
+        transition: background-color .15s, border-color .15s;
+    }
+    #editNodeModal :is(.node-editor-button, .btn-footer-close, .btn-add-protocol-left):hover:not(:disabled) {
+        background: var(--editor-surface);
+        border-color: #b4c4d8;
+    }
+    #editNodeModal .node-editor-button-primary {
+        color: white;
+        background: var(--editor-accent);
+        border-color: var(--editor-accent);
+    }
+    #editNodeModal .node-editor-button-primary:hover:not(:disabled) { background: #0055b3; border-color: #0055b3; }
+    #editNodeModal .node-editor-button-danger { color: #b42318; border-color: #e8bcb8; }
+    #editNodeModal .node-editor-button-danger:hover:not(:disabled) { background: #fff2f0; border-color: #b42318; }
+    #editNodeModal #btnPushConfig[data-confirm="true"] { background: #8a5800; border-color: #8a5800; color: white; }
+    #editNodeModal #btnResetNodeLinks[data-confirm="true"] { background: #b42318; border-color: #b42318; color: white; }
+    #editNodeModal :is(.node-editor-button, .btn-footer-close, .btn-add-protocol-left):disabled { opacity: .5; cursor: not-allowed; }
+    #editNodeModal :is(button, select, input, textarea, summary):focus-visible {
+        outline: 2px solid var(--editor-accent);
+        outline-offset: 3px;
+    }
+    #editNodeModal .btn-add-protocol-left { border-style: dashed; color: var(--editor-accent); }
+    @media (prefers-reduced-motion: reduce) {
+        #editNodeModal, #editNodeModal * { animation: none !important; transition: none !important; }
+    }
+
     /* 移动端 */
     @media (max-width: 768px) {
         .edit-left-col, .edit-right-col { box-sizing: border-box; min-width: 0; }
@@ -791,6 +813,8 @@
             padding: 8px 10px;
             font-size: 12px;
         }
+        #editNodeModal .edit-footer { flex-wrap: wrap; }
+        #editNodeModal .edit-footer .btn-footer-close { flex: 1 1 auto; padding: 8px; }
     }
 
     /* ================= 内嵌命令日志面板（右栏） ================= */
@@ -888,11 +912,11 @@
 
                     <div class="edit-section" id="editNodeIPModeSection">
                         <label class="section-label">IP 生成模式</label>
-                        <div class="segmented-control" id="editNodeIPModeControl">
-                            <div class="segment-option" data-ipmode="0" onclick="selectEditNodeIPMode(0)">跟随系统</div>
-                            <div class="segment-option" data-ipmode="1" onclick="selectEditNodeIPMode(1)">仅IPv4</div>
-                            <div class="segment-option" data-ipmode="2" onclick="selectEditNodeIPMode(2)">仅IPv6</div>
-                            <div class="segment-option" data-ipmode="3" onclick="selectEditNodeIPMode(3)">双栈</div>
+                        <div class="segmented-control" id="editNodeIPModeControl" role="group" aria-label="IP 生成模式">
+                            <button type="button" class="segment-option" data-ipmode="0" onclick="selectEditNodeIPMode(0)">跟随系统</button>
+                            <button type="button" class="segment-option" data-ipmode="1" onclick="selectEditNodeIPMode(1)">仅IPv4</button>
+                            <button type="button" class="segment-option" data-ipmode="2" onclick="selectEditNodeIPMode(2)">仅IPv6</button>
+                            <button type="button" class="segment-option" data-ipmode="3" onclick="selectEditNodeIPMode(3)">双栈</button>
                         </div>
                         <input type="hidden" id="editNodeIPMode" value="0">
                     </div>
@@ -937,7 +961,7 @@
                     </div>
 
                     <div class="edit-section" id="editNodeTrafficDetails"
-                        style="display: none; background: #fafbfc; border-radius: 8px; padding: 12px; border: 1px solid #e5e5ea; margin-bottom: 15px;">
+                        style="display: none; background: #fafbfc; border-radius: var(--editor-card-radius); padding: 12px; border: 1px solid var(--editor-border); margin-bottom: 15px;">
                         <div
                             style="font-size: 13px; font-weight: 600; color: #666; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
                             <span>流量消耗</span>
@@ -994,10 +1018,10 @@
 
                     <div class="edit-section">
                         <label class="section-label">路由类型</label>
-                        <div class="segmented-control">
-                            <div class="segment-option" data-type="1" onclick="selectEditGroup(1)">直连</div>
-                            <div class="segment-option" data-type="2" onclick="selectEditGroup(2)">落地</div>
-                            <div class="segment-option" data-type="3" onclick="selectEditGroup(3)">屏蔽</div>
+                        <div class="segmented-control" role="group" aria-label="路由类型">
+                            <button type="button" class="segment-option" data-type="1" onclick="selectEditGroup(1)">直连</button>
+                            <button type="button" class="segment-option" data-type="2" onclick="selectEditGroup(2)">落地</button>
+                            <button type="button" class="segment-option" data-type="3" onclick="selectEditGroup(3)">屏蔽</button>
                         </div>
                         <input type="hidden" id="editNodeUIState">
                     </div>
@@ -1028,7 +1052,7 @@
 
             <div class="edit-footer">
                 <button type="button" class="btn-footer-close" onclick="closeEditModal()">关闭</button>
-                <button type="button" class="btn-footer-close" id="btnResetNodeLinks" style="background:#ff3b30; color:#fff; display:flex; align-items:center; gap:5px; transition: all 0.2s;" onclick="handleResetLinksClick()" title="远程重置节点协议链接，将重写 sing-box 配置并重启服务">
+                <button type="button" class="btn-footer-close node-editor-button-danger" id="btnResetNodeLinks" onclick="handleResetLinksClick()" title="远程重置节点协议链接，将重写 sing-box 配置并重启服务">
                     <svg id="btnResetLinksIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="1 4 1 10 7 10"></polyline>
                         <polyline points="23 20 23 14 17 14"></polyline>
@@ -1036,7 +1060,7 @@
                     </svg>
                     <span id="btnResetLinksText">重置链接</span>
                 </button>
-                <button type="button" class="btn-footer-close" id="btnPushConfig" style="background:#007aff; color:#fff; display:flex; align-items:center; gap:5px; transition: all 0.2s;" onclick="handlePushConfigClick()" title="推送当前启用的协议及端口配置给 Agent，Agent 将重新配置 sing-box">
+                <button type="button" class="btn-footer-close node-editor-button-primary" id="btnPushConfig" onclick="handlePushConfigClick()" title="推送当前启用的协议及端口配置给 Agent，Agent 将重新配置 sing-box">
                     <svg id="btnPushConfigIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M22 2L11 13"></path>
                         <path d="M22 2L15 22L11 13L2 9L22 2Z"></path>
@@ -1460,8 +1484,9 @@
         const container = document.getElementById('editNodeIPModeControl');
         if (container) {
             container.querySelectorAll('.segment-option').forEach(el => {
-                el.classList.remove('active');
-                if (parseInt(el.getAttribute('data-ipmode')) === val) el.classList.add('active');
+                const selected = parseInt(el.getAttribute('data-ipmode')) === val;
+                el.classList.toggle('active', selected);
+                el.setAttribute('aria-pressed', String(selected));
             });
         }
         if (!skipSave) triggerNodeAutoSave(true);
@@ -1652,7 +1677,7 @@
         } else {
             // 第一次点击：进入确认状态
             _resetLinksInConfirm = true;
-            btn.style.background = '#cc0000';
+            btn.dataset.confirm = 'true';
             textEl.textContent = '确认重置';
             // 3秒后自动恢复
             _resetLinksConfirmTimer = setTimeout(() => {
@@ -1665,7 +1690,7 @@
         _resetLinksInConfirm = false;
         const btn = document.getElementById('btnResetNodeLinks');
         const textEl = document.getElementById('btnResetLinksText');
-        if (btn) btn.style.background = '#ff3b30';
+        if (btn) delete btn.dataset.confirm;
         if (textEl) textEl.textContent = '重置链接';
     }
 
@@ -2027,9 +2052,10 @@
 
     function selectEditGroup(val, skipSave = false) {
         document.getElementById('editNodeUIState').value = val;
-        document.querySelectorAll('.segment-option').forEach(el => {
-            el.classList.remove('active');
-            if (parseInt(el.getAttribute('data-type')) === val) el.classList.add('active');
+        document.querySelectorAll('#editNodeModal .segment-option[data-type]').forEach(el => {
+            const selected = parseInt(el.getAttribute('data-type')) === val;
+            el.classList.toggle('active', selected);
+            el.setAttribute('aria-pressed', String(selected));
         });
         if (val === 1 || val === 2) originalRoutingType = val;
         if (typeof renderNodeWGCard === 'function') renderNodeWGCard();
@@ -2106,7 +2132,7 @@
         } else {
             // 第一次点击：进入确认状态
             _pushConfigInConfirm = true;
-            btn.style.background = '#ff9500';
+            btn.dataset.confirm = 'true';
             textEl.textContent = '确定推送';
             // 3秒后自动恢复
             _pushConfigConfirmTimer = setTimeout(() => {
@@ -2119,7 +2145,7 @@
         _pushConfigInConfirm = false;
         const btn = document.getElementById('btnPushConfig');
         const textEl = document.getElementById('btnPushConfigText');
-        if (btn) btn.style.background = '#007aff';
+        if (btn) delete btn.dataset.confirm;
         if (textEl) textEl.textContent = '推送配置';
     }
 

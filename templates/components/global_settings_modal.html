@@ -1013,6 +1013,7 @@
         triggerGsAutoSave();
     }
 
+    let gsSettingsLoaded = false;
     async function openGlobalSettingsModal() {
         document.querySelectorAll('.proto-nav-card').forEach(c => c.classList.remove('active', 'mobile-expanded'));
         document.querySelectorAll('.proto-form').forEach(f => {
@@ -1037,9 +1038,12 @@
         gsModal.classList.add('active');
         document.getElementById('gsSaveIndicator').style.opacity = '0';
 
+        gsSettingsLoaded = false;
+        clearTimeout(gsAutoSaveTimer);
         try {
             const res = await fetch('/api/get-settings');
             const result = await res.json();
+            if (!res.ok || result.status !== 'success') throw new Error('设置读取失败');
             if (result.status === 'success') {
                 const d = result.data;
                 // VLESS 族
@@ -1088,8 +1092,13 @@
                 document.getElementById('gs_proxy_trojan_tls_sni').value = d.proxy_trojan_tls_sni || '';
                 // 系统优化
                 document.getElementById('gs_proxy_enable_bbr').checked = (d.proxy_enable_bbr === 'true');
+                gsSettingsLoaded = true;
             }
-        } catch (e) { console.error("加载配置失败", e); }
+        } catch (e) {
+            const indicator = document.getElementById('gsSaveIndicator');
+            indicator.textContent = '设置读取失败，请关闭后重新打开；当前未保存修改';
+            indicator.style.opacity = '1';
+        }
     }
 
     function closeGlobalSettingsModal() {
@@ -1101,12 +1110,19 @@
     function triggerGsAutoSave() {
         if (!document.getElementById('globalSettingsModal').classList.contains('active')) return;
 
+        if (!gsSettingsLoaded) {
+            const indicator = document.getElementById('gsSaveIndicator');
+            indicator.textContent = '设置尚未加载，请关闭后重新打开';
+            indicator.style.opacity = '1';
+            return;
+        }
         clearTimeout(gsAutoSaveTimer);
         const indicator = document.getElementById('gsSaveIndicator');
         indicator.innerHTML = '<span style="color:#888;">保存中...</span>';
         indicator.style.opacity = '1';
 
         gsAutoSaveTimer = setTimeout(async () => {
+            if (!gsSettingsLoaded) return;
             const tlsPath = document.querySelector('.tls-path-input')?.value || '';
             const payload = {
                 // VLESS 族
@@ -1156,12 +1172,17 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
+                const savedResult = await response.json();
+                if (!response.ok || savedResult.status !== "success") throw new Error(savedResult.message || "保存失败");
                 if (response.ok) {
                     indicator.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg> 已保存`;
                     setTimeout(() => indicator.style.opacity = '0', 2000);
                 }
             } catch (error) {
-                indicator.innerHTML = '<span style="color:#ff3b30;">保存失败</span>';
+                const failure = document.createElement("span");
+                failure.style.color = "#ff3b30";
+                failure.textContent = error.message || "保存失败";
+                indicator.replaceChildren(failure);
             }
         }, 600);
     }

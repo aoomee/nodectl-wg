@@ -720,6 +720,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ sub_custom_name: newName })
                 });
+                const savedResult = await res.json();
+                if (!res.ok || savedResult.status !== "success") throw new Error(savedResult.message || "保存失败");
                 if (res.ok) {
                     indicator.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg> 名称已保存`;
                     setTimeout(() => indicator.style.opacity = '0', 2000);
@@ -730,7 +732,10 @@
                     }
                 }
             } catch (e) {
-                indicator.innerHTML = '<span style="color:#ff3b30;">保存失败</span>';
+                const failure = document.createElement("span");
+                failure.style.color = "#ff3b30";
+                failure.textContent = e.message || "保存失败";
+                indicator.replaceChildren(failure);
             }
         }, 600);
     }

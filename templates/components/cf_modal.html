@@ -2903,10 +2903,10 @@
         }
 
         if (type === "error") {
-            indicator.innerHTML =
-                '<span style="color:#ff3b30;">' +
-                (text || "保存失败") +
-                "</span>";
+            const failure = document.createElement("span");
+            failure.style.color = "#ff3b30";
+            failure.textContent = text || "保存失败";
+            indicator.replaceChildren(failure);
             indicator.style.opacity = "1";
             setTimeout(() => {
                 indicator.style.opacity = "0";
@@ -5676,8 +5676,10 @@
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ cf_tunnel_auto_update: toggle.checked ? "true" : "false" }),
             });
-            cftShowSaveIndicator(resp.ok ? "success" : "error", resp.ok ? "已保存" : "保存失败");
-        } catch (e) { cftShowSaveIndicator("error", "保存失败"); }
+            const savedResult = await resp.json();
+            if (!resp.ok || savedResult.status !== "success") throw new Error(savedResult.message || "保存失败");
+            cftShowSaveIndicator("success", "已保存");
+        } catch (e) { cftShowSaveIndicator("error", e.message || "保存失败"); }
     }
 
     // ============== 版本图标渲染辅助函数 ==============
@@ -5831,8 +5833,10 @@
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ cf_ipopt_auto_update: toggle.checked ? "true" : "false" }),
             });
-            cftShowSaveIndicator(resp.ok ? "success" : "error", resp.ok ? "已保存" : "保存失败");
-        } catch (e) { cftShowSaveIndicator("error", "保存失败"); }
+            const savedResult = await resp.json();
+            if (!resp.ok || savedResult.status !== "success") throw new Error(savedResult.message || "保存失败");
+            cftShowSaveIndicator("success", "已保存");
+        } catch (e) { cftShowSaveIndicator("error", e.message || "保存失败"); }
     }
 
     async function cftLoadIPOptVersionStatus() {

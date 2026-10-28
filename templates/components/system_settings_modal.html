@@ -3910,10 +3910,14 @@
     }
 
     // 功能：拉取所有后端设置，并渲染到表单和证书状态 UI 中
+    let sysSettingsLoaded = false;
     async function loadAllSystemSettings() {
+        sysSettingsLoaded = false;
+        clearTimeout(sysAutoSaveTimer);
         try {
             const res = await fetch("/api/get-settings");
             const result = await res.json();
+            if (!res.ok || result.status !== "success") throw new Error("设置读取失败");
             if (result.status === "success") {
                 const data = result.data;
 
@@ -4090,9 +4094,12 @@
                         return item;
                     });
                 renderTgWhitelist();
+                sysSettingsLoaded = true;
             }
         } catch (e) {
-            console.error("加载配置失败", e);
+            const indicator = document.getElementById("sysSaveIndicator");
+            indicator.textContent = "设置读取失败，请关闭后重新打开；当前未保存修改";
+            indicator.style.opacity = "1";
         }
     }
 
@@ -4182,6 +4189,8 @@
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
             });
+            const savedResult = await res.json();
+            if (!res.ok || savedResult.status !== "success") throw new Error(savedResult.message || "保存失败");
             if (res.ok) {
                 input.dataset.original = val;
                 btn.classList.add("saved");
@@ -4756,6 +4765,12 @@
             return;
         }
 
+        if (!sysSettingsLoaded) {
+            const indicator = document.getElementById("sysSaveIndicator");
+            indicator.textContent = "设置尚未加载，请关闭后重新打开";
+            indicator.style.opacity = "1";
+            return;
+        }
         const preserveStatus = !!options.preserveStatus;
         const silentSaving = !!options.silentSaving;
 
@@ -4767,6 +4782,7 @@
         }
 
         sysAutoSaveTimer = setTimeout(async () => {
+            if (!sysSettingsLoaded) return;
             const payload = {
                 panel_url: document
                     .getElementById("sys_panel_url")
@@ -4920,6 +4936,8 @@
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(payload),
                 });
+                const savedResult = await response.json();
+                if (!response.ok || savedResult.status !== "success") throw new Error(savedResult.message || "保存失败");
                 if (response.ok) {
                     window.panelUrl = payload.panel_url;
                     if (!preserveStatus) {
@@ -4942,10 +4960,11 @@
                     }
                 }
             } catch (error) {
-                if (!preserveStatus) {
-                    indicator.innerHTML =
-                        '<span style="color:#ff3b30;">保存失败</span>';
-                }
+                const failure = document.createElement("span");
+                failure.style.color = "#ff3b30";
+                failure.textContent = error.message || "保存失败";
+                indicator.replaceChildren(failure);
+                indicator.style.opacity = "1";
             }
         }, 600);
     }

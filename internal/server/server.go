@@ -23,6 +23,7 @@ import (
 	"nodectl/internal/logger"
 	"nodectl/internal/middleware"
 	"nodectl/internal/service"
+	"nodectl/internal/webassets"
 	"nodectl/internal/wgrelay"
 )
 
@@ -263,6 +264,7 @@ func Start(tmplFS embed.FS) {
 
 	// 3. 创建路由器并注册所有路由 (只需执行一次，避免重复注册引发 panic)
 	mux := http.NewServeMux()
+	mux.HandleFunc(webassets.Prefix, withSecure(webassets.Handler))
 	registerWGRoutes(mux, wgManager)
 
 	// ========== A. 页面路由 (Page Routes) ==========

@@ -287,7 +287,6 @@ func apiChangePassword(w http.ResponseWriter, r *http.Request) {
 
 	req.OldUsername = strings.TrimSpace(req.OldUsername)
 	req.NewUsername = strings.TrimSpace(req.NewUsername)
-	req.OldPassword = strings.TrimSpace(req.OldPassword)
 
 	if req.OldPassword == "" {
 		logger.Log.Warn("修改账号/密码失败: 未输入当前密码", "ip", clientIP, "path", reqPath)
@@ -308,22 +307,23 @@ func apiChangePassword(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	wantPasswordChange := strings.TrimSpace(req.NewPassword) != "" || strings.TrimSpace(req.ConfirmPassword) != ""
+	wantPasswordChange := req.NewPassword != "" || req.ConfirmPassword != ""
 	if wantPasswordChange {
 		if req.NewPassword != req.ConfirmPassword {
 			logger.Log.Warn("修改密码失败: 两次密码不一致", "ip", clientIP, "path", reqPath)
 			sendJSON(w, "error", "两次输入的新密码不一致")
 			return
 		}
-		if len(req.NewPassword) < 5 {
-			logger.Log.Warn("修改密码失败: 密码过短", "ip", clientIP, "path", reqPath)
-			sendJSON(w, "error", "新密码长度不能小于 5 位")
+		if err := database.ValidateAdminPassword(req.NewPassword); err != nil {
+			logger.Log.Warn("修改密码失败: 密码格式不符合要求", "ip", clientIP, "path", reqPath)
+			sendJSON(w, "error", err.Error())
 			return
 		}
 	}
 
+	db := database.DB
 	var userConfig database.SysConfig
-	if err := database.DB.Where("key = ?", "admin_username").First(&userConfig).Error; err != nil {
+	if err := db.Where("key = ?", "admin_username").First(&userConfig).Error; err != nil {
 		logger.Log.Error("修改账号/密码失败: 找不到账号配置", "error", err, "ip", clientIP, "path", reqPath)
 		sendJSON(w, "error", "系统错误，找不到管理员账号")
 		return
@@ -346,7 +346,7 @@ func apiChangePassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var passConfig database.SysConfig
-	if err := database.DB.Where("key = ?", "admin_password").First(&passConfig).Error; err != nil {
+	if err := db.Where("key = ?", "admin_password").First(&passConfig).Error; err != nil {
 		logger.Log.Error("修改密码失败: 找不到密码配置", "error", err, "ip", clientIP, "path", reqPath)
 		sendJSON(w, "error", "系统错误，找不到管理员账号")
 		return
@@ -358,37 +358,56 @@ func apiChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if wantUsernameChange {
-		if err := database.DB.Model(&database.SysConfig{}).Where("key = ?", "admin_username").Update("value", req.NewUsername).Error; err != nil {
-			logger.Log.Error("更新管理员账号失败", "error", err, "ip", clientIP, "path", reqPath)
-			sendJSON(w, "error", "更新管理员账号失败，请稍后重试")
-			return
-		}
-	}
-
+	newHash := passConfig.Value
 	if wantPasswordChange {
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
 		if err != nil {
-			logger.Log.Error("新密码 Bcrypt 加密失败", "error", err, "ip", clientIP, "path", reqPath)
 			sendJSON(w, "error", "密码加密失败，请稍后重试")
 			return
 		}
-
-		if err := database.DB.Model(&database.SysConfig{}).Where("key = ?", "admin_password").Update("value", string(hashedPassword)).Error; err != nil {
-			logger.Log.Error("更新管理员密码失败", "error", err, "ip", clientIP, "path", reqPath)
-			sendJSON(w, "error", "更新管理员密码失败，请稍后重试")
-			return
-		}
+		newHash = string(hashedPassword)
 	}
-
-	// 修改密码时同时重置 JWT 密钥，强制所有设备下线
 	secureBytes := make([]byte, 32)
-	if _, err := rand.Read(secureBytes); err == nil {
-		newSecret := hex.EncodeToString(secureBytes)
-		database.DB.Model(&database.SysConfig{}).Where("key = ?", "jwt_secret").Update("value", newSecret)
-		logger.Log.Info("系统级密钥 (JWT Secret) 已重置", "ip", clientIP, "path", reqPath)
-	} else {
-		logger.Log.Error("生成新密钥失败", "error", err, "ip", clientIP, "path", reqPath)
+	if _, err := rand.Read(secureBytes); err != nil {
+		sendJSON(w, "error", "生成会话密钥失败，请稍后重试")
+		return
+	}
+	err := db.Transaction(func(tx *gorm.DB) error {
+		// Compare-and-swap fences concurrent changes authenticated with the old password.
+		result := tx.Model(&database.SysConfig{}).Where("key = ? AND value = ?", "admin_password", passConfig.Value).Update("value", newHash)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return errors.New("管理员密码已变化，请重新登录")
+		}
+		if wantUsernameChange {
+			result = tx.Model(&database.SysConfig{}).Where("key = ? AND value = ?", "admin_username", userConfig.Value).Update("value", req.NewUsername)
+			if result.Error != nil {
+				return result.Error
+			}
+			if result.RowsAffected != 1 {
+				return errors.New("管理员账号已变化，请重新登录")
+			}
+		}
+		result = tx.Model(&database.SysConfig{}).Where("key = ?", "jwt_secret").Update("value", hex.EncodeToString(secureBytes))
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return errors.New("会话密钥记录缺失")
+		}
+		return nil
+	})
+	if err != nil {
+		logger.Log.Error("更新管理员凭据失败，已回滚", "error", err, "ip", clientIP)
+		sendJSON(w, "error", "更新账号或密码失败，请刷新后重试")
+		return
+	}
+	if wantPasswordChange {
+		if err := database.RemoveInitialAdminPassword("data", passConfig.Value); err != nil {
+			logger.Log.Warn("密码已修改，但初始密码文件清理失败，请在服务器终端检查", "error", err)
+		}
 	}
 
 	logger.Log.Info("管理员账号/密码修改成功", "username_changed", wantUsernameChange, "password_changed", wantPasswordChange, "ip", clientIP, "path", reqPath)

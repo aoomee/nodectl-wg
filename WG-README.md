@@ -34,7 +34,19 @@ docker compose -f compose.wg.yaml -f compose.build.yaml up -d --build
 
 默认绑定 `127.0.0.1:7878`，通过自己的 HTTPS 反代或 SSH 转发访问。面板 HTTP 上游地址为 `http://127.0.0.1:7878`；反代需保留原始 Host、支持 WebSocket，并配置面板的可信代理 IP，见 [NGINX 反代说明](REVERSE-PROXY.md)。这个包不会生成自签证书。SSH 本地转发适用于页面管理和旧 SSH 部署流程；新版 Agent 授权仍要求对外 HTTPS/WSS。
 
-首次安装沿用 NodeCtl 的 `admin / admin`，请先修改密码，再开放访问。输入 VPS 密码时使用 HTTPS 或可信的 SSH 本地转发。
+包含本修复的版本首次安装使用账号 **`admin`**，密码自动随机生成。服务启动成功后，在面板服务器终端领取：
+
+```bash
+docker compose exec nodectl cat /app/data/initial-admin-password
+# 使用 compose.wg.yaml 时：
+# docker compose -f compose.wg.yaml exec nodectl cat /app/data/initial-admin-password
+```
+
+直接运行程序时读取工作目录下的 `data/initial-admin-password`。文件权限为 0600，密码不会打印到日志；登录后修改密码会清理对应的初始密码文件。新密码至少 12 个字符，且不超过 72 字节。
+
+已有数据卷沿用原账号密码，升级和重启不会重置；如果旧实例仍使用 `admin/admin`，请登录后修改。自动化部署可在首次启动时通过 `NODECTL_INITIAL_ADMIN_PASSWORD` 指定符合要求的密码，此时不生成密码文件；该变量对已有账号无效，不是密码重置开关。旧镜像仍按旧版行为运行。
+
+输入 VPS 密码时请使用 HTTPS 或可信的 SSH 本地转发。
 
 已有 NodeCtl：先停止旧实例，备份整个 `data/`（外置 PostgreSQL 还需备份数据库），再将原数据目录挂载到 `/app/data`。不要让新旧实例同时操作同一份数据。挂载此目录后保留原账号、节点、订阅及 WG 任务。
 

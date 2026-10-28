@@ -516,7 +516,10 @@ func InitDB() {
 	DB = db
 
 	// 调用外部模块初始化默认系统设置
-	initDefaultConfigs()
+	if err := initDefaultConfigs(); err != nil {
+		logger.Log.Error("初始化安全配置失败", "error", err)
+		panic("管理员初始化失败，请检查启动日志")
+	}
 
 	// PostgreSQL: 保障序列值与历史数据对齐（避免 duplicate key on node_traffic_stats_pkey）
 	if strings.EqualFold(cfg.Type, "postgres") {
@@ -649,7 +652,13 @@ func SwitchDatabase(cfg DBConfig) error {
 	DB = newDB
 
 	// 初始化默认系统设置到新数据库
-	initDefaultConfigs()
+	if err := initDefaultConfigs(); err != nil {
+		DB = oldDB
+		if sqlDB, closeErr := newDB.DB(); closeErr == nil {
+			_ = sqlDB.Close()
+		}
+		return fmt.Errorf("初始化新数据库安全配置失败: %w", err)
+	}
 
 	// PostgreSQL: 切换后主动对齐序列
 	if strings.EqualFold(cfg.Type, "postgres") {

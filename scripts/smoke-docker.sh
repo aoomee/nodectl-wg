@@ -8,8 +8,8 @@ trap cleanup EXIT
 cleanup
 docker run --rm --entrypoint python3 "$image" -c 'import sys,paramiko; assert sys.version_info >= (3,10); print("WG runtime:", paramiko.__version__)'
 docker run -d --init --name "$container" -p "127.0.0.1:${port}:8080" "$image" >/dev/null
-python3 - "$port" <<'PY'
-import base64,hashlib,http.cookiejar,json,re,sys,time,urllib.request,urllib.error
+python3 - "$port" "$container" <<'PY'
+import base64,hashlib,http.cookiejar,json,re,subprocess,sys,time,urllib.parse,urllib.request,urllib.error
 base='http://127.0.0.1:'+sys.argv[1]
 for _ in range(90):
     try:
@@ -20,7 +20,10 @@ for _ in range(90):
 else: raise SystemExit('Panel did not become ready')
 cookies=http.cookiejar.CookieJar()
 client=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookies))
-with client.open(base+'/login',b'username=admin&password=admin',timeout=10) as response:
+password=subprocess.check_output(['docker','exec',sys.argv[2],'cat','/app/data/initial-admin-password'],text=True).rstrip('\n')
+assert len(password)>=12 and password!='admin', 'Missing random initial password'
+login=urllib.parse.urlencode({'username':'admin','password':password}).encode()
+with client.open(base+'/login',login,timeout=10) as response:
     page=response.read().decode()
 assert any(c.name=='nodectl_token' for c in cookies), 'No authenticated session'
 assert 'wgRelayModal' in page and 'WG 中转' in page, 'WG UI absent'

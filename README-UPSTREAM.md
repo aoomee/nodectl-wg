@@ -175,7 +175,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/hobin66/nodectl/main/install
 - 数据目录位于 `/opt/nodectl/data`
 - 可执行命令 `nt` 管理服务（如 `nt start`、`nt stop`、`nt status`）
 
-部署成功后访问 `http://你的IP:8080`，使用默认账号 `admin` / `admin` 登录。
+上游原版默认账号为 `admin` / `admin`。本 fork 新版首次安装改用随机密码，领取方式见 [本项目首页](README.md)。
 
 ---
 

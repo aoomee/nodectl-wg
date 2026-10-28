@@ -39,7 +39,7 @@ jobs:
         env:
           NODECTL_TEST_NGINX: /usr/sbin/nginx
       - run: go vet ./...
-      - run: go test -race ./internal/requestmeta ./internal/service ./internal/agent/wgrelay ./internal/wgrelay ./internal/server
+      - run: go test -race ./internal/database ./internal/requestmeta ./internal/service ./internal/agent/wgrelay ./internal/wgrelay ./internal/server
         env:
           NODECTL_TEST_NGINX: /usr/sbin/nginx
       - run: python -m unittest discover -s tests -v
@@ -50,4 +50,5 @@ jobs:
           node tests/wg-ui.cjs
           node tests/traffic-calendar-ui.cjs
           node tests/browser-assets-ui.cjs
+          node tests/password-ui.cjs
       - run: bash -n scripts/smoke-docker.sh internal/wgrelay/engine/vendor/wg-multi-relay.sh

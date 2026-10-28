@@ -52,6 +52,36 @@ func identityTestDB(t *testing.T) *TrafficHub {
 	return h
 }
 
+func TestWGAgentConnectionReadiness(t *testing.T) {
+	h := identityTestDB(t)
+	secret := enrollTestAgent(t)
+	id := "aaaaaaaaaaaa"
+	if WGAgentV2Status(id) != "offline" || WGAgentV2Ready(id) {
+		t.Fatal("absent connection ready")
+	}
+	conn := &websocket.Conn{}
+	h.agentConns[id] = conn
+	if WGAgentV2Status(id) != "unauthenticated" {
+		t.Fatal("legacy connection authenticated")
+	}
+	session := agentSession{installID: id, secretHash: agentHash(secret), authenticated: true, wg: true}
+	h.agentSessions[conn] = session
+	if WGAgentV2Status(id) != "unsupported" || WGAgentV2Ready(id) {
+		t.Fatal("old Agent ready for v2")
+	}
+	session.wgV2 = true
+	h.agentSessions[conn] = session
+	if WGAgentV2Status(id) != "ready" || !WGAgentV2Ready(id) {
+		t.Fatal("authenticated v2 connection unavailable")
+	}
+	if err := database.DB.Model(&database.AgentIdentity{}).Where("node_uuid = ?", "node-a").Update("secret_hash", "").Error; err != nil {
+		t.Fatal(err)
+	}
+	if WGAgentV2Status(id) != "unauthenticated" || WGAgentV2Ready(id) {
+		t.Fatal("revoked connection ready")
+	}
+}
+
 func TestAuthenticatedAgentThroughHTTPSProxy(t *testing.T) {
 	for _, kind := range []string{"go", "nginx"} {
 		t.Run(kind, func(t *testing.T) {

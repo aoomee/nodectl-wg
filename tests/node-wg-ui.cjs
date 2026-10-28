@@ -15,8 +15,9 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
  try {
   for(const width of [1280,375,320]) {
    const page=await browser.newPage({viewport:{width,height:1000}});
-   const errors=[],requests=[],ordinary=[],saves=[],alerts=[];
+   const errors=[],requests=[],ordinary=[],saves=[],alerts=[],bindings=[];
    let pair=null,ready=true,saveFailure=false,optionFailure=false,optionDelay=0,bindDelay=0,saveDelay=0;
+   let diagnostics=false,unavailablePeer=false,enrollmentMode='none';
    let nodes=[makeNode('a'),makeNode('b',true)];
    page.on('pageerror',e=>errors.push(e.message));
    page.on('dialog',async d=>{alerts.push(d.message());await d.accept();});
@@ -27,6 +28,10 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
     if(url.pathname==='/api/node/wg/options') {
      if(optionFailure)return route.fulfill({status:503,json:{status:'error',message:'连接检查暂时失败，请刷新重试'}});
      const data={pair:url.searchParams.get('uuid')==='a'?pair:null,ready,peers:[{uuid:'b',name:'落地 B',ready:true},{uuid:'c',name:'落地 C',ready:true}]};
+     if(diagnostics) {
+      data.readiness={role:'entry',ready,enrollment_mode:enrollmentMode,checks:[{code:'node',label:'节点条件',ready:true},{code:'protocol',label:'REALITY 部署',ready:true},{code:'identity',label:'机器授权',ready:enrollmentMode==='none',detail:'机器授权已撤销，请重新授权。'},{code:'agent',label:'Agent 连接',ready,detail:'Agent 未连接；请检查服务是否运行，以及到面板的 HTTPS/WSS 连接。'}]};
+      if(unavailablePeer)data.peers[1]={uuid:'c',name:'落地 C <img src=x onerror=alert(1)>',ready:false,readiness:{checks:[{code:'protocol',label:'SS 部署',ready:false,detail:'请先启用并推送 SS，等待成功。'}]}};
+     }
      const delay=optionDelay; if(delay)await new Promise(r=>setTimeout(r,delay));
      return route.fulfill({json:{status:'success',data}});
     }
@@ -41,7 +46,7 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
      return route.fulfill({json:{status:saveFailure?'error':'success',message:saveFailure?'mock save failure':undefined}});
     }
     if(url.pathname==='/api/node/control/push-config') { ordinary.push(req.postDataJSON());return route.fulfill({json:{status:'success',command_id:'cmd-'+ordinary.length}}); }
-    if(url.pathname==='/api/node/agent/enrollment') {if(bindDelay)await new Promise(r=>setTimeout(r,bindDelay));return route.fulfill({json:{status:'success',data:{token:'SECRET-TEST-TOKEN',expires_at:'soon'}}});}
+    if(url.pathname==='/api/node/agent/enrollment') {bindings.push(req.postDataJSON());if(bindDelay)await new Promise(r=>setTimeout(r,bindDelay));return route.fulfill({json:{status:'success',data:{token:'SECRET-TEST-TOKEN',expires_at:'soon'}}});}
     errors.push('Unexpected HTTP '+url.pathname);return route.abort();
    });
    const open=async(uuid='a')=>{await page.evaluate(uuid=>openEditModal(uuid),uuid);await page.waitForFunction(()=>nodeWGEditor.loaded);await page.waitForFunction(()=>!isInitializingEdit);};
@@ -92,6 +97,34 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
    assert.equal(await page.locator('#nodeWGSetupBadge').innerText(),'待检查','failed refresh must not retain a green ready badge');
    assert.match(await page.locator('#nodeWGSetupStatus').innerText(),/刷新重试/);
    optionFailure=false;await page.locator('#nodeWGRefresh').click();await page.waitForFunction(()=>nodeWGEditor.loaded);
+
+   // Backend reasons, unavailable peers, safe text rendering and stale-state clearing.
+   diagnostics=true;ready=false;unavailablePeer=true;await page.evaluate(()=>loadNodeWGEditor('a'));
+   assert.equal(await page.locator('#nodeWGChecks .node-wg-check').count(),4);
+   assert.match(await page.locator('#nodeWGChecks').innerText(),/Agent 未连接/);
+   assert.equal(await page.locator('#nodeWGBind').isDisabled(),true,'authorized machines should not repeat initial enrollment');
+   await page.locator('#nodeWGMode').selectOption('wg');
+   assert.equal(await page.locator('#nodeWGPeer option[value="c"]').isDisabled(),true);
+   await page.locator('#nodeWGPeerIssues summary').click();
+   assert.match(await page.locator('#nodeWGPeerIssues').innerText(),/请先启用并推送 SS/);
+   assert.equal(await page.locator('#nodeWGPeerIssues img').count(),0,'node names must remain plain text');
+   await page.locator('#nodeWGPeerIssuesSummary').focus();await page.evaluate(()=>loadNodeWGEditor('a'));
+   assert.equal(await page.locator('#nodeWGPeerIssues').evaluate(e=>e.open),true,'refresh preserves expanded reasons');
+   assert.equal(await page.evaluate(()=>document.activeElement.id),'nodeWGPeerIssuesSummary');
+   const checkBox=await page.locator('#nodeWGChecks').boundingBox();assert.ok(checkBox.x>=0 && checkBox.x+checkBox.width<=width+1);
+   await snapshot('nodeWGSetup','readiness');await snapshot('nodeWGCard','peer-reasons');
+   optionFailure=true;await page.evaluate(()=>loadNodeWGEditor('a'));
+   assert.equal(await page.locator('#nodeWGChecks .node-wg-check').count(),0,'failed refresh must clear stale checks');
+   assert.equal(await page.locator('#nodeWGPeerIssues').isVisible(),false);
+   enrollmentMode='rotate';optionFailure=false;await page.evaluate(()=>loadNodeWGEditor('a'));
+   assert.equal(await page.locator('#nodeWGBind').innerText(),'重新授权');
+   await page.locator('#nodeWGBind').click();await page.waitForFunction(()=>!nodeWGEditor.binding);
+   assert.equal(bindings.at(-1).rotate,true);assert.match(alerts.at(-1),/旧机器凭据失效/);
+   enrollmentMode='none';
+   optionFailure=false;ready=true;unavailablePeer=false;await page.evaluate(()=>loadNodeWGEditor('a'));
+   assert.equal(await page.locator('#nodeWGChecks [data-tone="success"]').count(),4);
+   assert.equal(await page.locator('#nodeWGPeerIssues').isVisible(),false);
+   await page.locator('#nodeWGMode').selectOption('direct');diagnostics=false;
 
    // Direct retains the ordinary endpoint and awaits a real command result.
    await push();await page.waitForFunction(()=>streams.length===1);

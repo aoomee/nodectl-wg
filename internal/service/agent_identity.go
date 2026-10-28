@@ -235,6 +235,12 @@ func WGAgentReady(installID string) bool {
 }
 
 func WGAgentV2Ready(installID string) bool {
+	return WGAgentV2Status(installID) == "ready"
+}
+
+// A snapshot of the current authenticated control connection, not a claim that
+// remote tools, UDP reachability or the tunnel have passed deployment checks.
+func WGAgentV2Status(installID string) string {
 	agentIdentityMu.Lock()
 	defer agentIdentityMu.Unlock()
 	h := GetTrafficHub()
@@ -242,7 +248,16 @@ func WGAgentV2Ready(installID string) bool {
 	defer h.agentMu.RUnlock()
 	c := h.agentConns[installID]
 	s := h.agentSessions[c]
-	return c != nil && s.authenticated && s.wgV2 && validAgentSession(installID, s)
+	if c == nil {
+		return "offline"
+	}
+	if !s.authenticated || !validAgentSession(installID, s) {
+		return "unauthenticated"
+	}
+	if !s.wgV2 {
+		return "unsupported"
+	}
+	return "ready"
 }
 
 func SendWGCommand(ctx context.Context, installID, action string, payload interface{}) (json.RawMessage, error) {

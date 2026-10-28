@@ -136,7 +136,7 @@ func apiDownloadAgent(w http.ResponseWriter, r *http.Request) {
 	// 获取 GitHub 仓库信息
 	githubRepo := loadSysConfigValue("github_repo")
 	if githubRepo == "" {
-		githubRepo = "hobin66/nodectl" // 默认仓库
+		githubRepo = "aoomee/nodectl-wg" // 默认仓库
 	}
 
 	// WG fork releases contain their own Agent; never redirect a WG build to upstream.
@@ -393,7 +393,7 @@ var agentAssetCache = struct {
 
 // findAgentAssetURL 通过 GitHub API 查找指定 Release 中匹配前缀的 agent 二进制下载 URL
 // 参数：
-//   - repo: GitHub 仓库（如 "hobin66/nodectl"）
+//   - repo: GitHub 仓库（如 "aoomee/nodectl-wg"）
 //   - tag:  Release tag（如 "v0.4.32-alpha"）
 //   - prefix: 文件名前缀（如 "nodectl-agent-linux-amd64-"）
 //

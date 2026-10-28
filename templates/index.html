@@ -132,7 +132,7 @@
                 filter: drop-shadow(0 2px 6px rgba(0, 113, 227, 0.16));
             }
 
-            /* 版本更新徽章样式 */
+            /* 当前安装版本，仅展示，不执行更新检查。 */
             .top-version-badge {
                 margin-left: 12px;
                 padding: 5px 12px;
@@ -142,35 +142,8 @@
                 font-size: 12px;
                 font-weight: 600;
                 font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, monospace;
-                cursor: pointer;
-                display: flex;
+                display: inline-flex;
                 align-items: center;
-                gap: 5px;
-                transition: all 0.25s var(--ease-spring);
-                border: 1px solid transparent;
-            }
-
-            .top-version-badge:hover {
-                background: #e4e5eb;
-                color: var(--text);
-                transform: translateY(-1px);
-            }
-
-            .top-version-badge:active {
-                transform: scale(0.96);
-            }
-
-            /* 当检测到更新时通过 JS 附加此 Class */
-            .top-version-badge.has-update {
-                background: #e8fdf0;
-                color: #16a34a;
-                border-color: rgba(52, 199, 89, 0.3);
-                box-shadow: 0 2px 8px rgba(52, 199, 89, 0.14);
-            }
-
-            .top-version-badge.has-update:hover {
-                background: #d3f9e2;
-                transform: translateY(-1px);
             }
 
             /* =========================================================
@@ -1124,34 +1097,7 @@
                         NodeCTL
                     </a>
 
-                    <div
-                        id="topVersionBadge"
-                        class="top-version-badge"
-                        onclick="openUpdateModal()"
-                        title="当前版本: {{.Version}}"
-                    >
-                        <span
-                            id="versionText"
-                            style="opacity: 1; transition: opacity 0.3s"
-                            >{{.Version}}</span
-                        >
-                        <svg
-                            class="update-arrow-icon"
-                            id="updateArrowIcon"
-                            style="display: none"
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2.5"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                        >
-                            <line x1="12" y1="19" x2="12" y2="5"></line>
-                            <polyline points="5 12 12 5 19 12"></polyline>
-                        </svg>
-                    </div>
+                    <span class="top-version-badge" title="当前安装版本">{{.Version}}</span>
                 </div>
                 <div class="nav-right-actions">
                     <button
@@ -1985,30 +1931,7 @@
                         "flex";
                 }
 
-                checkForAppUpdate();
             });
-
-            // 调用后端 API 检查版本更新
-            async function checkForAppUpdate() {
-                try {
-                    const resp = await fetch("/api/check-update");
-                    if (!resp.ok) return;
-                    const result = await resp.json();
-                    if (result.status === "success" && result.data && result.data.has_update) {
-                        const badge = document.getElementById("topVersionBadge");
-                        const arrow = document.getElementById("updateArrowIcon");
-                        if (badge) {
-                            badge.classList.add("has-update");
-                            badge.title = "发现新版本: v" + result.data.latest_version + "，点击查看更新日志";
-                        }
-                        if (arrow) {
-                            arrow.style.display = "flex";
-                        }
-                    }
-                } catch (e) {
-                    console.debug("版本更新检查失败:", e);
-                }
-            }
 
             function dismissSecurityBanner() {
                 document.getElementById("security-banner").style.display =
@@ -2021,7 +1944,7 @@
         {{template "delete_node_modal.html" .}} {{template
         "edit_node_modal.html" .}} {{template "install_script_modal.html" .}}
         {{template "global_settings_modal.html" .}} {{template
-        "system_settings_modal.html" .}} {{template "update_modal.html" .}}
+        "system_settings_modal.html" .}}
         {{template "clash_template_modal.html" .}} {{template
         "sub_links_modal.html" .}} {{template "custom_rules_modal.html" .}}
         {{template "airport_sub_modal.html" .}} {{template "logs_modal.html" .}}

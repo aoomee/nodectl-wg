@@ -16,6 +16,7 @@ import (
 )
 
 const (
+	agentReleasesAPI        = "https://api.github.com/repos/aoomee/nodectl-wg/releases"
 	agentStartupCheckDelay  = 60 * time.Second
 	agentStartupCheckWindow = 60 * time.Second
 )
@@ -218,7 +219,7 @@ func runAgentStartupSilentUpdateCheck(ctx context.Context) (retErr error) {
 // 返回: (最新正式版本, 最新alpha版本, error)
 func fetchLatestAgentVersionsFromGitHub(ctx context.Context) (stableVersion, alphaVersion string, err error) {
 	// 获取所有 releases
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, githubReleasesListAPI, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, agentReleasesAPI, nil)
 	if err != nil {
 		return "", "", err
 	}

@@ -131,8 +131,11 @@ function renderNodeWGCard() {
                 <button type="button" id="nodeWGRefresh" class="node-editor-button">刷新状态</button>
             </div>
             <pre id="nodeWGBinding" role="status" hidden></pre>
-            <details id="nodeWGSetupDetails"><summary>首次授权与部署条件</summary>
-                <p>先部署 A 的 REALITY 和 B 的 SS，再选择 WG 出站。以上检查基于已保存的配置和当前连接；Linux/systemd、root、ip/wg 工具、实际协议配置与 UDP 连通性还需在部署时核验。</p>
+            <details id="nodeWGSetupDetails"><summary>WG 是什么 · 如何启用</summary>
+                <p>WG 出站会把入口 A 收到的流量，通过 WireGuard 隧道交给落地 B，再由 B 的 SS 访问互联网。客户端仍连接 A 的 REALITY。</p>
+                <p>① 打开 B，将节点设为“落地”，启用 SS 并点击底部“推送配置”，等待成功。② 打开 A，将节点设为“入口”，在直连模式启用 REALITY 并推送成功。</p>
+                <p>③ 两台机器分别点击“授权当前机器”，在各自服务器终端完成下方命令并重启 Agent，再点击“刷新状态”。④ 回到 A 上方的 REALITY 协议卡片，将“出站方式”改为“经 WG → SS 出站”，在“SS 落地节点”选择 B，点击底部“推送配置”，等待显示“运行中”。</p>
+                <p>若看不到出站选项，请确认正在编辑入口 A，且已添加 REALITY 协议。B 不可选时，展开“落地未就绪”查看原因。Linux/systemd、root、ip/wg 工具与 UDP 连通性仍需在部署时核验。</p>
                 <p>首次授权用于确认机器身份，不是 WG 密钥，也不需要每次建隧道都操作。已完成授权的机器无需重复绑定。</p>
                 <p>首次授权需在服务器终端确认，连接使用有效的 HTTPS/WSS。支持 NGINX HTTPS → 本机 HTTP 回源，反代部署需先配置面板的可信代理地址。</p>
             </details>`;
@@ -149,7 +152,7 @@ function renderNodeWGCard() {
             try {
                 const data = await nodeWGRequest('/api/node/agent/enrollment',{node_uuid:uuid,rotate});
                 if (generation !== nodeWGEditor.generation) return;
-                output.textContent = `一次性令牌（过期：${data.expires_at}）：\n${data.token}\n\n在当前服务器运行：\nsudo nodectl-agent enroll -config /etc/nodectl-agent/config.json\n按提示输入令牌并重启 nodectl-agent 服务。`;
+                output.textContent = `一次性令牌（过期：${data.expires_at}）：\n${data.token}\n\n在当前服务器运行：\nsudo nodectl-agent enroll -config /etc/nodectl-agent/config.json\n按提示输入令牌，然后运行：\nsudo systemctl restart nodectl-agent\n回到面板点击“刷新状态”。`;
             } catch (error) { if (generation === nodeWGEditor.generation) output.textContent = error.message; }
             finally { if (generation === nodeWGEditor.generation) { nodeWGEditor.binding = false; button.disabled = !nodeWGEditor.loaded || nodeWGEditor.readiness?.enrollment_mode === 'none'; } }
         };
@@ -168,7 +171,7 @@ function renderNodeWGCard() {
     setupBadge.dataset.tone = !nodeWGEditor.loaded ? '' : machineReady ? 'success' : 'warning';
     setup.querySelector('#nodeWGSetupStatus').textContent = nodeWGEditor.error || (landing
         ? (!nodeWGEditor.loaded ? '落地 B · 正在检查连接与协议…' : machineReady ? '落地 B · 可在入口 A 中选择本机；部署时将继续核验实际配置与连通性。' : '落地 B · 请完成下方待处理项，再到入口 A 选择本机。')
-        : `${document.getElementById('editNodeUIState').value === '1' ? '入口 A' : '已屏蔽'} · ${!nodeWGEditor.loaded ? '正在检查连接与协议…' : nodeWGEditor.ready ? '可配置 WG 出站；已授权的机器无需重复绑定。' : checks.length ? '请完成下方待处理项，再刷新状态。' : '未就绪。请检查 Agent 在线、机器授权和 REALITY 部署。'}`);
+        : `${document.getElementById('editNodeUIState').value === '1' ? '入口 A' : '已屏蔽'} · ${!nodeWGEditor.loaded ? '正在检查连接与协议…' : nodeWGEditor.ready ? '请在上方 REALITY 协议卡片选择出站方式和落地 B，再点击底部“推送配置”。' : checks.length ? '请完成下方待处理项，再刷新状态。' : '未就绪。请检查 Agent 在线、机器授权和 REALITY 部署。'}`);
     const checkList = setup.querySelector('#nodeWGChecks');
     checkList.replaceChildren(); checkList.hidden = checks.length === 0;
     setup.querySelector('#nodeWGCheckNote').hidden = checks.length === 0;
@@ -195,9 +198,9 @@ function renderNodeWGCard() {
         <details id="nodeWGPeerIssues" class="node-wg-peer-issues"><summary id="nodeWGPeerIssuesSummary"></summary><ul></ul></details>
         <p id="nodeWGStatus" role="status" aria-live="polite"></p>
         <details id="nodeWGUsage"><summary id="nodeWGUsageSummary">部署步骤与注意事项</summary>
-            <p>① B 推送 SS 成功 → ② A 推送 REALITY 成功 → ③ 选择 WG 与落地节点，点击底部“推送配置”。</p>
+            <p>先让 B 的 SS、A 的 REALITY 推送成功，并完成两台机器授权。然后在此处将“出站方式”改为“经 WG → SS 出站”，选择“SS 落地节点”B，点击底部“推送配置”，等待显示“运行中”。</p>
             <p>普通协议有修改时，需先在直连模式完成部署，再启用 WG；两步不是原子部署，准备期间为直连。应用出站可能短暂重启 A 的 sing-box。</p>
-            <p>配对期间修改协议或落地前需先停用清理；故障不会自动改为直连。首次授权说明位于下方“机器连接”。</p>
+            <p>配对期间修改协议或落地前需先停用清理；故障不会自动改为直连。操作说明位于下方“机器连接 → WG 是什么 · 如何启用”。</p>
         </details>
         <div class="node-wg-actions" id="nodeWGCleanupRow"><button type="button" id="nodeWGCleanup" class="node-editor-button node-editor-button-danger">停用 WG 并恢复直连</button></div>`;
     if (reality && !landing) reality.appendChild(card); else list.insertAdjacentElement('afterend', card);

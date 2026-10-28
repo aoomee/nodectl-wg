@@ -53,3 +53,33 @@ jobs:
           node tests/password-ui.cjs
           node tests/settings-ui.cjs
       - run: bash -n scripts/smoke-docker.sh internal/wgrelay/engine/vendor/wg-multi-relay.sh
+
+  docker:
+    name: Docker deployment (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    env:
+      ARCH: ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build with the documented Compose files
+        run: docker compose -f compose.wg.yaml -f compose.build.yaml build
+      - name: Verify source-built image with persistent Compose data
+        run: bash scripts/smoke-docker.sh nodectl-wg:local
+      - name: Build the release packaging from the tested native binary
+        run: |
+          mkdir -p bin
+          container=$(docker create nodectl-wg:local)
+          trap 'docker rm -v "$container" >/dev/null' EXIT
+          docker cp "$container:/app/nodectl" "bin/nodectl-linux-$ARCH"
+          docker build --build-arg "TARGETARCH=$ARCH" -f .github/Dockerfile -t nodectl-wg:release-smoke .
+      - name: Verify release image with persistent Compose data
+        run: bash scripts/smoke-docker.sh nodectl-wg:release-smoke

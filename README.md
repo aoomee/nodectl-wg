@@ -130,6 +130,10 @@ docker compose -f compose.wg.yaml -f compose.build.yaml up -d --build
 
 发布流程先执行 Go 和 Python 测试，再分别在 amd64 / arm64 Linux 环境构建并启动镜像；登录、WG 页面、鉴权 API 和运行依赖检查通过后推送 GHCR，并生成离线包。实际结果以 [Actions](https://github.com/aoomee/nodectl-wg/actions/workflows/release-main.yml) 和 Release 为准。
 
+提交检查也会在原生 amd64 / arm64 Linux 上验证 Docker：按上面的 Compose 文件构建，分别测试源码构建镜像和发布用镜像结构，检查首次登录、密码修改、设置保存、容器正常停止，以及删除并重建容器后密码和设置是否保留、SQLite 数据库是否完整。测试使用临时数据目录和随机本机端口，不发布镜像。结果见 [提交检查](https://github.com/aoomee/nodectl-wg/actions/workflows/checks.yml)。
+
+已有本地测试镜像时，可执行 `bash scripts/smoke-docker.sh 镜像名` 重复验证，需要 Docker Compose 和宿主机 Python 3。该脚本会创建并清理独立的临时 Compose 项目；验证容器重建的数据持久化，不代表已验证任意旧版本的数据库迁移。
+
 尚未完成真实 A/B VPS 的整合版端到端验证；实际线路的 UDP 可达性、WG 握手和客户端访问仍需部署时确认。
 
 原项目的完整功能介绍保存在 [上游说明存档](README-UPSTREAM.md)。部署本版本请使用本页的 `aoomee/nodectl-wg` 镜像。

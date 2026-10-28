@@ -472,22 +472,3 @@ func buildRecentLogFingerprint(logs []service.RecentLogEntry) string {
 	head := logs[0]
 	return fmt.Sprintf("%d|%s|%s|%s", len(logs), head.Time, head.Level, head.Raw)
 }
-
-// apiCheckUpdate 检查程序是否有新版本可用（带后端缓存，避免频繁请求 GitHub）
-func apiCheckUpdate(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	// force=true 时强制刷新缓存
-	forceRefresh := strings.TrimSpace(r.URL.Query().Get("force")) == "true"
-
-	result := service.CheckForUpdate(forceRefresh)
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status": "success",
-		"data":   result,
-	})
-}

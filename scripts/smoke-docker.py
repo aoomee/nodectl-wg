@@ -132,6 +132,7 @@ def main(image):
         login(base, "admin", accepted=False)
         session, _, page = login(base, initial)
         assert "wgRelayModal" in page and "WG 中转" in page, "WG UI absent"
+        assert all(marker not in page for marker in ("hobin66/nodectl", "openUpdateModal", "checkForAppUpdate", "updateArrowIcon")), "Removed upstream updater returned"
         scripts = re.findall(r'<script\b[^>]*\bsrc="([^"]+)"[^>]*\bintegrity="([^"]+)"', page)
         assert len(scripts) == 2, "Bundled browser libraries absent"
         for src, integrity in scripts:

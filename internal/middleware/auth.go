@@ -270,6 +270,11 @@ func Auth(next http.HandlerFunc) http.HandlerFunc {
 			http.Redirect(w, r, "/login", http.StatusFound)
 			return
 		}
+		if strings.TrimSpace(secretConfig.Value) == "" {
+			logger.Log.Error("鉴权系统异常：会话密钥为空", "ip", clientIP, "path", reqPath)
+			http.Redirect(w, r, "/login", http.StatusFound)
+			return
+		}
 
 		// 3. 解析并校验 JWT
 		tokenString := cookie.Value

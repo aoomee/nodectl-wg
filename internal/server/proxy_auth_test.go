@@ -40,7 +40,7 @@ func TestLoginCookieTransport(t *testing.T) {
 	// Wait for the disabled notification's read before restoring the test DB.
 	notified := make(chan struct{}, 4)
 	if err := database.DB.Callback().Query().After("gorm:query").Register("test:login-notification", func(tx *gorm.DB) {
-		if strings.Contains(tx.Statement.SQL.String(), "key IN") {
+		if strings.Contains(tx.Statement.SQL.String(), "key IN") && len(tx.Statement.Vars) > 0 && tx.Statement.Vars[0] == "tg_bot_enabled" {
 			notified <- struct{}{}
 		}
 	}); err != nil {

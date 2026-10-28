@@ -146,6 +146,7 @@ func TestBootstrapFailuresRollback(t *testing.T) {
 		{{Key: "admin_password", Value: "damaged"}},
 		{{Key: "admin_username", Value: "admin"}, {Key: "admin_password", Value: "damaged"}},
 		{{Key: "jwt_secret", Value: ""}},
+		{{Key: "jwt_secret", Value: "   "}},
 	} {
 		db := bootstrapDB(t)
 		if err := db.Create(&rows).Error; err != nil {

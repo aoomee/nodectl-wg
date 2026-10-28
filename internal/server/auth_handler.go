@@ -50,12 +50,16 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 
 		password := r.FormValue("password")
 
-		var userConfig database.SysConfig
-		var passConfig database.SysConfig
-		var secretConfig database.SysConfig
-
-		err := database.DB.Where("key = ?", "admin_username").First(&userConfig).Error
-		if errors.Is(err, gorm.ErrRecordNotFound) || userConfig.Value != username {
+		// Read one database snapshot: an in-flight old-password login must never
+		// pick up the new signing key after a concurrent credential rotation.
+		credentials, err := database.LoadAdminCredentials(database.DB)
+		if err != nil {
+			logger.Log.Error("登录凭据读取失败", "error", err, "ip", clientIP)
+			w.WriteHeader(http.StatusServiceUnavailable)
+			tmpl.ExecuteTemplate(w, "login.html", map[string]string{"Error": "登录暂不可用，请稍后重试或检查服务器日志"})
+			return
+		}
+		if credentials.Username != username {
 			blocked, remaining, blockAfter := middleware.RecordLoginFailure(clientIP)
 			if blocked {
 				logger.Log.Warn("登录拦截: 用户名不存在且IP已短期封禁",
@@ -74,8 +78,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		database.DB.Where("key = ?", "admin_password").First(&passConfig)
-		err = bcrypt.CompareHashAndPassword([]byte(passConfig.Value), []byte(password))
+		err = bcrypt.CompareHashAndPassword([]byte(credentials.PasswordHash), []byte(password))
 		if err != nil {
 			blocked, remaining, blockAfter := middleware.RecordLoginFailure(clientIP)
 			if blocked {
@@ -97,7 +100,6 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 
 		middleware.ClearLoginFailureRecord(clientIP)
 
-		database.DB.Where("key = ?", "jwt_secret").First(&secretConfig)
 		ttlMode := loadAuthCookieTTLMode()
 		expireAt, maxAge, persistent := resolveAuthCookieTTL(ttlMode)
 
@@ -109,7 +111,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 			claims["exp"] = expireAt.Unix()
 		}
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-		tokenString, err := token.SignedString([]byte(secretConfig.Value))
+		tokenString, err := token.SignedString([]byte(credentials.SessionSecret))
 		if err != nil {
 			logger.Log.Error("签发 Token 失败", "error", err, "ip", clientIP, "path", reqPath)
 			tmpl.ExecuteTemplate(w, "login.html", map[string]string{"Error": "系统内部错误"})
@@ -443,7 +445,12 @@ func apiResetJWT(w http.ResponseWriter, r *http.Request) {
 	secureBytes := make([]byte, 32)
 	if _, err := rand.Read(secureBytes); err == nil {
 		newSecret := hex.EncodeToString(secureBytes)
-		database.DB.Model(&database.SysConfig{}).Where("key = ?", "jwt_secret").Update("value", newSecret)
+		result := database.DB.Model(&database.SysConfig{}).Where("key = ?", "jwt_secret").Update("value", newSecret)
+		if result.Error != nil || result.RowsAffected != 1 {
+			logger.Log.Error("重置会话密钥未成功写入", "error", result.Error, "rows", result.RowsAffected, "ip", clientIP)
+			sendJSON(w, "error", "会话密钥重置失败，未确认设备下线，请稍后重试或检查服务器日志")
+			return
+		}
 		logger.Log.Info("系统级密钥 (JWT Secret) 已手动重置", "ip", clientIP, "path", reqPath)
 	} else {
 		logger.Log.Error("生成新密钥失败", "error", err, "ip", clientIP, "path", reqPath)

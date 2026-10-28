@@ -50,7 +50,7 @@ func initializeAuth(db *gorm.DB, dataDir, configuredPassword string) (created bo
 				return errors.New("管理员密码记录损坏，请恢复数据库备份")
 			}
 		}
-		if secret, exists := settings["jwt_secret"]; exists && secret == "" {
+		if secret, exists := settings["jwt_secret"]; exists && strings.TrimSpace(secret) == "" {
 			return errors.New("会话密钥为空，请恢复数据库备份")
 		} else if !exists {
 			secretBytes := make([]byte, 32)

@@ -32,7 +32,7 @@ Releases 中的 `.tar.gz` 为可 `docker load` 的离线镜像包；`v0.1.0-wg` 
 docker compose -f compose.wg.yaml -f compose.build.yaml up -d --build
 ```
 
-默认绑定 `127.0.0.1:7878`，通过自己的 HTTPS 反代或 SSH 转发访问。面板 HTTP 上游地址为 `http://127.0.0.1:7878`；反代需保留原始 Host、支持 WebSocket，并配置面板的可信代理 IP，见 [NGINX 反代说明](REVERSE-PROXY.md)。这个包不会生成自签证书。SSH 本地转发适用于页面管理和旧 SSH 部署流程；新版 Agent 授权仍要求对外 HTTPS/WSS。
+默认绑定 `127.0.0.1:7878`，通过自己的 HTTPS 反代或 SSH 转发访问。面板 HTTP 上游地址为 `http://127.0.0.1:7878`；反代需保留原始 Host、支持 WebSocket，并配置面板的可信代理 IP，见 [NGINX 反代说明](REVERSE-PROXY.md)。这个包不会生成自签证书。无论通过 HTTPS 反代还是可信的 SSH 本地转发访问面板，均可使用首页 SSH 部署与节点编辑页的 Agent 托管 WG 出站。
 
 包含本修复的版本首次安装使用账号 **`admin`**，密码自动随机生成。服务启动成功后，在面板服务器终端领取：
 

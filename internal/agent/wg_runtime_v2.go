@@ -112,8 +112,8 @@ func (rt *Runtime) executeWGV2(ctx context.Context, cmd ServerCommand) (json.Raw
 		status.SourceDigest = cm.RealityConfigDigest()
 	case "wg-v2-direct":
 		rt.stopWGRouteLease()
-		if rt.wgManager == nil {
-			return nil, errors.New("WG cleanup acknowledgement required")
+		if err := rt.ensureWGManager(); err != nil {
+			return nil, err
 		}
 		b, e := rt.wgManager.Execute(ctx, "wg-status", raw)
 		if e != nil {
@@ -128,8 +128,8 @@ func (rt *Runtime) executeWGV2(ctx context.Context, cmd ServerCommand) (json.Raw
 		}
 		status.Phase = "direct"
 	case "wg-v2-route", "wg-v2-status":
-		if rt.wgManager == nil {
-			return nil, errors.New("WG is not configured")
+		if err := rt.ensureWGManager(); err != nil {
+			return nil, err
 		}
 		route, e := cm.GetWGRoute()
 		if e != nil {

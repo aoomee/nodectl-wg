@@ -166,12 +166,22 @@ func validAgentSession(installID string, session agentSession) bool {
 	return session.authenticated && session.installID == installID && id.SecretHash != "" && id.SecretHash == session.secretHash
 }
 
-// Credentials require HTTPS, directly or through an explicitly trusted proxy.
-// Untrusted forwarding headers cannot bypass the transport requirement.
+// Credentials (when supplied) require HTTPS, directly or through an explicitly
+// trusted proxy. Direct Agent connections declare capabilities via headers and
+// are validated against NodePool + optional AgentIdentity state.
 func authenticateAgentRequest(r *http.Request) (agentSession, error) {
 	auth := r.Header.Get("Authorization")
 	id := strings.TrimSpace(r.Header.Get(AgentInstallIDHeader))
 	s := agentSession{installID: id}
+	for _, cap := range strings.Split(r.Header.Get(AgentCapabilityHeader), ",") {
+		switch strings.TrimSpace(cap) {
+		case WGRelayV2Capability:
+			s.wgV2 = true
+			s.wg = true
+		case WGRelayCapability:
+			s.wg = true
+		}
+	}
 	if auth != "" {
 		parts := strings.Fields(auth)
 		if !requestmeta.IsSecure(r) || len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") || len(parts[1]) != 64 || id == "" {
@@ -179,15 +189,6 @@ func authenticateAgentRequest(r *http.Request) (agentSession, error) {
 		}
 		s.authenticated = true
 		s.secretHash = agentHash(parts[1])
-		for _, cap := range strings.Split(r.Header.Get(AgentCapabilityHeader), ",") {
-			if strings.TrimSpace(cap) == WGRelayV2Capability {
-				s.wgV2 = true
-				s.wg = true
-			}
-			if strings.TrimSpace(cap) == WGRelayCapability {
-				s.wg = true
-			}
-		}
 	}
 	if id != "" && !validAgentSession(id, s) {
 		return s, ErrAgentIdentity
@@ -231,15 +232,15 @@ func WGAgentReady(installID string) bool {
 	defer h.agentMu.RUnlock()
 	c := h.agentConns[installID]
 	s := h.agentSessions[c]
-	return c != nil && s.authenticated && s.wg && validAgentSession(installID, s)
+	return c != nil && s.wg && validAgentSession(installID, s)
 }
 
 func WGAgentV2Ready(installID string) bool {
 	return WGAgentV2Status(installID) == "ready"
 }
 
-// A snapshot of the current authenticated control connection, not a claim that
-// remote tools, UDP reachability or the tunnel have passed deployment checks.
+// A snapshot of the current control connection, not a claim that remote tools,
+// UDP reachability or the tunnel have passed deployment checks.
 func WGAgentV2Status(installID string) string {
 	agentIdentityMu.Lock()
 	defer agentIdentityMu.Unlock()
@@ -251,7 +252,7 @@ func WGAgentV2Status(installID string) string {
 	if c == nil {
 		return "offline"
 	}
-	if !s.authenticated || !validAgentSession(installID, s) {
+	if !validAgentSession(installID, s) {
 		return "unauthenticated"
 	}
 	if !s.wgV2 {
@@ -266,7 +267,7 @@ func SendWGCommand(ctx context.Context, installID, action string, payload interf
 	default:
 		return nil, errors.New("invalid WireGuard action")
 	}
-	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -276,10 +277,10 @@ func SendWGCommand(ctx context.Context, installID, action string, payload interf
 	h.agentMu.RLock()
 	conn := h.agentConns[installID]
 	session := h.agentSessions[conn]
-	if conn == nil || !session.authenticated || !session.wg || (strings.HasPrefix(action, "wg-v2-") && !session.wgV2) || !validAgentSession(installID, session) {
+	if conn == nil || !session.wg || (strings.HasPrefix(action, "wg-v2-") && !session.wgV2) || !validAgentSession(installID, session) {
 		h.agentMu.RUnlock()
 		agentIdentityMu.Unlock()
-		return nil, errors.New("authenticated WireGuard agent unavailable")
+		return nil, errors.New("WireGuard agent unavailable")
 	}
 	nonce, err := agentSecret()
 	if err != nil {
@@ -346,7 +347,7 @@ func (h *TrafficHub) acceptAgentResult(conn *websocket.Conn, installID string, r
 	}
 	if owner.wg {
 		session := h.agentSessions[conn]
-		if !session.authenticated || !session.wg || !validAgentSession(installID, session) {
+		if !session.wg || !validAgentSession(installID, session) {
 			h.cmdMu.Unlock()
 			return false
 		}

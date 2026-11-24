@@ -254,6 +254,32 @@ func TestWGPairHappyPathAndSubscriptions(t *testing.T) {
 		t.Fatal("offline pair not failed closed")
 	}
 }
+
+func TestWGPairDirectAgentWithoutEnrollment(t *testing.T) {
+	c, f := newWGTest(t)
+	if err := c.db.Where("1 = 1").Delete(&database.AgentIdentity{}).Error; err != nil {
+		t.Fatal(err)
+	}
+	p := createWG(t, c)
+	wgSteps(t, c, p.ID, 8)
+	row := wgStored(t, c, p.ID)
+	if row.Status != "active" || row.AppliedRevision != 1 || len(f.calls) != 10 {
+		t.Fatalf("direct Agent pair failed to activate: %+v calls=%v", wgDTO(row), f.calls)
+	}
+	if links := c.subscriptionLinks(1); len(links) != 1 || !strings.Contains(links[0], "198.51.100.1:8443") {
+		t.Fatalf("unexpected subscription links: %v", links)
+	}
+	oldDB := database.DB
+	database.DB = c.db
+	t.Cleanup(func() { database.DB = oldDB })
+	summaries := ListWGPairNodeSummaries()
+	if summaries["entry"].Role != "entry" || summaries["entry"].PeerName != "Landing" || summaries["entry"].Status != "active" {
+		t.Fatalf("missing entry summary: %+v", summaries["entry"])
+	}
+	if summaries["landing"].Role != "landing" || summaries["landing"].PeerName != "Entry" || summaries["landing"].Status != "active" {
+		t.Fatalf("missing landing summary: %+v", summaries["landing"])
+	}
+}
 func TestWGPairFailureAtEveryStageAndCleanup(t *testing.T) {
 	stages := []string{"aaaaaaaaaaaa:wg-v2-guard", "aaaaaaaaaaaa:wg-prepare", "bbbbbbbbbbbb:wg-prepare", "bbbbbbbbbbbb:wg-configure", "aaaaaaaaaaaa:wg-configure", "aaaaaaaaaaaa:wg-verify", "bbbbbbbbbbbb:wg-verify", "aaaaaaaaaaaa:wg-v2-route"}
 	for index, stage := range stages {

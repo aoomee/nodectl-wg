@@ -62,8 +62,8 @@ func TestWGPairOptionsContract(t *testing.T) {
 	if result.Status != "success" || result.Data.Pair != nil || result.Data.Peers == nil || result.Data.Ready {
 		t.Fatal(w.Body.String())
 	}
-	if result.Data.Readiness.Role != "entry" || len(result.Data.Readiness.Checks) != 4 || result.Data.Readiness.EnrollmentMode != "initial" {
-		t.Fatal("missing readiness contract")
+	if result.Data.Readiness.Role != "entry" || len(result.Data.Readiness.Checks) != 3 || result.Data.Readiness.EnrollmentMode != "none" {
+		t.Fatalf("missing readiness contract: %+v", result.Data.Readiness)
 	}
 }
 func TestWGPairHandlerRejectsInvalidRequests(t *testing.T) {
@@ -75,7 +75,7 @@ func TestWGPairHandlerRejectsInvalidRequests(t *testing.T) {
 		code         int
 	}{
 		{"GET", "", true, true, "", 405},
-		{"POST", `{"uuid":"entry","revision":1}`, false, true, "", 400},
+		{"POST", `{"uuid":"entry","revision":1}`, false, false, "", 403},
 		{"POST", `{"uuid":"entry","revision":1}`, true, false, "", 403},
 		{"POST", `{"uuid":"entry","revision":1}`, true, true, "https://evil.test", 403},
 		{"POST", `{"uuid":"entry","revision":0}`, true, true, "", 400},

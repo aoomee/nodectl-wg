@@ -621,11 +621,12 @@ func apiGetNodes(w http.ResponseWriter, r *http.Request) {
 	var tunnelSubdomainConfig database.SysConfig
 	database.DB.Where("key = ?", "cf_tunnel_subdomain").First(&tunnelSubdomainConfig)
 
-	// 4. 返回结构化数据
+	// 4. 返回结构化数据（附带活跃 WG 配对摘要供首页直接标记）
 	sendJSON(w, "success", map[string]interface{}{
 		"data": map[string]interface{}{
 			"direct_nodes":     directNodes,
 			"land_nodes":       landNodes,
+			"wg_pairs":         service.ListWGPairNodeSummaries(),
 			"panel_url":        config.Value,
 			"tunnel_subdomain": tunnelSubdomainConfig.Value,
 		},

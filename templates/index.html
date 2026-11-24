@@ -1658,12 +1658,25 @@
                 } catch (error) {
                     console.error("获取节点列表失败:", error);
                     showErrorState("direct-nodes-list");
+                    showErrorState("land-nodes-list");
                 }
             }
+
+            let _sortableDirect = null;
+            let _sortableLand = null;
 
             function initDragAndDrop() {
                 const directList = document.getElementById("direct-nodes-list");
                 const landList = document.getElementById("land-nodes-list");
+
+                if (_sortableDirect) {
+                    _sortableDirect.destroy();
+                    _sortableDirect = null;
+                }
+                if (_sortableLand) {
+                    _sortableLand.destroy();
+                    _sortableLand = null;
+                }
 
                 const sortableOptions = {
                     group: "active-nodes",
@@ -1717,13 +1730,13 @@
                     },
                 };
 
-                if (directList) new Sortable(directList, sortableOptions);
-                if (landList) new Sortable(landList, sortableOptions);
+                if (directList) _sortableDirect = new Sortable(directList, sortableOptions);
+                if (landList) _sortableLand = new Sortable(landList, sortableOptions);
             }
 
             async function saveNodeOrder(routingType, uuids) {
                 try {
-                    await fetch("/api/reorder-nodes", {
+                    const res = await fetch("/api/reorder-nodes", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
@@ -1731,6 +1744,10 @@
                             node_uuids: uuids,
                         }),
                     });
+                    if (!res.ok) {
+                        console.error("排序保存失败: HTTP", res.status);
+                        return;
+                    }
 
                     // 节点排序/分组变更后，通知已打开的弹窗刷新数据
                     if (typeof cftLoadTunnelNodeSettings === "function" &&
@@ -1758,6 +1775,15 @@
             // 精致圆润的矢量地球图标（替原生丑陋的 🌐 与方框）
             const globeBadgeHTML = `<span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; background:#eaf4ff; color:#007aff; margin-right:8px; flex-shrink:0;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg></span>`;
 
+            function escapeNodeHTML(str) {
+                return String(str ?? "")
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#39;");
+            }
+
             // =========================================================
             // 核心优化：节点列表项渲染逻辑
             // =========================================================
@@ -1784,7 +1810,9 @@
                     let flagHTML = globeBadgeHTML;
                     if (node.region && node.region.trim() !== "") {
                         const isoCode = node.region.trim().toLowerCase();
-                        flagHTML = `<img src="https://flagcdn.com/${isoCode}.svg" loading="lazy" alt="${isoCode}" style="width: 22px; height: 16px; object-fit: cover; margin-right: 8px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.12);">`;
+                        if (/^[a-z]{2}$/.test(isoCode)) {
+                            flagHTML = `<img src="https://flagcdn.com/${isoCode}.svg" loading="lazy" alt="${isoCode}" style="width: 22px; height: 16px; object-fit: cover; margin-right: 8px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.12);">`;
+                        }
                     }
 
                     // 2. 动态生成启用的协议标签
@@ -1799,7 +1827,7 @@
                         tagsHTML = activeProtos
                             .map((proto) => {
                                 const color = getProtoColor(proto);
-                                return `<span class="proto-tag" style="background-color: ${color.bg}; color: ${color.text};">${proto}</span>`;
+                                return `<span class="proto-tag" style="background-color: ${color.bg}; color: ${color.text};">${escapeNodeHTML(proto)}</span>`;
                             })
                             .join("");
                     } else {
@@ -1826,6 +1854,9 @@
                         ipTagsHTML += `<span style="font-size: 9.5px; font-weight: 700; background: #f2f3f7; color: #6e6e73; padding: 2px 7px; border-radius: 999px; margin-left: ${marginLeft}; line-height: 1.2;">IPv6</span>`;
                     }
 
+                    const safeUUID = escapeNodeHTML(node.uuid);
+                    const safeName = escapeNodeHTML(node.name);
+
                     // 4. 组装 DOM
                     item.innerHTML = `
                     <div style="display:flex; align-items:center; justify-content: space-between; width: 100%;">
@@ -1834,7 +1865,7 @@
                             <div class="node-info">
                                 <div class="node-name-wrapper">
                                     ${flagHTML}
-                                    <span class="node-name">${node.name}</span>
+                                    <span class="node-name">${safeName}</span>
                                     ${ipTagsHTML}
                                 </div>
                                 <div class="node-tags">${tagsHTML}</div>
@@ -1844,15 +1875,15 @@
                         <div class="node-actions-group">
                             <div class="node-status-dot" style="background: ${finalDotColor}; box-shadow: 0 0 0 3px ${finalDotColor}22; margin-right: 4px;"></div>
 
-                            <button type="button" onclick="openScriptModal('${node.uuid}')" class="node-action-btn" style="color: #007aff;" title="生成部署脚本">
+                            <button type="button" onclick="openScriptModal('${safeUUID}')" class="node-action-btn" style="color: #007aff;" title="生成部署脚本">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                             </button>
 
-                            <button type="button" onclick="openEditModal('${node.uuid}')" class="node-action-btn" style="color: #007aff;" title="编辑节点">
+                            <button type="button" onclick="openEditModal('${safeUUID}')" class="node-action-btn" style="color: #007aff;" title="编辑节点">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                             </button>
 
-                            <button type="button" onclick="openDeleteModal('${node.uuid}')" class="node-action-btn" style="color: #ff3b30;" title="删除节点">
+                            <button type="button" onclick="openDeleteModal('${safeUUID}')" class="node-action-btn" style="color: #ff3b30;" title="删除节点">
                                 <svg style="pointer-events: none; width: 16px; height: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                             </button>
                         </div>

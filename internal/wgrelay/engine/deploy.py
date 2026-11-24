@@ -52,7 +52,10 @@ for line in out(['ss','-H','-lun']).splitlines():
  try:udp_ports.append(int(line.split()[3].rsplit(':',1)[1]))
  except (ValueError,IndexError):pass
 p=pathlib.Path('/root/wg-ab-auto/state.json')
-state=json.loads(p.read_text()) if p.exists() else None
+state=None
+if p.exists():
+ try:state=json.loads(p.read_text())
+ except Exception:raise SystemExit('远端状态文件损坏：'+str(p))
 paths=['/etc/xray-wgab-auto/config.json','/etc/realm-wgab-auto/config.toml',
  '/etc/wireguard/wg-abauto.conf','/etc/systemd/system/xray-wgab-auto.service',
  '/etc/systemd/system/realm-wgab-auto.service','/usr/local/lib/xray-wgab-auto','/usr/local/lib/realm-wgab-auto',
@@ -109,8 +112,11 @@ def configure_pair(a, b, a_port, b_port, architecture='realm'):
         raise ValueError('未知的部署模式。')
     legacy = []
     for host in (a, b):
-        raw = host.shell("if test -f /root/wg-ab-auto/state.json; then cat /root/wg-ab-auto/state.json; else echo null; fi", quiet=True)
-        legacy.append(json.loads(raw))
+        raw = host.shell("if test -f /root/wg-ab-auto/state.json; then cat /root/wg-ab-auto/state.json; else echo null; fi", quiet=True).strip()
+        try:
+            legacy.append(json.loads(raw) if raw else None)
+        except json.JSONDecodeError:
+            raise RuntimeError(host.role + ' 的旧版状态文件 /root/wg-ab-auto/state.json 已损坏，请检查后再继续。')
     matches = lambda state: state and all(state.get(k) == v for k, v in
         dict(a_ip=a.ip, b_ip=b.ip, a_port=a_port, b_port=b_port).items())
     use_legacy = architecture == 'realm' and any(matches(state) for state in legacy) and all(not state or matches(state) for state in legacy)
@@ -277,9 +283,13 @@ class Host:
         channel.exec_command(command)
         return channel, marker.encode()
 
-    def answer_sudo(self, channel, data, marker, answered):
-        if marker in data:
-            data[:] = data.replace(marker, b'')
+    def answer_sudo(self, channel, data, marker, answered, start_offset=0):
+        if not self.elevate:
+            return answered
+        search_from = max(0, start_offset - len(marker))
+        idx = data.find(marker, search_from)
+        if idx != -1:
+            del data[idx:idx + len(marker)]
             if answered or self.sudo_password is None:
                 raise RuntimeError(self.role + ' sudo 验证失败。')
             channel.sendall((self.sudo_password + '\n').encode())
@@ -295,8 +305,9 @@ class Host:
         try:
             while True:
                 while channel.recv_ready():
+                    prev_len = len(data)
                     data.extend(channel.recv(65536))
-                    answered = self.answer_sudo(channel, data, marker, answered)
+                    answered = self.answer_sudo(channel, data, marker, answered, prev_len)
                 if channel.exit_status_ready() and not channel.recv_ready():
                     break
                 if time.monotonic() - start > timeout:
@@ -336,7 +347,10 @@ class Host:
                     self.command('install -m ' + oct(mode)[2:] + ' -- ' + shlex.quote(tmp) + ' ' + shlex.quote(target) +
                                  ' && mv -f -- ' + shlex.quote(target) + ' ' + shlex.quote(path), quiet=True)
                 finally:
-                    sftp.remove(tmp)
+                    try:
+                        sftp.remove(tmp)
+                    except Exception:
+                        pass
             return
         with self.client.open_sftp() as sftp:
             tmp = path + '.upload'
@@ -524,7 +538,9 @@ def diagnose_wg(a, b, pair):
             log('诊断：' + line)
         return report
     except Exception as exc:
-        log('自动诊断未能完成（' + type(exc).__name__ + '）；原始部署错误保留，不将推测视为结论。')
+        detail = str(exc).strip().splitlines()[0][:200] if str(exc).strip() else ''
+        suffix = ('：' + detail) if detail else ''
+        log('自动诊断未能完成（' + type(exc).__name__ + suffix + '）；原始部署错误保留，不将推测视为结论。')
         return dict(ok=False, established=None, lines=['诊断连接未完成。'])
 
 
@@ -554,8 +570,18 @@ def apply_deployment(a, b, pair):
         log('3/5 从 B 经 A 的公网入口验证真实 VLESS 请求及出口 IP。')
         b.worker('test')
         # This is independent of the B-originated application test.
-        with socket.create_connection((a.ip, pair['a_port']), timeout=15):
-            pass
+        last_conn_err = None
+        for attempt in range(2):
+            try:
+                with socket.create_connection((a.ip, pair['a_port']), timeout=15):
+                    last_conn_err = None
+                    break
+            except OSError as exc:
+                last_conn_err = exc
+                if attempt == 0:
+                    time.sleep(1.5)
+        if last_conn_err is not None:
+            raise RuntimeError(f"面板本机无法连接 A 的入口端口 {a.ip}:{pair['a_port']}（{type(last_conn_err).__name__}）；请检查 A 的防火墙与云安全组 TCP 放行规则。") from last_conn_err
         log('本机到 A 入口端口可达。')
         log('4/5 在 A 执行 WG 配对并切换到 B 的隧道地址。')
         switching = True

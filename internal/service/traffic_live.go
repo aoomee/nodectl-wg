@@ -302,45 +302,68 @@ func (h *TrafficHub) collectDirtyNodeTrafficAndClear() []dirtyTrafficItem {
 
 func (h *TrafficHub) flushDirtyNodeTrafficTotal() {
 	items := h.collectDirtyNodeTrafficAndClear()
-	now := time.Now()
+	if len(items) == 0 {
+		return
+	}
+	batch := make([]TrafficBatchItem, 0, len(items))
 	for _, item := range items {
-		if _, err := SaveNodeTrafficTotalOnly(item.installID, item.rx, item.tx, now); err != nil {
-			logger.Log.Error("实时累计流量写库失败", "install_id", item.installID, "error", err)
-			h.mu.Lock()
-			if st, ok := h.nodes[item.installID]; ok && st != nil {
-				st.Dirty = true
+		batch = append(batch, TrafficBatchItem{
+			InstallID: item.installID,
+			RXBytes:   item.rx,
+			TXBytes:   item.tx,
+		})
+	}
+	now := time.Now()
+	if err := SaveNodeTrafficTotalsBatch(batch, now); err != nil {
+		logger.Log.Error("批量实时累计流量写库失败，回退逐条重试", "count", len(batch), "error", err)
+		for _, item := range items {
+			if _, itemErr := SaveNodeTrafficTotalOnly(item.installID, item.rx, item.tx, now); itemErr != nil {
+				logger.Log.Error("实时累计流量写库失败", "install_id", item.installID, "error", itemErr)
+				h.mu.Lock()
+				if st, ok := h.nodes[item.installID]; ok && st != nil {
+					st.Dirty = true
+				}
+				h.mu.Unlock()
 			}
-			h.mu.Unlock()
 		}
 	}
 }
 
 func (h *TrafficHub) flushNodeTrafficPoint() {
-	type pointItem struct {
-		installID string
-		rx        int64
-		tx        int64
+	// 先快照在线节点集合，避免持 hub.mu 期间再获取 hub.agentMu。
+	h.agentMu.RLock()
+	onlineSet := make(map[string]struct{}, len(h.agentConns))
+	for iid := range h.agentConns {
+		onlineSet[iid] = struct{}{}
 	}
-	items := make([]pointItem, 0, 64)
+	h.agentMu.RUnlock()
 
+	if len(onlineSet) == 0 {
+		return
+	}
+
+	batch := make([]TrafficBatchItem, 0, len(onlineSet))
 	h.mu.RLock()
-	for iid, st := range h.nodes {
-		if st == nil {
+	for iid := range onlineSet {
+		st, ok := h.nodes[iid]
+		if !ok || st == nil {
 			continue
 		}
-		// 离线节点不写入历史点数据，避免浪费存储
-		if !IsNodeOnline(iid) {
-			continue
-		}
-		items = append(items, pointItem{installID: iid, rx: st.TotalRXBytes, tx: st.TotalTXBytes})
+		batch = append(batch, TrafficBatchItem{
+			InstallID: iid,
+			RXBytes:   st.TotalRXBytes,
+			TXBytes:   st.TotalTXBytes,
+		})
 	}
 	h.mu.RUnlock()
 
+	if len(batch) == 0 {
+		return
+	}
+
 	now := time.Now()
-	for _, item := range items {
-		if _, err := SaveNodeTrafficPointOnly(item.installID, item.rx, item.tx, now); err != nil {
-			logger.Log.Error("实时流量点数据写库失败", "install_id", item.installID, "error", err)
-		}
+	if err := SaveNodeTrafficPointsBatch(batch, now); err != nil {
+		logger.Log.Error("批量实时流量点数据写库失败", "count", len(batch), "error", err)
 	}
 }
 
@@ -405,20 +428,41 @@ func (h *TrafficHub) ensureNodeLiveState(installID string) {
 
 	nodeUUID := h.resolveNodeUUID(installID)
 
-	h.mu.Lock()
-	defer h.mu.Unlock()
+	// 先快速检查是否已存在，避免持有 hub.mu 期间执行数据库查询。
+	h.mu.RLock()
+	st, exists := h.nodes[installID]
+	needUpdateMeta := exists && st != nil && (st.InstallID == "" || (st.NodeUUID == "" && nodeUUID != ""))
+	h.mu.RUnlock()
 
-	if st, ok := h.nodes[installID]; ok && st != nil {
-		if st.InstallID == "" {
-			st.InstallID = installID
-		}
-		if st.NodeUUID == "" {
-			st.NodeUUID = nodeUUID
+	if exists && st != nil {
+		if needUpdateMeta {
+			h.mu.Lock()
+			if cur, ok := h.nodes[installID]; ok && cur != nil {
+				if cur.InstallID == "" {
+					cur.InstallID = installID
+				}
+				if cur.NodeUUID == "" {
+					cur.NodeUUID = nodeUUID
+				}
+			}
+			h.mu.Unlock()
 		}
 		return
 	}
 
 	baseRX, baseTX := loadNodeTrafficBase(installID)
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if cur, ok := h.nodes[installID]; ok && cur != nil {
+		if cur.InstallID == "" {
+			cur.InstallID = installID
+		}
+		if cur.NodeUUID == "" {
+			cur.NodeUUID = nodeUUID
+		}
+		return
+	}
 	h.nodes[installID] = &NodeLiveState{
 		InstallID:    installID,
 		NodeUUID:     nodeUUID,
@@ -653,25 +697,27 @@ func HandleAgentWS(w http.ResponseWriter, r *http.Request) {
 		// 解析 node_uuid，因为前边硬核校验过了，此时必定有缓存或能查到数据库
 		nodeUUID := hub.resolveNodeUUID(installID)
 
+		// 确保内存态已初始化（在无锁状态下查库，避免持锁 DB I/O）
+		hub.ensureNodeLiveState(installID)
+
 		// 更新内存态
 		hub.mu.Lock()
 		state, exists := hub.nodes[installID]
-		if !exists {
-			baseRX, baseTX := loadNodeTrafficBase(installID)
+		if !exists || state == nil {
 			state = &NodeLiveState{
-				InstallID:    installID,
-				NodeUUID:     nodeUUID,
-				TotalRXBytes: baseRX,
-				TotalTXBytes: baseTX,
+				InstallID: installID,
+				NodeUUID:  nodeUUID,
 			}
 			hub.nodes[installID] = state
 		}
 		state.RXRateBps = msg.RXRateBps
 		state.TXRateBps = msg.TXRateBps
 		state.LastLiveAt = time.Now()
-		// 更新 agent 版本
-		if msg.AgentVersion != "" {
+		// 仅在内存中的 AgentVersion 发生变更时才触发写库，避免每 2 秒心跳都查库/起协程
+		agentVersionChanged := false
+		if msg.AgentVersion != "" && msg.AgentVersion != state.AgentVersion {
 			state.AgentVersion = msg.AgentVersion
+			agentVersionChanged = true
 		}
 
 		if strings.TrimSpace(msg.BootID) != "" {
@@ -754,8 +800,8 @@ func HandleAgentWS(w http.ResponseWriter, r *http.Request) {
 
 		_ = CheckAndHandleNodeTrafficThresholdRealtime(installID, totalTX, totalRX)
 
-		// 持久化 agent_version 到 NodePool（仅版本变更时更新，避免重复写库）
-		if msg.AgentVersion != "" {
+		// 持久化 agent_version 到 NodePool（仅内存态检测到版本变更时查库更新）
+		if agentVersionChanged {
 			go func(iid, newVer string) {
 				var node database.NodePool
 				if err := database.DB.Select("name", "agent_version").Where("install_id = ?", iid).First(&node).Error; err != nil {
@@ -820,12 +866,14 @@ func HandleTrafficLive(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close(websocket.StatusNormalClosure, "connection closed")
 
-	ctx := r.Context()
+	connCtx, connCancel := context.WithCancel(r.Context())
+	defer connCancel()
 
-	// 必须持续读取以处理客户端 close / ping 帧
+	// 必须持续读取以处理客户端 close / ping 帧；客户端断开时立即取消上下文释放推送循环
 	go func() {
+		defer connCancel()
 		for {
-			if _, _, err := conn.Read(ctx); err != nil {
+			if _, _, err := conn.Read(connCtx); err != nil {
 				return
 			}
 		}
@@ -845,10 +893,17 @@ func HandleTrafficLive(w http.ResponseWriter, r *http.Request) {
 	defer hub.unsubscribe(subKey, ch)
 
 	sendSnapshot := func() error {
-		hub.mu.RLock()
-		defer hub.mu.RUnlock()
+		// 先快照在线连接集合和节点状态，立即释放锁后再做 JSON 编码和网络写，避免慢客户端阻塞全局 hub.mu。
+		hub.agentMu.RLock()
+		onlineSet := make(map[string]struct{}, len(hub.agentConns))
+		for iid := range hub.agentConns {
+			onlineSet[iid] = struct{}{}
+		}
+		hub.agentMu.RUnlock()
 
 		now := time.Now()
+		hub.mu.RLock()
+		snapshot := make([]FrontendPushMsg, 0, len(hub.nodes))
 		for _, state := range hub.nodes {
 			if state == nil {
 				continue
@@ -856,7 +911,7 @@ func HandleTrafficLive(w http.ResponseWriter, r *http.Request) {
 			if nodeUUID != "" && state.NodeUUID != nodeUUID {
 				continue
 			}
-			wsOnline := IsNodeOnline(state.InstallID)
+			_, wsOnline := onlineSet[state.InstallID]
 			hasRecentLive := hasRecentTrafficSignal(state.LastLiveAt, now)
 			// 状态判定以“最近是否收到实时流量消息”为准，WS 仅用于辅助速率呈现。
 			online := hasRecentLive
@@ -868,7 +923,7 @@ func HandleTrafficLive(w http.ResponseWriter, r *http.Request) {
 				outTX = state.TXRateBps
 			}
 
-			initMsg := FrontendPushMsg{
+			snapshot = append(snapshot, FrontendPushMsg{
 				InstallID:    state.InstallID,
 				NodeUUID:     state.NodeUUID,
 				RXRateBps:    outRX,
@@ -877,10 +932,19 @@ func HandleTrafficLive(w http.ResponseWriter, r *http.Request) {
 				TotalTXBytes: state.TotalTXBytes,
 				LastLiveAt:   state.LastLiveAt.Unix(),
 				Offline:      !online,
-			}
+			})
+		}
+		hub.mu.RUnlock()
 
-			data, _ := json.Marshal(initMsg)
-			if err := conn.Write(ctx, websocket.MessageText, data); err != nil {
+		for _, initMsg := range snapshot {
+			data, err := json.Marshal(initMsg)
+			if err != nil {
+				continue
+			}
+			writeCtx, writeCancel := context.WithTimeout(connCtx, 5*time.Second)
+			err = conn.Write(writeCtx, websocket.MessageText, data)
+			writeCancel()
+			if err != nil {
 				return err
 			}
 		}
@@ -900,7 +964,7 @@ func HandleTrafficLive(w http.ResponseWriter, r *http.Request) {
 	// 持续推送
 	for {
 		select {
-		case <-ctx.Done():
+		case <-connCtx.Done():
 			return
 		case <-ticker.C:
 			if err := sendSnapshot(); err != nil {
@@ -914,7 +978,7 @@ func HandleTrafficLive(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				continue
 			}
-			writeCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			writeCtx, cancel := context.WithTimeout(connCtx, 5*time.Second)
 			if err := conn.Write(writeCtx, websocket.MessageText, data); err != nil {
 				cancel()
 				return
@@ -945,12 +1009,14 @@ func (h *TrafficHub) unsubscribe(key string, ch chan FrontendPushMsg) {
 	defer h.subMu.Unlock()
 
 	if subs, ok := h.subscribers[key]; ok {
-		delete(subs, ch)
+		if _, exists := subs[ch]; exists {
+			delete(subs, ch)
+			close(ch)
+		}
 		if len(subs) == 0 {
 			delete(h.subscribers, key)
 		}
 	}
-	close(ch)
 }
 
 // broadcast 向对应节点的前端订阅者广播消息

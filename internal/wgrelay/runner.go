@@ -5,6 +5,7 @@ import (
 	"context"
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -35,7 +36,16 @@ func Python() string {
 func CheckRuntime() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if err := exec.CommandContext(ctx, Python(), "-c", "import sys,paramiko; assert sys.version_info >= (3, 10)").Run(); err != nil {
+	py := Python()
+	out, err := exec.CommandContext(ctx, py, "-c", "import sys\nif sys.version_info < (3, 10): sys.exit(2)\nimport paramiko").CombinedOutput()
+	if err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) && exitErr.ExitCode() == 2 {
+			return fmt.Errorf("WG 需要 Python 3.10+（当前解释器 %s 版本过低）；请使用 WG 版 Docker 镜像，或设置 NODECTL_WG_PYTHON", py)
+		}
+		if strings.Contains(string(out), "paramiko") {
+			return fmt.Errorf("WG 缺少 Python 依赖 paramiko；请使用 WG 版 Docker 镜像，或安装 requirements-wg.txt")
+		}
 		return fmt.Errorf("WG 需要 Python 3.10+ 和 Paramiko；请使用 WG 版 Docker 镜像，或设置 NODECTL_WG_PYTHON")
 	}
 	return nil
@@ -71,7 +81,16 @@ func Execute(ctx context.Context, r Request, folder string, output io.Writer) (R
 	cmd.Stdout = output
 	cmd.Stderr = output
 	cmd.Env = append(os.Environ(), "PYTHONDONTWRITEBYTECODE=1")
-	cmd.Cancel = func() error { return cmd.Process.Signal(syscall.SIGTERM) }
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.Cancel = func() error {
+		if cmd.Process == nil {
+			return nil
+		}
+		if err := syscall.Kill(-cmd.Process.Pid, syscall.SIGTERM); err == nil {
+			return nil
+		}
+		return cmd.Process.Signal(syscall.SIGTERM)
+	}
 	cmd.WaitDelay = 45 * time.Second
 	if err := cmd.Run(); err != nil {
 		return result, fmt.Errorf("部署进程未成功完成：%w", err)

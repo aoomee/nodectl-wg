@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 )
@@ -60,6 +61,12 @@ func New(root string, execute Executor) (*Manager, error) {
 			return nil, err
 		}
 	}
+	// Clean up any leftover temp files from an interrupted save.
+	if tmps, err := filepath.Glob(filepath.Join(root, "jobs", "*.json.tmp")); err == nil {
+		for _, tmp := range tmps {
+			_ = os.Remove(tmp)
+		}
+	}
 	files, err := filepath.Glob(filepath.Join(root, "jobs", "*.json"))
 	if err != nil {
 		return nil, err
@@ -71,10 +78,13 @@ func New(root string, execute Executor) (*Manager, error) {
 		}
 		var j Job
 		if err := json.Unmarshal(b, &j); err != nil {
-			return nil, fmt.Errorf("WG 任务记录损坏：%s", filepath.Base(file))
+			// Quarantine corrupted job files instead of disabling the entire WG relay manager.
+			_ = os.Rename(file, file+".corrupt")
+			continue
 		}
 		if _, err := uuid.Parse(j.ID); err != nil || filepath.Base(file) != j.ID+".json" {
-			return nil, errors.New("WG 任务标识无效")
+			_ = os.Rename(file, file+".corrupt")
+			continue
 		}
 		j.Spec = j.Spec.Public()
 		if j.Status == "running" || j.Status == "cancelling" {
@@ -92,7 +102,28 @@ func New(root string, execute Executor) (*Manager, error) {
 		}
 		m.jobs[j.ID] = &j
 	}
+	m.pruneLocked(maxJobs)
 	return m, nil
+}
+func (m *Manager) pruneLocked(limit int) {
+	for len(m.jobs) > limit {
+		var oldest *Job
+		for _, v := range m.jobs {
+			if v.ID == m.active {
+				continue
+			}
+			if oldest == nil || v.Created.Before(oldest.Created) {
+				oldest = v
+			}
+		}
+		if oldest == nil {
+			break
+		}
+		if err := os.Remove(filepath.Join(m.root, "jobs", oldest.ID+".json")); err != nil && !errors.Is(err, os.ErrNotExist) {
+			break
+		}
+		delete(m.jobs, oldest.ID)
+	}
 }
 func (m *Manager) save(j *Job) error {
 	b, err := json.Marshal(j)
@@ -100,10 +131,16 @@ func (m *Manager) save(j *Job) error {
 		return err
 	}
 	file := filepath.Join(m.root, "jobs", j.ID+".json")
-	if err = os.WriteFile(file+".tmp", b, 0600); err != nil {
+	tmp := file + ".tmp"
+	if err = os.WriteFile(tmp, b, 0600); err != nil {
+		_ = os.Remove(tmp)
 		return err
 	}
-	return os.Rename(file+".tmp", file)
+	if err = os.Rename(tmp, file); err != nil {
+		_ = os.Remove(tmp)
+		return err
+	}
+	return nil
 }
 func clone(j *Job) Job {
 	c := *j
@@ -152,18 +189,7 @@ func (m *Manager) Start(r Request) (Job, error) {
 		return Job{}, err
 	}
 	// Retain the most recent 50 jobs; imported nodes have their own database records.
-	for len(m.jobs) >= maxJobs {
-		var oldest *Job
-		for _, v := range m.jobs {
-			if oldest == nil || v.Created.Before(oldest.Created) {
-				oldest = v
-			}
-		}
-		if err := os.Remove(filepath.Join(m.root, "jobs", oldest.ID+".json")); err != nil {
-			break
-		}
-		delete(m.jobs, oldest.ID)
-	}
+	m.pruneLocked(maxJobs - 1)
 	ctx, cancel := context.WithTimeout(context.Background(), m.timeout)
 	m.active = j.ID
 	m.cancel = cancel
@@ -190,6 +216,9 @@ func (w *logWriter) Write(p []byte) (int, error) {
 	for i := 0; i < len(input); {
 		matched, partial := false, false
 		for _, secret := range w.secrets {
+			if secret == "" {
+				continue
+			}
 			if strings.HasPrefix(input[i:], secret) {
 				clean.WriteString("[密码已隐藏]")
 				i += len(secret)
@@ -214,7 +243,12 @@ func (w *logWriter) Write(p []byte) (int, error) {
 	j := w.m.jobs[w.id]
 	j.Log += clean.String()
 	if len(j.Log) > maxLog {
-		j.Log = j.Log[len(j.Log)-maxLog:]
+		cut := len(j.Log) - maxLog
+		// Advance to the next UTF-8 rune boundary so multibyte Chinese text is never split.
+		for cut < len(j.Log) && !utf8.RuneStart(j.Log[cut]) {
+			cut++
+		}
+		j.Log = j.Log[cut:]
 	}
 
 	return len(p), nil
@@ -223,18 +257,32 @@ func (m *Manager) run(ctx context.Context, cancel context.CancelFunc, id string,
 	defer close(done)
 	defer cancel()
 	folder := filepath.Join(m.root, "jobs", id)
-	w := &logWriter{m: m, id: id, secrets: []string{r.APassword, r.BPassword}}
+	var secrets []string
+	for _, s := range []string{r.APassword, r.BPassword} {
+		if s != "" {
+			secrets = append(secrets, s)
+		}
+	}
+	w := &logWriter{m: m, id: id, secrets: secrets}
 	// Redact longer secrets first when one is a substring of another.
 	sort.Slice(w.secrets, func(i, j int) bool { return len(w.secrets[i]) > len(w.secrets[j]) })
 	var result Result
-	err := os.MkdirAll(folder, 0700)
-	if err == nil {
-		result, err = m.execute(ctx, r, folder, w)
-	}
+	var err error
+	func() {
+		defer func() {
+			if rec := recover(); rec != nil {
+				err = fmt.Errorf("部署执行发生内部异常：%v", rec)
+			}
+		}()
+		err = os.MkdirAll(folder, 0700)
+		if err == nil {
+			result, err = m.execute(ctx, r, folder, w)
+		}
+	}()
 	if err == nil && (result.Kind != r.Mode || (r.Mode == "deploy" && !strings.HasPrefix(result.Link, "vless://"))) {
 		err = errors.New("部署结果无效，未标记成功")
 	}
-	if err != nil {
+	if err != nil && ctx.Err() == nil {
 		fmt.Fprintln(io.Writer(w), "\n未完成：", err)
 	}
 	cleanupErr := os.RemoveAll(folder)

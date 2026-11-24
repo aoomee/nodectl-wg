@@ -75,6 +75,17 @@ func IncrementTrafficHistoryCount(nodeUUID string) {
 	)
 }
 
+// BatchIncrementTrafficHistoryCount 批量递增一组节点的历史流量记录计数（每个节点 +1）。
+func BatchIncrementTrafficHistoryCount(nodeUUIDs []string) {
+	if len(nodeUUIDs) == 0 {
+		return
+	}
+	database.DB.Exec(
+		"UPDATE node_pool SET traffic_history_count = COALESCE(traffic_history_count, 0) + 1 WHERE uuid IN ?",
+		nodeUUIDs,
+	)
+}
+
 // DecrementTrafficHistoryCount 原子递减指定节点的历史流量记录计数。
 // delta 为本次删除的记录条数。计数不会低于 0。
 func DecrementTrafficHistoryCount(nodeUUID string, delta int64) {

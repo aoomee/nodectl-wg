@@ -108,7 +108,7 @@ def download(url, dest, expected):
     if dest.exists() and hashlib.sha256(dest.read_bytes()).hexdigest() == expected:
         return
     part = dest.with_suffix(dest.suffix + '.part')
-    run(['curl', '-fLsS', '--retry', '2', '--connect-timeout', '15',
+    run(['curl', '-fLsS', '--retry', '3', '--retry-delay', '2', '--connect-timeout', '15',
          '--max-time', '180', url, '-o', str(part)], timeout=600)
     if hashlib.sha256(part.read_bytes()).hexdigest() != expected:
         part.unlink(missing_ok=True)
@@ -137,7 +137,12 @@ def service(name, body, force_restart=False):
     if changed or force_restart or not active:
         run(['systemctl', 'restart', name])
     time.sleep(2)
-    run(['systemctl', 'is-active', '--quiet', name])
+    check_res = run(['systemctl', 'is-active', '--quiet', name], capture=True, check=False)
+    if check_res.returncode != 0:
+        status_out = run(['systemctl', 'status', '--no-pager', '-n', '10', name], capture=True, check=False).stdout.strip()
+        if status_out:
+            print(status_out[-1500:], flush=True)
+        raise RuntimeError('服务未能保持运行：' + name + '（退出码 ' + str(check_res.returncode) + '）')
 
 
 def firewall(c):
@@ -372,11 +377,23 @@ def test_chain(c, large=False):
     test_file = ROOT / 'test-client.json'
     save(test_file, json.dumps(config))
     proc = subprocess.Popen([str(XRAY_DIR / 'xray'), 'run', '-config', str(test_file)],
-                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
     try:
-        time.sleep(1)
-        if proc.poll() is not None:
-            raise RuntimeError('测试客户端未能启动。')
+        ready_deadline = time.monotonic() + 5.0
+        ready = False
+        while time.monotonic() < ready_deadline:
+            if proc.poll() is not None:
+                err_tail = (proc.stderr.read() if proc.stderr else '').strip()[-400:]
+                suffix = ('：' + err_tail) if err_tail else ''
+                raise RuntimeError('测试客户端未能启动' + suffix)
+            try:
+                with socket.create_connection(('127.0.0.1', port), timeout=0.3):
+                    ready = True
+                    break
+            except OSError:
+                time.sleep(0.1)
+        if not ready:
+            raise RuntimeError('测试客户端启动超时（本地 SOCKS 端口未就绪）。')
         targets = [('出口 IP', 'https://api.ipify.org'), ('HTTPS', 'https://addons.mozilla.org/')]
         if large:
             targets.append(('文件下载', 'https://github.com/zhboner/realm/releases/download/v2.9.6/realm-x86_64-unknown-linux-musl.tar.gz'))
@@ -390,17 +407,29 @@ def test_chain(c, large=False):
                     args += ['-o', str(download_file)]
                 p = run(args, capture=True, check=False, timeout=40)
                 good = p.returncode == 0
-                if name == '出口 IP':
-                    good = good and p.stdout.strip() == c['b_ip']
+                reason = ''
+                if not good:
+                    reason = f'curl 退出码 {p.returncode}'
+                elif name == '出口 IP':
+                    got_ip = p.stdout.strip()
+                    good = got_ip == c['b_ip']
+                    if not good:
+                        reason = f'实际出口 IP 与 B 不一致（期望 {c["b_ip"]}，实际 {got_ip or "空"}）'
                 elif name == 'HTTPS':
-                    good = good and len(p.stdout) > 1000
+                    good = len(p.stdout) > 1000
+                    if not good:
+                        reason = f'响应体过短（{len(p.stdout)} 字节）'
                 else:
-                    good = good and download_file.exists() and hashlib.sha256(download_file.read_bytes()).hexdigest() == REALM_SHA
+                    good = download_file.exists() and hashlib.sha256(download_file.read_bytes()).hexdigest() == REALM_SHA
+                    if not good:
+                        reason = '文件 SHA256 校验未通过'
                     download_file.unlink(missing_ok=True)
                 if good:
                     print(name + '：通过（第 ' + str(attempt) + ' 次，出口 B）', flush=True)
                     break
-                print(name + '：第 ' + str(attempt) + ' 次未通过，检查/重试。', flush=True)
+                print(name + '：第 ' + str(attempt) + ' 次未通过' + ('（' + reason + '）' if reason else '') + '，检查/重试。', flush=True)
+                if attempt < 3:
+                    time.sleep(1.5)
             if not good:
                 raise RuntimeError(name + '验证失败；不将当前链路标为成功。')
     finally:
@@ -410,6 +439,11 @@ def test_chain(c, large=False):
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait()
+        if proc.stderr:
+            try:
+                proc.stderr.close()
+            except Exception:
+                pass
         test_file.unlink(missing_ok=True)
         (ROOT / 'test-download.bin').unlink(missing_ok=True)
 

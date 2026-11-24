@@ -1159,16 +1159,27 @@
         }
 
         // Connect live traffic websocket.
+        let wsReconnectTimer = null;
+        let wsRetryDelayMs = 3000;
         function connectLiveWS() {
+            clearTimeout(wsReconnectTimer);
+            wsReconnectTimer = null;
             if (state.liveWs) {
-                try { state.liveWs.close(); } catch (e) { }
+                const prev = state.liveWs;
+                prev.onopen = null;
+                prev.onmessage = null;
+                prev.onclose = null;
+                prev.onerror = null;
+                try { prev.close(); } catch (e) { }
             }
             const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = proto + '//' + location.host + '/api/traffic/live';
             const ws = new WebSocket(wsUrl);
             state.liveWs = ws;
 
-            ws.onopen = function () { };
+            ws.onopen = function () {
+                wsRetryDelayMs = 3000;
+            };
 
             ws.onmessage = function (evt) {
                 try {
@@ -1205,13 +1216,18 @@
             };
 
             ws.onclose = function () {
-                // 断线 5 秒后自动重连
-                setTimeout(function () {
+                if (state.liveWs !== ws) return;
+                clearTimeout(wsReconnectTimer);
+                const delay = wsRetryDelayMs;
+                wsRetryDelayMs = Math.min(wsRetryDelayMs * 2, 30000);
+                wsReconnectTimer = setTimeout(function () {
                     if (document.getElementById('traffic-stats-card')) connectLiveWS();
-                }, 5000);
+                }, delay);
             };
 
-            ws.onerror = function () { ws.close(); };
+            ws.onerror = function () {
+                try { ws.close(); } catch (e) { }
+            };
         }
 
         // 局部更新排名项的实时速率和离线状态
@@ -1226,10 +1242,11 @@
             if (!rateEl) return;
 
             const live = state.liveRates[nodeUUID];
-            if (live && !offline) {
-                rateEl.innerHTML = '<span style="color:#34c759;">↑ ' + fmtRate(live.rx_rate_bps) + '</span> <span style="color:#1e88ff;">↓ ' + fmtRate(live.tx_rate_bps) + '</span>';
-            } else {
-                rateEl.innerHTML = '<span style="color:#ccc;">--</span>';
+            const nextHtml = (live && !offline)
+                ? ('<span style="color:#34c759;">↑ ' + fmtRate(live.rx_rate_bps) + '</span> <span style="color:#1e88ff;">↓ ' + fmtRate(live.tx_rate_bps) + '</span>')
+                : '<span style="color:#ccc;">--</span>';
+            if (rateEl.innerHTML !== nextHtml) {
+                rateEl.innerHTML = nextHtml;
             }
         }
 
@@ -1986,14 +2003,19 @@
                 });
             }
 
+            let resizeDebounceTimer = null;
             window.addEventListener('resize', function () {
-                renderBar();
-                renderLine();
-                syncRankListHeight();
+                clearTimeout(resizeDebounceTimer);
+                resizeDebounceTimer = setTimeout(function () {
+                    renderBar();
+                    renderLine();
+                    syncRankListHeight();
+                }, 120);
             });
 
-            // 定时刷新离线标记，避免仅在收到 WS 消息时才更新状态
+            // 定时刷新离线标记，避免仅在收到 WS 消息时才更新状态；页面不可见时跳过以节省资源
             setInterval(function () {
+                if (document.hidden) return;
                 const list = document.getElementById('ts-rank-list');
                 if (!list) return;
                 list.querySelectorAll('.ts-rank-item').forEach(function (el) {

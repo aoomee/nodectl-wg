@@ -189,15 +189,27 @@
 #wgMessage {
     min-height: 20px;
     margin: 10px 0;
-    color: #d97706;
+    color: #b45309;
     font-weight: 500;
     font-size: 13px;
+}
+
+#wgMessage[data-tone="error"] {
+    color: #d92d20;
+}
+
+#wgMessage[data-tone="success"] {
+    color: #16803d;
+}
+
+#wgMessage[data-tone="info"] {
+    color: #0066cc;
 }
 
 #wgStatus {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 7px;
     font-weight: 600;
     font-size: 12.5px;
     margin: 12px 0 10px;
@@ -205,6 +217,46 @@
     border-radius: 999px;
     background: #f2f2f7;
     color: #48484a;
+}
+
+#wgStatus::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.7;
+    flex-shrink: 0;
+}
+
+#wgStatus[data-tone="running"] {
+    background: #eaf4ff;
+    color: #0066cc;
+}
+
+#wgStatus[data-tone="running"]::before {
+    opacity: 1;
+    animation: wgPulse 1.4s ease-in-out infinite;
+}
+
+#wgStatus[data-tone="cancelling"] {
+    background: #fff4e5;
+    color: #b45309;
+}
+
+#wgStatus[data-tone="succeeded"] {
+    background: #e8fdf0;
+    color: #16803d;
+}
+
+#wgStatus[data-tone="failed"] {
+    background: #feeceb;
+    color: #d92d20;
+}
+
+@keyframes wgPulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.35); opacity: 0.45; }
 }
 
 #wgResult {
@@ -266,37 +318,84 @@
 (() => {
  const el=id=>document.getElementById(id), modal=el('wgRelayModal'), form=el('wgForm');
  const labels={running:'正在执行',cancelling:'正在停止并清理',succeeded:'已完成',failed:'未完成',cancelled:'已停止',timed_out:'已超时',interrupted:'进程中断，需检查远端'};
- let selected='',active='',timer=null,visible=false,loading=false,submitting=false,current=null,previousFocus=null;
+ let selected='',active='',activeStatus='',timer=null,elapsedTimer=null,visible=false,loading=false,submitting=false,cancellingReq=false,current=null,previousFocus=null,lastJobId='';
  const busy=j=>j.status==='running'||j.status==='cancelling';
+ function setMessage(text,tone=''){
+  const m=el('wgMessage');m.textContent=text||'';
+  if(tone)m.dataset.tone=tone;else delete m.dataset.tone;
+ }
+ function formatElapsed(createdIso){
+  const sec=Math.max(0,Math.floor((Date.now()-new Date(createdIso).getTime())/1000));
+  if(!Number.isFinite(sec))return '';
+  const m=Math.floor(sec/60),s=sec%60;
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+ }
+ function updateElapsed(){
+  if(!visible||!current||!busy(current)){clearInterval(elapsedTimer);elapsedTimer=null;return;}
+  const base=labels[current.status]||current.status;
+  const elapsed=current.created?formatElapsed(current.created):'';
+  el('wgStatus').textContent=elapsed?`${base} · ${elapsed}`:base;
+ }
  async function api(action,body) {
   const res=await fetch('/api/wg-relay/'+action,body===undefined?{cache:'no-store'}:{method:'POST',headers:{'Content-Type':'application/json','X-NodeCtl-WG':'1'},body:JSON.stringify(body)});
   if(res.redirected||!res.headers.get('Content-Type')?.includes('application/json'))throw Error('登录已失效，请重新登录面板。');
   const data=await res.json();if(!res.ok)throw Error(data.error||'请求失败');return data;
  }
- function controls(){el('wgFields').disabled=!!active||submitting;el('wgCheck').disabled=!!active||submitting;el('wgDeploy').disabled=!!active||submitting;el('wgCancel').disabled=!active;}
+ function controls(){
+  el('wgFields').disabled=!!active||submitting;
+  el('wgCheck').disabled=!!active||submitting;
+  el('wgDeploy').disabled=!!active||submitting;
+  el('wgCancel').disabled=!active||activeStatus==='cancelling'||cancellingReq;
+ }
  function display(j){
+  const switched=lastJobId!==j.id;lastJobId=j.id;
   current=j;let status=labels[j.status]||j.status;
   if(j.status==='succeeded') status=j.spec.mode==='check'?'预检完成（不代表 WG 部署成功）':'部署及业务验证通过';
-  el('wgStatus').textContent=status;
-  el('wgLog').textContent=j.log||'正在连接，请稍候…';
+  const statusEl=el('wgStatus');
+  if(busy(j)&&j.created){
+   const elapsed=formatElapsed(j.created);
+   statusEl.textContent=elapsed?`${status} · ${elapsed}`:status;
+   if(!elapsedTimer)elapsedTimer=setInterval(updateElapsed,1000);
+  }else{
+   clearInterval(elapsedTimer);elapsedTimer=null;
+   statusEl.textContent=status;
+  }
+  statusEl.dataset.tone=j.status==='running'?'running':j.status==='cancelling'?'cancelling':j.status==='succeeded'?'succeeded':(j.status==='failed'||j.status==='timed_out'||j.status==='interrupted')?'failed':'';
+  const logEl=el('wgLog');
+  const nearBottom=switched||(logEl.scrollHeight-logEl.scrollTop-logEl.clientHeight<40);
+  const nextLog=j.log||'正在连接，请稍候…';
+  if(logEl.textContent!==nextLog){
+   logEl.textContent=nextLog;
+   if(nearBottom)logEl.scrollTop=logEl.scrollHeight;
+  }
   const ok=j.status==='succeeded'&&j.spec.mode==='deploy'&&j.result?.link;
   el('wgResult').hidden=!ok;el('wgLink').value=ok?j.result.link:'';
+ }
+ function scheduleRefresh(){
+  clearTimeout(timer);timer=null;
+  if(!visible||document.hidden)return;
+  timer=setTimeout(refresh,active?2000:10000);
  }
  async function refresh(){
   if(loading||!visible)return;loading=true;
   try{
-   const data=await api('jobs');active=data.jobs.find(busy)?.id||'';controls();
+   const data=await api('jobs');
+   const activeJob=data.jobs.find(busy);
+   active=activeJob?.id||'';
+   activeStatus=activeJob?.status||'';
+   controls();
    if(!selected||!data.jobs.some(j=>j.id===selected))selected=active||data.jobs[0]?.id||'';
    const select=el('wgJobs');select.replaceChildren();
    if(!data.jobs.length)select.add(new Option('暂无任务',''));
    for(const j of data.jobs)select.add(new Option(`${new Date(j.created).toLocaleString()} · ${j.spec.mode==='check'?'检查':'部署'} · ${j.spec.a_ip} → ${j.spec.b_ip} · ${labels[j.status]||j.status}`,j.id));
    select.value=selected;
    if(selected){const id=selected,j=await api('job?id='+encodeURIComponent(id));if(selected===id)display(j);}
-  }catch(e){el('wgMessage').textContent=e.message;}finally{loading=false;if(visible){clearTimeout(timer);timer=setTimeout(refresh,2000);}}
+  }catch(e){setMessage(e.message,'error');}finally{loading=false;scheduleRefresh();}
  }
  window.openWGRelayModal=()=>{previousFocus=document.activeElement;visible=true;modal.classList.add('active');el('wgArchitecture').focus();refresh();};
- window.closeWGRelayModal=()=>{visible=false;clearTimeout(timer);modal.classList.remove('active');el('wgAPass').value='';el('wgBPass').value='';previousFocus?.focus();};
+ window.closeWGRelayModal=()=>{visible=false;clearTimeout(timer);timer=null;clearInterval(elapsedTimer);elapsedTimer=null;modal.classList.remove('active');el('wgAPass').value='';el('wgBPass').value='';previousFocus?.focus();};
  modal.addEventListener('click',e=>{if(e.target===modal)closeWGRelayModal();});
+ document.addEventListener('visibilitychange',()=>{if(visible&&!document.hidden)refresh();else if(document.hidden){clearTimeout(timer);timer=null;}});
  document.addEventListener('keydown',e=>{
   if(!visible)return;
   if(e.key==='Escape'){closeWGRelayModal();return;}
@@ -306,15 +405,41 @@
  form.addEventListener('submit',async e=>{
   e.preventDefault();if(active||submitting)return;if(!form.reportValidity())return;
   const body=Object.fromEntries(new FormData(form));body.mode=e.submitter?.value||'check';
+  body.a_ip=String(body.a_ip||'').trim();body.b_ip=String(body.b_ip||'').trim();body.sni=String(body.sni||'').trim();
   for(const key of ['a_ssh','b_ssh','a_port','b_port','mtu'])body[key]=Number(body[key]);
-  submitting=true;controls();el('wgMessage').textContent='正在提交任务…';
-  try{const j=await api('start',body);selected=j.id;active=j.id;display(j);el('wgAPass').value='';el('wgBPass').value='';el('wgMessage').textContent='任务已启动，关闭此窗口仍会继续。';}
-  catch(e){el('wgMessage').textContent=e.message;}finally{body.a_password='';body.b_password='';submitting=false;controls();refresh();}
+  if(body.a_ip===body.b_ip){setMessage('A 与 B 的公网 IP 不能相同，请填写两台不同服务器。','error');return;}
+  if(body.a_ssh===body.a_port||body.b_ssh===body.b_port){setMessage('业务端口不能与 SSH 端口相同，请更换空闲业务端口。','error');return;}
+  submitting=true;controls();setMessage('正在提交任务…','info');
+  try{const j=await api('start',body);selected=j.id;active=j.id;activeStatus=j.status;display(j);el('wgAPass').value='';el('wgBPass').value='';setMessage('任务已启动，关闭此窗口仍会继续。','success');}
+  catch(e){setMessage(e.message,'error');}finally{body.a_password='';body.b_password='';submitting=false;controls();refresh();}
  });
  el('wgJobs').addEventListener('change',()=>{selected=el('wgJobs').value;refresh();});
- el('wgCancel').addEventListener('click',async()=>{try{await api('cancel',{id:active});el('wgMessage').textContent='正在停止并清理，可能需要约 45 秒。远端已安装的服务会保留。';refresh();}catch(e){el('wgMessage').textContent=e.message;}});
- el('wgCopy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(el('wgLink').value);el('wgMessage').textContent='链接已复制。';}catch{el('wgLink').select();el('wgMessage').textContent='请手动复制已选中的链接。';}});
- el('wgImport').addEventListener('click',async()=>{if(!current)return;el('wgImport').disabled=true;try{const result=await api('import',{id:current.id});el('wgMessage').textContent=result.message+'；可在「自定义节点」查看。';}catch(e){el('wgMessage').textContent=e.message;}finally{el('wgImport').disabled=false;}});
+ el('wgCancel').addEventListener('click',async()=>{
+  if(!active||cancellingReq)return;
+  if(current?.spec?.mode==='deploy'&&!confirm('确认停止当前 WG 部署任务？已安装的远端服务会保留，清理过程可能需要约 45 秒。'))return;
+  cancellingReq=true;controls();
+  try{await api('cancel',{id:active});activeStatus='cancelling';setMessage('正在停止并清理，可能需要约 45 秒。远端已安装的服务会保留。','info');refresh();}
+  catch(e){setMessage(e.message,'error');}
+  finally{cancellingReq=false;controls();}
+ });
+ let copyResetTimer=null;
+ el('wgCopy').addEventListener('click',async()=>{
+  const btn=el('wgCopy');
+  try{
+   await navigator.clipboard.writeText(el('wgLink').value);
+   setMessage('链接已复制。','success');
+   btn.textContent='已复制 ✓';
+   clearTimeout(copyResetTimer);
+   copyResetTimer=setTimeout(()=>{btn.textContent='复制链接';},2000);
+  }catch{el('wgLink').select();setMessage('请手动复制已选中的链接。','info');}
+ });
+ el('wgImport').addEventListener('click',async()=>{
+  if(!current)return;
+  const btn=el('wgImport');btn.disabled=true;const orig=btn.textContent;btn.textContent='正在加入…';
+  try{const result=await api('import',{id:current.id});setMessage(result.message+'；可在「自定义节点」查看。','success');}
+  catch(e){setMessage(e.message,'error');}
+  finally{btn.disabled=false;btn.textContent=orig;}
+ });
 })();
 </script>
 {{end}}

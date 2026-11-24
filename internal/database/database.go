@@ -397,7 +397,9 @@ func (n *CustomNode) BeforeCreate(tx *gorm.DB) (err error) {
 // openSQLite 打开 SQLite 数据库连接
 func openSQLite() (*gorm.DB, error) {
 	dbPath := filepath.Join("data", "nodectl.db")
-	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{
+	// 通过 DSN 绑定 PRAGMA，确保连接池重建连接后外键、WAL 与锁超时设置不丢失。
+	dsn := dbPath + "?_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=synchronous(NORMAL)&_pragma=temp_store(MEMORY)&_pragma=cache_size(-16000)"
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
 		Logger: gormlogger.Default.LogMode(gormlogger.Warn),
 	})
 	if err != nil {
@@ -412,8 +414,6 @@ func openSQLite() (*gorm.DB, error) {
 	sqlDB.SetMaxIdleConns(1)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
-	// 启用 SQLite 外键约束
-	db.Exec("PRAGMA foreign_keys = ON")
 	return db, nil
 }
 
@@ -865,7 +865,12 @@ func DeleteNodeTrafficStatsBatched(nodeUUID string, batchSize int) (int64, error
 
 	var totalDeleted int64
 	for {
-		result := DB.Where("node_uuid = ?", nodeUUID).Limit(batchSize).Delete(&NodeTrafficStat{})
+		// 使用 id IN (SELECT id ... LIMIT ?) 兼容 SQLite 和 PostgreSQL，避免 GORM 忽略 DELETE LIMIT 导致全表锁。
+		subQuery := DB.Model(&NodeTrafficStat{}).
+			Select("id").
+			Where("node_uuid = ?", nodeUUID).
+			Limit(batchSize)
+		result := DB.Where("id IN (?)", subQuery).Delete(&NodeTrafficStat{})
 		if result.Error != nil {
 			return totalDeleted, result.Error
 		}

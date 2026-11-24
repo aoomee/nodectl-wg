@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 )
 
 func validRequest() Request {
@@ -221,5 +222,84 @@ func TestSplitAndOverlappingPasswordRedaction(t *testing.T) {
 	}
 	if m.jobs["test"].Log != "prefix [密码已隐藏] suffix\n" {
 		t.Fatal(m.jobs["test"].Log)
+	}
+}
+
+func TestCorruptJobQuarantinedOnStartup(t *testing.T) {
+	root := t.TempDir()
+	jobsDir := filepath.Join(root, "jobs")
+	if err := os.MkdirAll(jobsDir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	corruptPath := filepath.Join(jobsDir, "corrupt.json")
+	if err := os.WriteFile(corruptPath, []byte("{broken json"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	tmpPath := filepath.Join(jobsDir, "leftover.json.tmp")
+	if err := os.WriteFile(tmpPath, []byte("partial"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	m, err := New(root, nil)
+	if err != nil {
+		t.Fatalf("New should quarantine corrupt job instead of failing: %v", err)
+	}
+	if _, err := os.Stat(corruptPath + ".corrupt"); err != nil {
+		t.Fatalf("expected corrupt file to be quarantined: %v", err)
+	}
+	if _, err := os.Stat(tmpPath); !os.IsNotExist(err) {
+		t.Fatalf("expected leftover tmp file to be removed")
+	}
+	if len(m.List()) != 0 {
+		t.Fatalf("unexpected jobs loaded: %d", len(m.List()))
+	}
+}
+
+func TestUTF8LogTruncationAndEmptySecretSafe(t *testing.T) {
+	m := &Manager{jobs: map[string]*Job{"test": {}}}
+	w := &logWriter{m: m, id: "test", secrets: []string{"", "secret-val"}}
+	// Write > maxLog bytes of 3-byte Chinese runes so truncation hits inside multibyte runes.
+	chunk := strings.Repeat("中", (maxLog/3)+500) + "secret-val"
+	if _, err := w.Write([]byte(chunk)); err != nil {
+		t.Fatal(err)
+	}
+	got := m.jobs["test"].Log
+	if len(got) > maxLog {
+		t.Fatalf("log exceeded maxLog: %d > %d", len(got), maxLog)
+	}
+	if !utf8.ValidString(got) {
+		t.Fatalf("truncated log is not valid UTF-8")
+	}
+	if strings.Contains(got, "secret-val") {
+		t.Fatalf("secret leaked in truncated log")
+	}
+}
+
+func TestPanicInExecutorReleasesActiveSlot(t *testing.T) {
+	first := true
+	m, err := New(t.TempDir(), func(_ context.Context, _ Request, _ string, _ io.Writer) (Result, error) {
+		if first {
+			first = false
+			panic("boom")
+		}
+		return Result{Kind: "deploy", Link: "vless://recovered"}, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	j1, err := m.Start(validRequest())
+	if err != nil {
+		t.Fatal(err)
+	}
+	j1 = awaitJob(t, m, j1.ID)
+	if j1.Status != "failed" {
+		t.Fatalf("expected failed after panic, got %s", j1.Status)
+	}
+	j2, err := m.Start(validRequest())
+	if err != nil {
+		t.Fatalf("active slot not released after panic: %v", err)
+	}
+	j2 = awaitJob(t, m, j2.ID)
+	if j2.Status != "succeeded" {
+		t.Fatalf("expected second job to succeed, got %s", j2.Status)
 	}
 }

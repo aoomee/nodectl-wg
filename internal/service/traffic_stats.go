@@ -5,12 +5,37 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"nodectl/internal/database"
 
 	"gorm.io/gorm"
 )
+
+const trafficCleanupMinInterval = 10 * time.Minute
+
+var (
+	trafficCleanupMu   sync.Mutex
+	lastTrafficCleanup time.Time
+)
+
+func shouldRunTrafficCleanup(now time.Time) bool {
+	trafficCleanupMu.Lock()
+	defer trafficCleanupMu.Unlock()
+	if !lastTrafficCleanup.IsZero() && now.Sub(lastTrafficCleanup) < trafficCleanupMinInterval {
+		return false
+	}
+	lastTrafficCleanup = now
+	return true
+}
+
+// TrafficBatchItem 批量落库单节点流量项
+type TrafficBatchItem struct {
+	InstallID string
+	RXBytes   int64
+	TXBytes   int64
+}
 
 func isNodeTrafficStatsPrimaryKeyConflict(err error) bool {
 	if err == nil {
@@ -21,35 +46,150 @@ func isNodeTrafficStatsPrimaryKeyConflict(err error) bool {
 }
 
 func saveNodeTrafficTotalOnce(installID string, rxBytes, txBytes int64, reportedAt time.Time) (bool, error) {
-	found := false
-	err := database.DB.Transaction(func(tx *gorm.DB) error {
-		var node database.NodePool
-		if err := tx.Where("install_id = ?", installID).First(&node).Error; err != nil {
-			if err == gorm.ErrRecordNotFound {
-				return nil
+	now := time.Now()
+	res := database.DB.Model(&database.NodePool{}).
+		Where("install_id = ?", installID).
+		Updates(map[string]interface{}{
+			"traffic_down":      rxBytes,
+			"traffic_up":        txBytes,
+			"traffic_update_at": reportedAt,
+			"updated_at":        now,
+		})
+	if res.Error != nil {
+		return false, res.Error
+	}
+	return res.RowsAffected > 0, nil
+}
+
+// SaveNodeTrafficTotalsBatch 在单个事务内批量更新多个节点的累计流量，显著降低 SQLite 写锁与事务开销。
+func SaveNodeTrafficTotalsBatch(items []TrafficBatchItem, reportedAt time.Time) error {
+	if len(items) == 0 {
+		return nil
+	}
+	if reportedAt.IsZero() {
+		reportedAt = time.Now()
+	}
+	now := time.Now()
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		for _, item := range items {
+			iid := strings.TrimSpace(item.InstallID)
+			if iid == "" {
+				continue
 			}
-			return err
+			if err := tx.Model(&database.NodePool{}).
+				Where("install_id = ?", iid).
+				Updates(map[string]interface{}{
+					"traffic_down":      item.RXBytes,
+					"traffic_up":        item.TXBytes,
+					"traffic_update_at": reportedAt,
+					"updated_at":        now,
+				}).Error; err != nil {
+				return err
+			}
 		}
-		found = true
-
-		if err := tx.Model(&database.NodePool{}).
-			Where("uuid = ?", node.UUID).
-			Updates(map[string]interface{}{
-				"traffic_down":      rxBytes,
-				"traffic_up":        txBytes,
-				"traffic_update_at": reportedAt,
-				"updated_at":        time.Now(),
-			}).Error; err != nil {
-			return err
-		}
-
 		return nil
 	})
+}
 
-	if err != nil {
-		return false, err
+func saveNodeTrafficPointsBatchOnce(items []TrafficBatchItem, reportedAt time.Time) error {
+	installIDs := make([]string, 0, len(items))
+	seen := make(map[string]struct{}, len(items))
+	for _, item := range items {
+		iid := strings.TrimSpace(item.InstallID)
+		if iid == "" {
+			continue
+		}
+		if _, ok := seen[iid]; ok {
+			continue
+		}
+		seen[iid] = struct{}{}
+		installIDs = append(installIDs, iid)
 	}
-	return found, nil
+	if len(installIDs) == 0 {
+		return nil
+	}
+
+	var savedUUIDs []string
+	hk := hourKey(reportedAt)
+	thk := twoHourKey(reportedAt)
+	dk := dayKey(reportedAt)
+
+	err := database.DB.Transaction(func(tx *gorm.DB) error {
+		var nodes []database.NodePool
+		if err := tx.Select("uuid", "install_id").Where("install_id IN ?", installIDs).Find(&nodes).Error; err != nil {
+			return err
+		}
+		if len(nodes) == 0 {
+			return nil
+		}
+		uuidByInstall := make(map[string]string, len(nodes))
+		for _, n := range nodes {
+			uuidByInstall[n.InstallID] = n.UUID
+		}
+
+		records := make([]database.NodeTrafficStat, 0, len(nodes))
+		savedUUIDs = make([]string, 0, len(nodes))
+		for _, item := range items {
+			iid := strings.TrimSpace(item.InstallID)
+			uid, ok := uuidByInstall[iid]
+			if !ok || uid == "" {
+				continue
+			}
+			records = append(records, database.NodeTrafficStat{
+				NodeUUID:   uid,
+				ReportedAt: reportedAt,
+				HourKey:    hk,
+				TwoHourKey: thk,
+				DayKey:     dk,
+				TXBytes:    item.TXBytes,
+				RXBytes:    item.RXBytes,
+			})
+			savedUUIDs = append(savedUUIDs, uid)
+		}
+		if len(records) == 0 {
+			return nil
+		}
+		if err := tx.CreateInBatches(records, 100).Error; err != nil {
+			return err
+		}
+
+		if shouldRunTrafficCleanup(reportedAt) {
+			retentionDays := loadTrafficRetentionDays(tx)
+			if err := cleanupExpiredTrafficStats(tx, reportedAt, retentionDays); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	if len(savedUUIDs) > 0 {
+		BatchIncrementTrafficHistoryCount(savedUUIDs)
+	}
+	return nil
+}
+
+// SaveNodeTrafficPointsBatch 批量写入多个节点的历史流量采样点，并节流执行过期清理。
+func SaveNodeTrafficPointsBatch(items []TrafficBatchItem, reportedAt time.Time) error {
+	if len(items) == 0 {
+		return nil
+	}
+	if reportedAt.IsZero() {
+		reportedAt = time.Now()
+	}
+	err := saveNodeTrafficPointsBatchOnce(items, reportedAt)
+	if err == nil {
+		return nil
+	}
+	if !isNodeTrafficStatsPrimaryKeyConflict(err) {
+		return err
+	}
+	if syncErr := database.SyncNodeTrafficStatSequence(); syncErr != nil {
+		return fmt.Errorf("批量写入失败且序列同步失败: %v; 原始错误: %w", syncErr, err)
+	}
+	return saveNodeTrafficPointsBatchOnce(items, reportedAt)
 }
 
 func saveNodeTrafficPointOnce(installID string, rxBytes, txBytes int64, reportedAt time.Time) (bool, error) {
@@ -368,17 +508,12 @@ func GetTrafficConsumptionRank(limit int, rankDate string) (*TrafficConsumptionR
 	}
 
 	dayStart := selectedDate
-	dayEnd := selectedDate.AddDate(0, 0, 1)
-
-	uuidToNode := make(map[string]database.NodePool, len(nodes))
-	for _, n := range nodes {
-		uuidToNode[n.UUID] = n
-	}
+	targetDayKey := dayKey(dayStart)
 
 	var samples []database.NodeTrafficStat
 	if err := database.DB.
 		Select("node_uuid", "reported_at", "tx_bytes", "rx_bytes").
-		Where("reported_at >= ? AND reported_at < ?", dayStart, dayEnd).
+		Where("day_key = ?", targetDayKey).
 		Order("node_uuid ASC, reported_at ASC").
 		Find(&samples).Error; err != nil {
 		return nil, err

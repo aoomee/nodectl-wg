@@ -2,10 +2,13 @@
 import json
 import os
 from pathlib import Path
+import secrets
 import shutil
 import signal
+import socket
 import sys
-import traceback
+
+import paramiko
 
 sys.path.insert(0, str(Path(__file__).parent / 'engine'))
 import deploy as engine
@@ -57,11 +60,19 @@ def run():
             print('部署和本次业务验证通过。请导入后在自己的网络中确认使用。', flush=True)
         (folder / 'result.json').write_text(json.dumps(result, ensure_ascii=False))
     finally:
-        b.close()
-        a.close()
+        for host in (b, a):
+            try:
+                host.close()
+            except Exception:
+                pass
         if (folder / '.known_hosts').exists():
-            shutil.copyfile(folder / '.known_hosts', known)
-            known.chmod(0o600)
+            tmp_known = known.with_name(known.name + '.tmp-' + secrets.token_hex(4))
+            try:
+                shutil.copyfile(folder / '.known_hosts', tmp_known)
+                tmp_known.chmod(0o600)
+                os.replace(tmp_known, known)
+            finally:
+                tmp_known.unlink(missing_ok=True)
         request.clear()
 
 
@@ -71,6 +82,18 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print('任务已中断，已尝试停止远程操作及清理临时凭据；重试前请确认服务器状态。', flush=True)
         sys.exit(130)
+    except paramiko.AuthenticationException:
+        print('SSH 登录失败：请确认用户名、密码、SSH 端口及服务器是否允许密码登录。', flush=True)
+        sys.exit(1)
+    except paramiko.BadHostKeyException:
+        print('SSH 指纹与已记录的指纹不同，已停止连接。请核实服务器是否重装过系统后再更新主机记录。', flush=True)
+        sys.exit(1)
+    except paramiko.ssh_exception.NoValidConnectionsError:
+        print('无法建立 SSH TCP 连接：请检查服务器公网 IP、SSH 端口及云安全组/防火墙放行规则。', flush=True)
+        sys.exit(1)
+    except (socket.timeout, TimeoutError):
+        print('SSH 连接或操作超时：请检查服务器网络连通性、SSH 端口和防火墙状态后重试。', flush=True)
+        sys.exit(1)
     except Exception as exc:
         print('未完成：' + type(exc).__name__ + '：' + str(exc), flush=True)
         sys.exit(1)

@@ -69,6 +69,9 @@ function nodeWGMessage(message) {
 }
 async function nodeWGRequest(path, body) {
     const response = await fetch(path, body === undefined ? {cache:'no-store'} : {method:'POST', headers:{'Content-Type':'application/json','X-NodeCtl-WG':'1'}, body:JSON.stringify(body)});
+    if (response.redirected || !response.headers.get('Content-Type')?.includes('application/json')) {
+        throw new Error('登录已失效或服务响应异常，请刷新页面后重试');
+    }
     const result = await response.json();
     if (!response.ok || result.status === 'error' || result.error) throw new Error(result.message || result.error || 'WG 请求失败');
     return result.data || result;

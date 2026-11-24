@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"nodectl/internal/logger"
 	"nodectl/internal/service"
 )
 
@@ -23,6 +24,9 @@ func apiWGPairOptions(w http.ResponseWriter, r *http.Request) {
 	}
 	data, err := service.WGPairOptions(id)
 	if err != nil {
+		if logger.Log != nil {
+			logger.Log.Warn("读取 WG 配对选项失败", "node_uuid", id, "error", err)
+		}
 		wgPairError(w, 409, "WireGuard options unavailable")
 		return
 	}
@@ -40,6 +44,9 @@ func apiWGPairPush(w http.ResponseWriter, r *http.Request) {
 	}
 	data, err := service.SaveWGPair(r.Context(), request)
 	if err != nil {
+		if logger.Log != nil {
+			logger.Log.Warn("保存 WG 配对配置失败", "node_uuid", request.UUID, "peer_uuid", request.PeerUUID, "enabled", request.Enabled, "error", err)
+		}
 		wgPairError(w, 409, "pair conflict or unavailable dependencies; disable and finish cleanup before editing")
 		return
 	}

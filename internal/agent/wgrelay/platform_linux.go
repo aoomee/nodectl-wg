@@ -8,9 +8,50 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"sync"
 	"syscall"
 	"time"
 )
+
+var wgToolInstallMu sync.Mutex
+
+func ensureWGTools() {
+	wgToolInstallMu.Lock()
+	defer wgToolInstallMu.Unlock()
+	if _, err := exec.LookPath("ip"); err == nil {
+		if _, err := exec.LookPath("wg"); err == nil {
+			return
+		}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	env := append(os.Environ(), "DEBIAN_FRONTEND=noninteractive", "NEEDRESTART_MODE=l")
+	runPkg := func(name string, args ...string) bool {
+		if _, err := exec.LookPath(name); err != nil {
+			return false
+		}
+		cmd := exec.CommandContext(ctx, name, args...)
+		cmd.Env = env
+		_ = cmd.Run()
+		return true
+	}
+	switch {
+	case hasBinary("apt-get"):
+		runPkg("apt-get", "update", "-qq")
+		runPkg("apt-get", "install", "-y", "-qq", "--no-install-recommends", "iproute2", "wireguard-tools")
+	case hasBinary("dnf"):
+		runPkg("dnf", "install", "-y", "-q", "iproute", "wireguard-tools")
+	case hasBinary("yum"):
+		runPkg("yum", "install", "-y", "-q", "iproute", "wireguard-tools")
+	case hasBinary("apk"):
+		runPkg("apk", "add", "--no-cache", "iproute2", "wireguard-tools")
+	}
+}
+
+func hasBinary(name string) bool {
+	_, err := exec.LookPath(name)
+	return err == nil
+}
 
 func prerequisites() error {
 	if os.Geteuid() != 0 {
@@ -19,8 +60,11 @@ func prerequisites() error {
 	if s, err := os.Stat("/run/systemd/system"); err != nil || !s.IsDir() {
 		return ErrUnsupported
 	}
+	if !hasBinary("ip") || !hasBinary("wg") {
+		ensureWGTools()
+	}
 	for _, name := range []string{"ip", "wg"} {
-		if _, err := exec.LookPath(name); err != nil {
+		if !hasBinary(name) {
 			return ErrUnsupported
 		}
 	}

@@ -1635,6 +1635,7 @@
                         };
                         cacheNodes(result.data.direct_nodes);
                         cacheNodes(result.data.land_nodes);
+                        window.allWGPairs = result.data.wg_pairs || {};
                         window.panelUrl = result.data.panel_url;
                         window.cftTunnelSubdomain =
                             result.data.tunnel_subdomain || "";
@@ -1829,6 +1830,25 @@
                             .join("");
                     } else {
                         tagsHTML = `<span style="font-size:11px; color:#a1a1a6;">暂无有效协议</span>`;
+                    }
+
+                    // 2.5 若节点处于 Agent WG 配对中，展示实时链路角色与状态徽章
+                    const wgInfo = window.allWGPairs ? window.allWGPairs[node.uuid] : null;
+                    if (wgInfo) {
+                        const st = wgInfo.status || "";
+                        let wgBg = "#eaf4ff", wgText = "#0066cc", stHint = "处理中";
+                        if (st === "active") {
+                            wgBg = "#e8fdf0"; wgText = "#15803d"; stHint = "";
+                        } else if (st === "blocked" || st === "failed") {
+                            wgBg = "#feeceb"; wgText = "#d92d20"; stHint = st === "blocked" ? "已阻断" : "异常";
+                        } else if (st === "cleanup_pending") {
+                            wgBg = "#fff4e5"; wgText = "#b45309"; stHint = "清理中";
+                        }
+                        const arrow = wgInfo.role === "entry" ? "→" : "←";
+                        const peerLabel = escapeNodeHTML(wgInfo.peer_name || "");
+                        const badgeText = `WG ${arrow} ${peerLabel}${stHint ? " · " + stHint : ""}`;
+                        const wgBadge = `<span class="proto-tag" style="background-color: ${wgBg}; color: ${wgText}; font-weight: 600;" title="WireGuard 双机中转">${badgeText}</span>`;
+                        tagsHTML = activeProtos.length > 0 ? (tagsHTML + wgBadge) : wgBadge;
                     }
 
                     // 3. 拖拽手柄

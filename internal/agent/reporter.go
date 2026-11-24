@@ -113,13 +113,15 @@ func (r *Reporter) Connect(ctx context.Context) error {
 	defer cancel()
 
 	headers := make(http.Header)
+	if id := strings.TrimSpace(r.cfg.InstallID); id != "" {
+		headers.Set("X-NodeCtl-Install-ID", id)
+		headers.Set("X-NodeCtl-Capabilities", agentCapability)
+	}
 	if r.cfg.AgentToken != "" {
 		if err := validateAgentTransport(r.cfg); err != nil {
 			return err
 		}
 		headers.Set("Authorization", "Bearer "+r.cfg.AgentToken)
-		headers.Set("X-NodeCtl-Install-ID", r.cfg.InstallID)
-		headers.Set("X-NodeCtl-Capabilities", agentCapability)
 	}
 	conn, _, err := websocket.Dial(dialCtx, r.cfg.WSURL, &websocket.DialOptions{
 		Subprotocols: []string{"nodectl-agent"},

@@ -15,21 +15,21 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
  try {
   for(const width of [1280,375,320]) {
    const page=await browser.newPage({viewport:{width,height:1000}});
-   const errors=[],requests=[],ordinary=[],saves=[],alerts=[],bindings=[];
-   let pair=null,ready=true,saveFailure=false,optionFailure=false,optionDelay=0,bindDelay=0,saveDelay=0;
-   let diagnostics=false,unavailablePeer=false,enrollmentMode='none';
+   const errors=[],requests=[],ordinary=[],saves=[],alerts=[];
+   let pair=null,ready=true,saveFailure=false,optionFailure=false,optionDelay=0,saveDelay=0;
+   let diagnostics=false,unavailablePeer=false;
    let nodes=[makeNode('a'),makeNode('b',true)];
    page.on('pageerror',e=>errors.push(e.message));
    page.on('dialog',async d=>{alerts.push(d.message());await d.accept();});
    await page.route('**/*',async route=>{
     const req=route.request(),url=new URL(req.url());
     if(url.pathname==='/')return route.fulfill({contentType:'text/html; charset=utf-8',body:html});
-    if(url.pathname==='/api/get-nodes')return route.fulfill({json:{status:'success',data:{direct_nodes:[nodes[0]],land_nodes:[nodes[1]]}}});
+    if(url.pathname==='/api/get-nodes')return route.fulfill({json:{status:'success',data:{direct_nodes:[nodes[0]],land_nodes:[nodes[1]],wg_pairs:pair?{a:{role:'entry',peer_uuid:'b',peer_name:'落地 B',status:pair.status}}:{} }}});
     if(url.pathname==='/api/node/wg/options') {
      if(optionFailure)return route.fulfill({status:503,json:{status:'error',message:'连接检查暂时失败，请刷新重试'}});
      const data={pair:url.searchParams.get('uuid')==='a'?pair:null,ready,peers:[{uuid:'b',name:'落地 B',ready:true},{uuid:'c',name:'落地 C',ready:true}]};
      if(diagnostics) {
-      data.readiness={role:'entry',ready,enrollment_mode:enrollmentMode,checks:[{code:'node',label:'节点条件',ready:true},{code:'protocol',label:'REALITY 部署',ready:true},{code:'identity',label:'机器授权',ready:enrollmentMode==='none',detail:'机器授权已撤销，请重新授权。'},{code:'agent',label:'Agent 连接',ready,detail:'Agent 未连接；请检查服务是否运行，以及到面板的 HTTPS/WSS 连接。'}]};
+      data.readiness={role:'entry',ready,enrollment_mode:'none',checks:[{code:'node',label:'节点条件',ready:true},{code:'protocol',label:'REALITY 部署',ready:true},{code:'agent',label:'Agent 连接',ready,detail:'Agent 未连接；请确认服务器上的 nodectl-agent 服务正在运行。'}]};
       if(unavailablePeer)data.peers[1]={uuid:'c',name:'落地 C <img src=x onerror=alert(1)>',ready:false,readiness:{checks:[{code:'protocol',label:'SS 部署',ready:false,detail:'请先启用并推送 SS，等待成功。'}]}};
      }
      const delay=optionDelay; if(delay)await new Promise(r=>setTimeout(r,delay));
@@ -46,7 +46,6 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
      return route.fulfill({json:{status:saveFailure?'error':'success',message:saveFailure?'mock save failure':undefined}});
     }
     if(url.pathname==='/api/node/control/push-config') { ordinary.push(req.postDataJSON());return route.fulfill({json:{status:'success',command_id:'cmd-'+ordinary.length}}); }
-    if(url.pathname==='/api/node/agent/enrollment') {bindings.push(req.postDataJSON());if(bindDelay)await new Promise(r=>setTimeout(r,bindDelay));return route.fulfill({json:{status:'success',data:{token:'SECRET-TEST-TOKEN',expires_at:'soon'}}});}
     errors.push('Unexpected HTTP '+url.pathname);return route.abort();
    });
    const open=async(uuid='a')=>{await page.evaluate(uuid=>openEditModal(uuid),uuid);await page.waitForFunction(()=>nodeWGEditor.loaded);await page.waitForFunction(()=>!isInitializingEdit);};
@@ -65,13 +64,14 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
    await page.evaluate(()=>document.getElementById('protoSelectOverlay').style.display='none');
    const box=await page.locator('#nodeWGCard').boundingBox();assert.ok(box.x>=-1 && box.x+box.width<=width+1,'outbound must fit viewport');
 
-   // Help uses progressive disclosure; one scroll area never squeezes protocols.
+   // Help uses progressive disclosure; one scroll area never squeezes protocols. No manual enrollment buttons.
    assert.equal(await page.locator('#nodeWGPeerField').isVisible(),false,'direct must hide landing controls');
    assert.equal(await page.locator('#nodeWGSetupDetails').evaluate(e=>e.open),false);
    assert.equal(await page.locator('#nodeWGUsage').evaluate(e=>e.open),false);
-   assert.equal(await page.locator('#nodeWGBind').isVisible(),true,'authorization must be reachable with help closed');
-   await page.locator('#nodeWGBind').focus();await page.keyboard.press('Tab');
-   assert.equal(await page.evaluate(()=>document.activeElement.id),'nodeWGRefresh','authorization and refresh must have a predictable keyboard order');
+   assert.equal(await page.locator('#nodeWGBind').count(),0,'direct Agent WG requires no manual enrollment button');
+   assert.equal(await page.locator('#nodeWGRefresh').isVisible(),true,'refresh must be reachable with help closed');
+   await page.locator('#nodeWGRefresh').focus();
+   assert.equal(await page.evaluate(()=>document.activeElement.id),'nodeWGRefresh');
    const snapshot=async(name,label=name)=>{
     if(!process.env.NODECTL_UI_SCREENSHOT_DIR)return;
     fs.mkdirSync(process.env.NODECTL_UI_SCREENSHOT_DIR,{recursive:true});
@@ -100,9 +100,8 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
 
    // Backend reasons, unavailable peers, safe text rendering and stale-state clearing.
    diagnostics=true;ready=false;unavailablePeer=true;await page.evaluate(()=>loadNodeWGEditor('a'));
-   assert.equal(await page.locator('#nodeWGChecks .node-wg-check').count(),4);
+   assert.equal(await page.locator('#nodeWGChecks .node-wg-check').count(),3);
    assert.match(await page.locator('#nodeWGChecks').innerText(),/Agent 未连接/);
-   assert.equal(await page.locator('#nodeWGBind').isDisabled(),true,'authorized machines should not repeat initial enrollment');
    await page.locator('#nodeWGMode').selectOption('wg');
    assert.equal(await page.locator('#nodeWGPeer option[value="c"]').isDisabled(),true);
    await page.locator('#nodeWGPeerIssues summary').click();
@@ -116,13 +115,8 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
    optionFailure=true;await page.evaluate(()=>loadNodeWGEditor('a'));
    assert.equal(await page.locator('#nodeWGChecks .node-wg-check').count(),0,'failed refresh must clear stale checks');
    assert.equal(await page.locator('#nodeWGPeerIssues').isVisible(),false);
-   enrollmentMode='rotate';optionFailure=false;await page.evaluate(()=>loadNodeWGEditor('a'));
-   assert.equal(await page.locator('#nodeWGBind').innerText(),'重新授权');
-   await page.locator('#nodeWGBind').click();await page.waitForFunction(()=>!nodeWGEditor.binding);
-   assert.equal(bindings.at(-1).rotate,true);assert.match(alerts.at(-1),/旧机器凭据失效/);
-   enrollmentMode='none';
    optionFailure=false;ready=true;unavailablePeer=false;await page.evaluate(()=>loadNodeWGEditor('a'));
-   assert.equal(await page.locator('#nodeWGChecks [data-tone="success"]').count(),4);
+   assert.equal(await page.locator('#nodeWGChecks [data-tone="success"]').count(),3);
    assert.equal(await page.locator('#nodeWGPeerIssues').isVisible(),false);
    await page.locator('#nodeWGMode').selectOption('direct');diagnostics=false;
 
@@ -195,12 +189,12 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
    assert.equal(await page.locator('#nodeWGSetupBadge').innerText(),'待就绪');
    await snapshot('nodeWGSetup','not-ready');
 
-   // Superseded options and close during enrollment cannot resurrect state/tokens.
+   // Superseded options and close cannot resurrect stale state.
    optionDelay=180;await page.evaluate(()=>{window.oldOptions=loadNodeWGEditor('a')});
    await page.waitForTimeout(30);optionDelay=0;pair={uuid:'a',peer_uuid:'b',entry_port:443,revision:9,enabled:true,status:'active',phase:'active',topology_version:2};
    await page.evaluate(()=>loadNodeWGEditor('a'));await page.evaluate(()=>window.oldOptions);assert.equal(await page.evaluate(()=>nodeWGEditor.pair.revision),9);
-   bindDelay=180;await page.locator('#nodeWGBind').click();await page.evaluate(()=>closeEditModal());await page.waitForTimeout(230);
-   assert.equal(await page.locator('#nodeWGSetup').count(),0);assert.equal(await page.evaluate(()=>nodeWGEditor.timer),null);assert.ok(!(await page.locator('body').innerText()).includes('SECRET-TEST-TOKEN'));bindDelay=0;
+   await page.evaluate(()=>closeEditModal());
+   assert.equal(await page.locator('#nodeWGSetup').count(),0);assert.equal(await page.evaluate(()=>nodeWGEditor.timer),null);
 
    // Legacy pair without REALITY exposes cleanup only, not a fake protocol.
    nodes[0]={...makeNode('a'),links:{ss:'ss://mock'},link_ports:{ss:8388}};
@@ -210,17 +204,15 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
    await push();assert.equal(requests.length,before);await page.locator('#nodeWGCleanup').click();await page.waitForFunction(()=>nodeWGEditor.pair.status==='disabled');
    assert.equal(requests.at(-1).enabled,false);
 
-   // Landing has setup/token controls without any fake WG protocol/card.
+   // Landing shows readiness card without any fake WG protocol/card or manual enrollment prompt.
    await page.evaluate(()=>closeEditModal());await open('b');
    assert.equal(await page.locator('#nodeWGCard').count(),0);assert.match(await page.locator('#nodeWGSetupStatus').innerText(),/落地 B/);
    assert.equal(await page.locator('#nodeWGSetupDetails').evaluate(e=>e.open),false);
-   await page.locator('#nodeWGBind').click();await page.waitForFunction(()=>document.getElementById('nodeWGBinding').textContent.includes('SECRET-TEST-TOKEN'));
-   assert.equal(await page.locator('#nodeWGBinding').isVisible(),true,'token must be visible without opening help');
-   const overflow=await page.locator('#editNodeModal').evaluate(e=>Array.from(e.querySelectorAll('#nodeWGSetup, #nodeWGBinding, .edit-footer')).some(el=>el.scrollWidth>el.clientWidth+1));
-   assert.equal(overflow,false,'authorization and footer must fit narrow screens');
-   await page.evaluate(()=>closeEditModal());assert.equal(await page.locator('#nodeWGBinding').count(),0);
+   const overflow=await page.locator('#editNodeModal').evaluate(e=>Array.from(e.querySelectorAll('#nodeWGSetup, .edit-footer')).some(el=>el.scrollWidth>el.clientWidth+1));
+   assert.equal(overflow,false,'readiness card and footer must fit narrow screens');
+   await page.evaluate(()=>closeEditModal());
    assert.deepEqual(errors,[]);await page.close();
   }
-  console.log('PASS: real modal at 1280/375/320px, keyboard focus across polling, visible authorization, ordinary SSE staging, fail-closed guards, cleanup, readiness, autosave, revision, stale options, token cleanup, SS landing and legacy migration.');
+  console.log('PASS: real modal at 1280/375/320px, direct Agent WG readiness without manual enrollment, keyboard focus across polling, ordinary SSE staging, fail-closed guards, cleanup, autosave, revision, stale options, SS landing and legacy migration.');
  } finally {await browser.close();}
 })().catch(e=>{console.error(e);process.exit(1)});

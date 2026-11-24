@@ -512,6 +512,10 @@ func (h *TrafficHub) bindAgentConnection(conn *websocket.Conn, installID, client
 	h.agentMu.Lock()
 	prevConn := h.agentConns[installID]
 	h.agentConns[installID] = conn
+	if s := h.agentSessions[conn]; s.installID == "" {
+		s.installID = installID
+		h.agentSessions[conn] = s
+	}
 	h.agentMu.Unlock()
 
 	// 如果同一节点已有旧连接，主动关闭旧连接，避免并发双连接导致状态抖动。

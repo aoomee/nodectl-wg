@@ -108,7 +108,7 @@ type wgPairCoordinator struct {
 	generation uint64
 }
 
-var wgDefault = &wgPairCoordinator{ready: WGAgentV2Ready, agentStatus: WGAgentV2Status, legacyReady: WGAgentReady, send: SendWGCommand, now: time.Now, timeout: 20 * time.Second, confirmed: map[string]uint64{}}
+var wgDefault = &wgPairCoordinator{ready: WGAgentV2Ready, agentStatus: WGAgentV2Status, legacyReady: WGAgentReady, send: SendWGCommand, now: time.Now, timeout: 75 * time.Second, confirmed: map[string]uint64{}}
 
 func (c *wgPairCoordinator) database() *gorm.DB {
 	if c.db != nil {
@@ -173,11 +173,106 @@ func (c *wgPairCoordinator) identity(db *gorm.DB, n database.NodePool) (string, 
 	return c.identityState(db, n, true)
 }
 func (c *wgPairCoordinator) identityState(db *gorm.DB, n database.NodePool, online bool) (string, error) {
-	var i database.AgentIdentity
-	if db.Where("node_uuid = ? AND install_id = ?", n.UUID, n.InstallID).First(&i).Error != nil || !i.Bound || i.SecretHash == "" || (online && !c.ready(n.InstallID)) {
+	if online && !c.ready(n.InstallID) {
 		return "", ErrWGUnavailable
 	}
-	return wgHash(i.SecretHash), nil
+	var i database.AgentIdentity
+	err := db.Where("node_uuid = ? AND install_id = ?", n.UUID, n.InstallID).First(&i).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return "", err
+	}
+	if err == nil && i.Bound {
+		if i.SecretHash == "" {
+			return "", ErrWGUnavailable
+		}
+		return wgHash(i.SecretHash), nil
+	}
+	// Direct Agent mode: bind pair dependency fingerprint to node UUID + InstallID without manual enrollment.
+	if n.UUID == "" || n.InstallID == "" {
+		return "", ErrWGUnavailable
+	}
+	return wgHash("direct:" + n.UUID + ":" + n.InstallID), nil
+}
+
+// WGPairNodeSummary 用于首页节点卡片展示当前 WG 配对角色与状态
+type WGPairNodeSummary struct {
+	Role      string `json:"role"`      // "entry" | "landing"
+	PeerUUID  string `json:"peer_uuid"` // 对端节点 UUID
+	PeerName  string `json:"peer_name"` // 对端节点名称
+	Status    string `json:"status"`    // "active" | "pending" | "applying" | "recovering" | "cleanup_pending" | "blocked" | "failed"
+	Topology  int    `json:"topology"`
+}
+
+// ListWGPairNodeSummaries 返回所有尚未彻底停用/恢复直连的 WG 配对摘要（按 node_uuid 索引）。
+func ListWGPairNodeSummaries() map[string]WGPairNodeSummary {
+	out := make(map[string]WGPairNodeSummary)
+	if database.DB == nil || !database.DB.Migrator().HasTable(&database.WGPair{}) {
+		return out
+	}
+	var pairs []database.WGPair
+	if err := database.DB.Find(&pairs).Error; err != nil || len(pairs) == 0 {
+		return out
+	}
+	uuidSet := make(map[string]struct{}, len(pairs)*2)
+	activePairs := make([]database.WGPair, 0, len(pairs))
+	for _, p := range pairs {
+		if p.Status == "disabled" && (p.TopologyVersion != 2 || p.RestoreDirect) {
+			continue
+		}
+		activePairs = append(activePairs, p)
+		if p.EntryUUID != "" {
+			uuidSet[p.EntryUUID] = struct{}{}
+		}
+		if p.PeerUUID != "" {
+			uuidSet[p.PeerUUID] = struct{}{}
+		}
+	}
+	if len(activePairs) == 0 {
+		return out
+	}
+	ids := make([]string, 0, len(uuidSet))
+	for id := range uuidSet {
+		ids = append(ids, id)
+	}
+	var nodes []database.NodePool
+	_ = database.DB.Select("uuid", "name").Where("uuid IN ?", ids).Find(&nodes)
+	nameByUUID := make(map[string]string, len(nodes))
+	for _, n := range nodes {
+		nameByUUID[n.UUID] = strings.TrimSpace(n.Name)
+	}
+	for _, p := range activePairs {
+		st := p.Status
+		if st == "disabled" && p.TopologyVersion == 2 && !p.RestoreDirect {
+			st = "blocked"
+		}
+		entryName := nameByUUID[p.EntryUUID]
+		if entryName == "" {
+			entryName = p.EntryUUID
+		}
+		peerName := nameByUUID[p.PeerUUID]
+		if peerName == "" {
+			peerName = p.PeerUUID
+		}
+		if p.EntryUUID != "" {
+			out[p.EntryUUID] = WGPairNodeSummary{
+				Role:     "entry",
+				PeerUUID: p.PeerUUID,
+				PeerName: peerName,
+				Status:   st,
+				Topology: p.TopologyVersion,
+			}
+		}
+		if p.PeerUUID != "" {
+			out[p.PeerUUID] = WGPairNodeSummary{
+				Role:     "landing",
+				PeerUUID: p.EntryUUID,
+				PeerName: entryName,
+				Status:   st,
+				Topology: p.TopologyVersion,
+			}
+		}
+	}
+	return out
 }
 func (c *wgPairCoordinator) dependencies(db *gorm.DB, aID, bID string) (a, b database.NodePool, ah, bh, link string, port int, err error) {
 	return c.dependencyState(db, aID, bID, true)

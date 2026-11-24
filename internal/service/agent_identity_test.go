@@ -82,6 +82,27 @@ func TestWGAgentConnectionReadiness(t *testing.T) {
 	}
 }
 
+func TestDirectAgentWGReadyWithoutEnrollment(t *testing.T) {
+	h := identityTestDB(t)
+	id := "bbbbbbbbbbbb" // node-b has no AgentIdentity row at all
+	req := httptest.NewRequest(http.MethodGet, "http://panel.example/api/callback/traffic/ws", nil)
+	req.Header.Set(AgentInstallIDHeader, id)
+	req.Header.Set(AgentCapabilityHeader, WGRelayCapability+","+WGRelayV2Capability)
+	session, err := authenticateAgentRequest(req)
+	if err != nil {
+		t.Fatalf("direct agent handshake rejected: %v", err)
+	}
+	if session.authenticated || !session.wg || !session.wgV2 {
+		t.Fatalf("unexpected direct session: %+v", session)
+	}
+	conn := &websocket.Conn{}
+	h.agentConns[id] = conn
+	h.agentSessions[conn] = session
+	if !WGAgentReady(id) || !WGAgentV2Ready(id) || WGAgentV2Status(id) != "ready" {
+		t.Fatalf("direct agent should be ready without enrollment, got status=%s", WGAgentV2Status(id))
+	}
+}
+
 func TestAuthenticatedAgentThroughHTTPSProxy(t *testing.T) {
 	for _, kind := range []string{"go", "nginx"} {
 		t.Run(kind, func(t *testing.T) {

@@ -19,6 +19,7 @@ func TestWGReadinessReasons(t *testing.T) {
 				err = c.db.Model(&database.NodePool{}).Where("uuid = ?", "landing").Update("disabled_links", `["ss"]`).Error
 			case "identity":
 				err = c.db.Model(&database.AgentIdentity{}).Where("node_uuid = ?", "landing").Update("secret_hash", "").Error
+				code = "agent"
 			case "offline", "unauthenticated", "unsupported":
 				c.agentStatus = func(id string) string {
 					if id == "bbbbbbbbbbbb" {
@@ -53,18 +54,15 @@ func TestWGReadinessReasons(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !options.Ready || !options.Readiness.Ready || options.Readiness.Role != "entry" || len(options.Readiness.Checks) != 4 {
+			if !options.Ready || !options.Readiness.Ready || options.Readiness.Role != "entry" || len(options.Readiness.Checks) != 3 {
 				t.Fatalf("entry checks: %+v", options.Readiness)
 			}
 			if len(options.Peers) != 1 {
 				t.Fatal("unavailable landing disappeared")
 			}
 			peer := options.Peers[0]
-			if kind == "identity" && peer.Readiness.EnrollmentMode != "rotate" {
-				t.Fatal("revoked identity needs explicit re-enrollment")
-			}
-			if options.Readiness.EnrollmentMode != "none" {
-				t.Fatal("bound identity must not prompt initial enrollment")
+			if options.Readiness.EnrollmentMode != "none" || peer.Readiness.EnrollmentMode != "none" {
+				t.Fatal("direct Agent mode must not prompt manual enrollment")
 			}
 			if kind == "ready" {
 				if !peer.Ready || !peer.Readiness.Ready {
@@ -105,5 +103,20 @@ func TestWGReadinessLandingAndDatabaseFailure(t *testing.T) {
 	}
 	if _, err := c.options("entry"); err == nil {
 		t.Fatal("database failure shown as unbound")
+	}
+}
+
+func TestWGReadinessDirectAgentWithoutIdentityRecord(t *testing.T) {
+	c, _ := newWGTest(t)
+	c.agentStatus = func(string) string { return "ready" }
+	if err := c.db.Where("1 = 1").Delete(&database.AgentIdentity{}).Error; err != nil {
+		t.Fatal(err)
+	}
+	options, err := c.options("entry")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !options.Ready || !options.Readiness.Ready || len(options.Readiness.Checks) != 3 || len(options.Peers) != 1 || !options.Peers[0].Ready {
+		t.Fatalf("direct agent nodes without AgentIdentity should be ready: %+v", options)
 	}
 }

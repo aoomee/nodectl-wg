@@ -66,41 +66,60 @@ detect_os() {
 }
 
 # -----------------------
-# 安装基础依赖（curl）
+# 安装基础依赖（curl + wireguard-tools）
 install_deps() {
     if command -v curl >/dev/null 2>&1; then
         info "curl 已存在，跳过安装"
-        return
+    else
+        info "未检测到 curl，正在自动安装..."
+        case "$OS" in
+            debian)
+                DEBIAN_FRONTEND=noninteractive apt-get update -qq >/dev/null 2>&1
+                DEBIAN_FRONTEND=noninteractive apt-get install -y -qq curl >/dev/null 2>&1
+                ;;
+            redhat)
+                if command -v dnf >/dev/null 2>&1; then
+                    dnf install -y -q curl >/dev/null 2>&1
+                else
+                    yum install -y -q curl >/dev/null 2>&1
+                fi
+                ;;
+            alpine)
+                apk update >/dev/null 2>&1
+                apk add --no-cache curl >/dev/null 2>&1
+                ;;
+            *)
+                err "未知系统类型，无法自动安装 curl，请手动安装后重试"
+                exit 1
+                ;;
+        esac
+
+        if command -v curl >/dev/null 2>&1; then
+            info "curl 安装成功 ✓"
+        else
+            err "curl 安装失败，请手动安装后重试"
+            exit 1
+        fi
     fi
 
-    info "未检测到 curl，正在自动安装..."
-    case "$OS" in
-        debian)
-            apt-get update -qq >/dev/null 2>&1
-            apt-get install -y -qq curl >/dev/null 2>&1
-            ;;
-        redhat)
-            if command -v dnf >/dev/null 2>&1; then
-                dnf install -y -q curl >/dev/null 2>&1
-            else
-                yum install -y -q curl >/dev/null 2>&1
-            fi
-            ;;
-        alpine)
-            apk update >/dev/null 2>&1
-            apk add --no-cache curl >/dev/null 2>&1
-            ;;
-        *)
-            err "未知系统类型，无法自动安装 curl，请手动安装后重试"
-            exit 1
-            ;;
-    esac
-
-    if command -v curl >/dev/null 2>&1; then
-        info "curl 安装成功 ✓"
-    else
-        err "curl 安装失败，请手动安装后重试"
-        exit 1
+    if ! command -v wg >/dev/null 2>&1 || ! command -v ip >/dev/null 2>&1; then
+        info "正在预装 WireGuard 工具依赖（wireguard-tools / iproute2）..."
+        case "$OS" in
+            debian)
+                DEBIAN_FRONTEND=noninteractive apt-get update -qq >/dev/null 2>&1 || true
+                DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends iproute2 wireguard-tools >/dev/null 2>&1 || true
+                ;;
+            redhat)
+                if command -v dnf >/dev/null 2>&1; then
+                    dnf install -y -q iproute wireguard-tools >/dev/null 2>&1 || true
+                else
+                    yum install -y -q iproute wireguard-tools >/dev/null 2>&1 || true
+                fi
+                ;;
+            alpine)
+                apk add --no-cache iproute2 wireguard-tools >/dev/null 2>&1 || true
+                ;;
+        esac
     fi
 }
 
@@ -390,14 +409,16 @@ main() {
     curl -fsSL "$DOWNLOAD_URL" -o "$AGENT_BIN"
     chmod +x "$AGENT_BIN"
 
-    # 3. 创建必要目录
+    # 3. 创建必要目录（严格权限隔离）
     mkdir -p "$CONFIG_DIR"
+    chmod 700 "$CONFIG_DIR"
     mkdir -p "$DATA_DIR"
 
     # 4. 生成最小化配置
     # 如果指定了 --report-url，则使用该地址作为回调地址；否则使用面板地址
     local CALLBACK_URL="${REPORT_URL:-$PANEL_URL}"
 
+    umask 077
     cat > "${CONFIG_DIR}/config.json" <<EOF
 {
   "install_id": "$INSTALL_ID",
@@ -406,6 +427,8 @@ main() {
   "log_level": "info"
 }
 EOF
+    chmod 600 "${CONFIG_DIR}/config.json"
+    umask 022
 
     info "配置文件已写入: ${CONFIG_DIR}/config.json"
     if [ -n "$REPORT_URL" ]; then

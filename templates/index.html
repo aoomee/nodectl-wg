@@ -1662,20 +1662,17 @@
                 }
             }
 
-            let _sortableDirect = null;
-            let _sortableLand = null;
-
             function initDragAndDrop() {
                 const directList = document.getElementById("direct-nodes-list");
                 const landList = document.getElementById("land-nodes-list");
 
-                if (_sortableDirect) {
-                    _sortableDirect.destroy();
-                    _sortableDirect = null;
+                if (window._sortableDirect) {
+                    window._sortableDirect.destroy();
+                    window._sortableDirect = null;
                 }
-                if (_sortableLand) {
-                    _sortableLand.destroy();
-                    _sortableLand = null;
+                if (window._sortableLand) {
+                    window._sortableLand.destroy();
+                    window._sortableLand = null;
                 }
 
                 const sortableOptions = {
@@ -1730,8 +1727,8 @@
                     },
                 };
 
-                if (directList) _sortableDirect = new Sortable(directList, sortableOptions);
-                if (landList) _sortableLand = new Sortable(landList, sortableOptions);
+                if (directList) window._sortableDirect = new Sortable(directList, sortableOptions);
+                if (landList) window._sortableLand = new Sortable(landList, sortableOptions);
             }
 
             async function saveNodeOrder(routingType, uuids) {

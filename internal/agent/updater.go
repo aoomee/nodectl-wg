@@ -209,10 +209,15 @@ func (u *Updater) Run(ctx context.Context) {
 
 // TriggerCheck 手动触发一次更新检查（供远程命令调用）
 func (u *Updater) TriggerCheck(ctx context.Context) error {
+	return u.TriggerCheckWithNotify(ctx, nil)
+}
+
+// TriggerCheckWithNotify 手动触发一次更新检查，并在就地重启前回调通知调用方
+func (u *Updater) TriggerCheckWithNotify(ctx context.Context, onBeforeReexec func(targetVersion string)) error {
 	if AgentVersion == "dev" || AgentVersion == "" {
 		return fmt.Errorf("dev 版本不支持更新检查")
 	}
-	u.checkAndUpdate(ctx)
+	u.checkAndUpdateWithNotify(ctx, onBeforeReexec)
 	return nil
 }
 
@@ -230,6 +235,10 @@ func (u *Updater) HealthTimeout() time.Duration {
 
 // checkAndUpdate 执行一次完整的检查和更新流程
 func (u *Updater) checkAndUpdate(ctx context.Context) {
+	u.checkAndUpdateWithNotify(ctx, nil)
+}
+
+func (u *Updater) checkAndUpdateWithNotify(ctx context.Context, onBeforeReexec func(targetVersion string)) {
 	if !u.mu.TryLock() {
 		return // 另一个更新流程正在进行
 	}
@@ -371,6 +380,10 @@ func (u *Updater) checkAndUpdate(ctx context.Context) {
 	u.saveState()
 
 	log.Printf("[Updater] 更新完成 %s → %s，准备加载新进程", localVer, targetVersion)
+	if onBeforeReexec != nil {
+		onBeforeReexec(targetVersion)
+		time.Sleep(150 * time.Millisecond)
+	}
 
 	// 10. 就地替换进程镜像（execve），成功后不会返回
 	// 优点：PID 不变，systemd 无需感知；新二进制从 main() 重新初始化。

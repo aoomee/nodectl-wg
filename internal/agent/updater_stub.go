@@ -26,6 +26,11 @@ func (u *Updater) Run(ctx context.Context) {}
 // TriggerCheck 非 Linux 不支持更新检查
 func (u *Updater) TriggerCheck(ctx context.Context) error { return nil }
 
+// TriggerCheckWithNotify 非 Linux 空操作
+func (u *Updater) TriggerCheckWithNotify(ctx context.Context, onBeforeReexec func(targetVersion string)) error {
+	return nil
+}
+
 // IsPostUpdatePending 非 Linux 恒为 false
 func (u *Updater) IsPostUpdatePending() bool { return false }
 

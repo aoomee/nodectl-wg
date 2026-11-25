@@ -1,6 +1,7 @@
 package wgrelay
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -36,9 +37,10 @@ func (m *Manager) run(ctx context.Context, name string, args ...string) ([]byte,
 }
 
 type linkInfo struct {
-	Name  string `json:"ifname"`
-	Alias string `json:"ifalias"`
-	Info  struct {
+	Name    string `json:"ifname"`
+	Alias   string `json:"alias"`
+	IfAlias string `json:"ifalias"`
+	Info    struct {
 		Kind string `json:"info_kind"`
 	} `json:"linkinfo"`
 	Addresses []struct {
@@ -47,16 +49,33 @@ type linkInfo struct {
 	} `json:"addr_info"`
 }
 
+func (l linkInfo) effectiveAlias() string {
+	if l.Alias != "" {
+		return l.Alias
+	}
+	return l.IfAlias
+}
+
 func (m *Manager) links(ctx context.Context) ([]linkInfo, error) {
 	b, err := m.run(ctx, "ip", "-j", "-d", "link", "show")
 	if err != nil {
 		return nil, err
+	}
+	if len(bytes.TrimSpace(b)) == 0 {
+		return nil, nil
 	}
 	var links []linkInfo
 	if json.Unmarshal(b, &links) != nil {
 		return nil, errors.New("invalid ip link response")
 	}
 	return links, nil
+}
+func (m *Manager) canAdoptUnaliased(r *record) bool {
+	if r == nil || r.Config.PairID == "" || r.Interface != interfaceName(r.Config.PairID) {
+		return false
+	}
+	existing := m.records[r.Config.PairID]
+	return existing != nil && existing.Token != "" && existing.Token == r.Token
 }
 func (m *Manager) owned(ctx context.Context, r *record) (bool, error) {
 	links, err := m.links(ctx)
@@ -65,10 +84,20 @@ func (m *Manager) owned(ctx context.Context, r *record) (bool, error) {
 	}
 	for _, l := range links {
 		if l.Name == r.Interface {
-			if l.Alias != r.alias() || l.Info.Kind != "wireguard" {
+			if l.Info.Kind != "wireguard" {
 				return false, ErrNotOwned
 			}
-			return true, nil
+			alias := l.effectiveAlias()
+			if alias == r.alias() {
+				return true, nil
+			}
+			if alias == "" && m.canAdoptUnaliased(r) {
+				if _, err := m.run(ctx, "ip", "link", "set", "dev", r.Interface, "alias", r.alias()); err != nil {
+					return false, err
+				}
+				return true, nil
+			}
+			return false, ErrNotOwned
 		}
 	}
 	return false, nil
@@ -79,8 +108,20 @@ func (m *Manager) collisions(ctx context.Context, r *record) error {
 		return err
 	}
 	for _, l := range links {
-		if l.Name == r.Interface && (l.Alias != r.alias() || l.Info.Kind != "wireguard") {
-			return ErrNotOwned
+		if l.Name == r.Interface {
+			if l.Info.Kind != "wireguard" {
+				return ErrNotOwned
+			}
+			alias := l.effectiveAlias()
+			if alias != r.alias() {
+				if alias == "" && m.canAdoptUnaliased(r) {
+					if _, err := m.run(ctx, "ip", "link", "set", "dev", r.Interface, "alias", r.alias()); err != nil {
+						return err
+					}
+					continue
+				}
+				return ErrNotOwned
+			}
 		}
 	}
 	b, err := m.run(ctx, "ip", "-j", "-4", "address", "show")
@@ -88,8 +129,10 @@ func (m *Manager) collisions(ctx context.Context, r *record) error {
 		return err
 	}
 	var addresses []linkInfo
-	if json.Unmarshal(b, &addresses) != nil {
-		return errors.New("invalid ip address response")
+	if len(bytes.TrimSpace(b)) > 0 {
+		if json.Unmarshal(b, &addresses) != nil {
+			return errors.New("invalid ip address response")
+		}
 	}
 	local, _ := netip.ParsePrefix(r.Config.LocalAddress)
 	peer, _ := netip.ParsePrefix(r.Config.PeerAddress)
@@ -98,6 +141,9 @@ func (m *Manager) collisions(ctx context.Context, r *record) error {
 			continue
 		}
 		for _, a := range l.Addresses {
+			if a.Local == "" {
+				continue
+			}
 			addr, e := netip.ParseAddr(a.Local)
 			if e != nil || !addr.Is4() || a.PrefixLen < 0 || a.PrefixLen > 32 {
 				return errors.New("invalid ip address response")
@@ -113,19 +159,27 @@ func (m *Manager) collisions(ctx context.Context, r *record) error {
 		return err
 	}
 	var routes []struct {
-		Dst string `json:"dst"`
-		Dev string `json:"dev"`
+		Type      string `json:"type"`
+		Dst       string `json:"dst"`
+		PrefixLen *int   `json:"prefixlen"`
+		Dev       string `json:"dev"`
 	}
-	if json.Unmarshal(b, &routes) != nil {
-		return errors.New("invalid ip route response")
+	if len(bytes.TrimSpace(b)) > 0 {
+		if json.Unmarshal(b, &routes) != nil {
+			return errors.New("invalid ip route response")
+		}
 	}
 	for _, route := range routes {
-		if route.Dev == r.Interface || route.Dst == "default" || route.Dst == "" || route.Dst == "0.0.0.0/0" {
+		if route.Dev == r.Interface || route.Dst == "default" || route.Dst == "" || route.Dst == "0.0.0.0/0" || route.Type == "broadcast" || route.Type == "multicast" {
 			continue
 		}
 		dst := route.Dst
 		if !strings.Contains(dst, "/") {
-			dst += "/32"
+			if route.PrefixLen != nil {
+				dst = fmt.Sprintf("%s/%d", dst, *route.PrefixLen)
+			} else {
+				dst += "/32"
+			}
 		}
 		prefix, e := netip.ParsePrefix(dst)
 		if e != nil {
@@ -176,10 +230,17 @@ func (m *Manager) createInterface(ctx context.Context, r *record) error {
 	if exists {
 		return nil
 	}
-	// The single create operation installs the ownership alias atomically. A
-	// crash cannot leave an unmarked link that cleanup would have to guess about.
-	_, err = m.run(ctx, "ip", "link", "add", "name", r.Interface, "alias", r.alias(), "type", "wireguard")
-	return err
+	// Linux rtnetlink only applies IFLA_IFALIAS via RTM_SETLINK (`ip link set`),
+	// not during RTM_NEWLINK (`ip link add`). Stamp the ownership alias immediately
+	// after creation and delete the fresh link if stamping fails.
+	if _, err = m.run(ctx, "ip", "link", "add", "name", r.Interface, "type", "wireguard"); err != nil {
+		return err
+	}
+	if _, err = m.run(ctx, "ip", "link", "set", "dev", r.Interface, "alias", r.alias()); err != nil {
+		_, _ = m.run(ctx, "ip", "link", "delete", "dev", r.Interface)
+		return err
+	}
+	return nil
 }
 func (m *Manager) configureKernel(ctx context.Context, r *record) error {
 	if err := m.collisions(ctx, r); err != nil {
@@ -206,8 +267,10 @@ func (m *Manager) configureKernel(ctx context.Context, r *record) error {
 		Dst string `json:"dst"`
 		Dev string `json:"dev"`
 	}
-	if json.Unmarshal(b, &routes) != nil {
-		return errors.New("invalid ip route response")
+	if len(bytes.TrimSpace(b)) > 0 {
+		if json.Unmarshal(b, &routes) != nil {
+			return errors.New("invalid ip route response")
+		}
 	}
 	if len(routes) > 0 {
 		for _, route := range routes {

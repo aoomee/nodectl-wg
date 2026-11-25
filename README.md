@@ -9,7 +9,7 @@
 [![GHCR](https://img.shields.io/badge/GHCR-aoomee%2Fwirearc-1d1d1f?logo=docker)](https://github.com/aoomee/wirearc/pkgs/container/wirearc)
 [![Arch](https://img.shields.io/badge/Linux-amd64%20%7C%20arm64-34c759)](#docker-部署)
 
-[核心特性](#核心特性) · [Docker 部署](#docker-部署) · [访问与反代](#访问与反代) · [双机中转](#wireguard-双机中转) · [运维与构建](#运维与构建) · [文档](#文档)
+[核心特性](#核心特性) · [Docker 部署](#docker-部署) · [访问与反代](#访问与反代) · [双机专线](#wireguard-双机专线) · [运维与构建](#运维与构建) · [文档](#文档)
 
 </div>
 
@@ -17,20 +17,18 @@
 
 ## 核心特性
 
-- **双模 WireGuard 跨机专线** — 支持 **Agent 零配置直管**（自动分配隧道密钥与私网网段、链路异常阻断防直连泄漏）与 **SSH 独立自动化部署**（一键完成双端安装、端到端校验与回滚）。
-- **全协议统一编排** — 基于 Sing-box 可视化管理 Reality、Hysteria2、TUIC、Shadowsocks、Trojan、VMess / VLESS 多传输层及 Socks5 等 17 种协议。
-- **多端订阅与规则引擎** — 统一输出 Clash (Mihomo)、Sing-box、Surge 与通用 V2Ray 订阅；支持外部机场订阅聚合、内核级延迟与下载测速、自定义分流规则热编辑。
-- **实时遥测与自动化运维** — WebSocket 秒级速率图表、日/月流量日历、配额达标自动熔断，集成 Cloudflare 证书 / Tunnel / 优选 IP 与 Telegram Bot 告警。
+- **纯 Go 轻量架构** — 零 Python 依赖、基于 Alpine 构建的超小多架构镜像，单一二进制即可运行。
+- **Agent 托管 WireGuard 双机专线** — 无需 SSH 密码或手动授权，双端安装 Agent 后即可一键建立 `VLESS+REALITY → WireGuard → Shadowsocks` 加密中转，自动分配隧道密钥与网段，异常自动阻断防泄漏。
+- **17 种协议统一编排** — 基于 Sing-box 可视化管理 Reality、Hysteria2、TUIC、Shadowsocks、Trojan、VMess / VLESS 多传输层与 Socks5。
+- **多端订阅与实时遥测** — 统一输出 Clash (Mihomo)、Sing-box、Surge 与 V2Ray 订阅；内置机场聚合测速、WebSocket 秒级速率图表、流量配额熔断、Cloudflare 证书/Tunnel/优选 IP 与 Telegram Bot 告警。
 
 ---
 
 ## Docker 部署
 
-官方镜像 `ghcr.io/aoomee/wirearc:latest` 原生支持 `linux/amd64` 与 `linux/arm64`，所有配置、数据库与日志统一持久化在 `/app/data`。
+官方镜像 `ghcr.io/aoomee/wirearc:latest` 原生支持 `linux/amd64` 与 `linux/arm64`，所有配置、数据库与日志持久化在 `/app/data`。
 
 ### Docker Compose（推荐）
-
-在服务器终端执行：
 
 ```bash
 mkdir -p /opt/wirearc && cd /opt/wirearc
@@ -81,52 +79,42 @@ docker run -d \
 
 ### 首次登录
 
-首次启动会自动创建管理员账号 **`admin`** 并生成高强度随机密码（不会输出到容器日志）。在宿主机查看初始密码：
+首次启动会自动创建管理员账号 **`admin`** 与随机高强度密码（不会打印到日志），在宿主机执行以下命令查看：
 
 ```bash
-# Docker Compose
-docker compose exec wirearc cat /app/data/initial-admin-password
-
-# Docker Run
-docker exec wirearc cat /app/data/initial-admin-password
+docker exec $(docker ps --format '{{.Names}}' | grep -i wirearc | head -n1) cat /app/data/initial-admin-password
 ```
 
-> 登录后修改密码会自动清理初始密码文件。自动化部署可在首次创建容器时传入环境变量 `NODECTL_INITIAL_ADMIN_PASSWORD`（12–72 字符）。
+> 登录后修改密码会自动清理初始密码文件。自动化部署可在首次启动时传入 `NODECTL_INITIAL_ADMIN_PASSWORD`（12–72 字符）。
 
 ---
 
 ## 访问与反代
 
-面板默认仅监听本机回环地址 `127.0.0.1:7878`，不向公网暴露未加密端口。
+面板默认仅绑定宿主机回环地址 `127.0.0.1:7878`：
 
-- **SSH 本地端口转发（免域名快速访问）**
-  ```bash
-  ssh -L 7878:127.0.0.1:7878 root@<服务器公网IP>
-  ```
-  转发建立后在本地浏览器打开 `http://127.0.0.1:7878`。
-- **HTTPS 反向代理（生产环境 / 公网 Agent 接入）**
-  使用 NGINX 或 Caddy 反代至 `http://127.0.0.1:7878`，保留 `Host`、开启 WebSocket `Upgrade` 并配置 `NODECTL_TRUSTED_PROXIES`。详见 [NGINX 反代配置指南](docs/reverse-proxy.md)。
+- **本地 SSH 转发**：`ssh -L 7878:127.0.0.1:7878 root@<服务器IP>`，浏览器访问 `http://127.0.0.1:7878`。
+- **HTTPS 反向代理**：使用 NGINX / Caddy / 1Panel 将 HTTPS 域名反代至 `http://127.0.0.1:7878`，保留 `Host`、开启 WebSocket `Upgrade` 并配置 `NODECTL_TRUSTED_PROXIES`（或在面板「系统设置」中放行内网回源）。详见 [NGINX 反代配置指南](docs/reverse-proxy.md)。
 
 ---
 
-## WireGuard 双机中转
+## WireGuard 双机专线
 
-| 模式 | 入口位置 | 链路拓扑 | 适用场景 |
-| :--- | :--- | :--- | :--- |
-| **Agent 直管模式** | 节点编辑 → `REALITY` 卡片 → **出站方式** | `VLESS+REALITY (A) → WG → Shadowsocks (B)` | **日常主力推荐**。双端安装 Agent 后下拉即连，自动完成密钥分配、路由下发、健康巡检与故障阻断，计入实时流量统计。 |
-| **SSH 独立模式** | 控制台首页 → **WG 中转** | `Realm / VLESS (A) → WG → REALITY / SS (B)` | **无 Agent 独立部署**。经 SSH 在双端部署独立 systemd 隧道与转发服务，业务校验通过后一键导入订阅。 |
+1. 在**落地节点 B**（分组设为「落地」）启用 `SS` 并推送配置。
+2. 在**入口节点 A**（分组设为「直连」）启用 `REALITY` 并推送配置。
+3. 在入口节点 A 的 `REALITY` 协议卡片中将出站切换为 **经 WG → SS 出站**，选择落地节点 B 并点击 **推送配置** 即可自动完成双端隧道部署与巡检。
 
 ---
 
 ## 运维与构建
 
 ```bash
-# 平滑升级（保留全部节点与历史数据）
+# 平滑升级
 cd /opt/wirearc && docker compose pull && docker compose up -d
 
-# 离线镜像加载（从 Releases 下载对应架构 .tar.gz）
-docker load -i wirearc-v1.0.0-linux-amd64.tar.gz
-NODECTL_IMAGE=ghcr.io/aoomee/wirearc:v1.0.0 docker compose up -d
+# 离线镜像加载
+docker load -i wirearc-v1.1.0-linux-amd64.tar.gz
+NODECTL_IMAGE=ghcr.io/aoomee/wirearc:v1.1.0 docker compose up -d
 
 # 本地源码构建
 git clone https://github.com/aoomee/wirearc.git && cd wirearc
@@ -139,5 +127,4 @@ docker compose -f compose.yaml -f compose.build.yaml up -d --build
 
 - [NGINX HTTPS 反向代理配置](docs/reverse-proxy.md)
 - [Agent 托管 WireGuard 专线架构](docs/wg-agent.md)
-- [SSH 独立 WireGuard 中转说明](docs/wg-ssh.md)
 - [开源致谢与组件说明](docs/credits.md)

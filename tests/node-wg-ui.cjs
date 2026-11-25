@@ -57,6 +57,15 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
    assert.equal(await page.locator('.segment-option[data-type="1"]').getAttribute('aria-pressed'),'true');
    assert.equal(await page.locator('.segment-option[data-ipmode="0"]').getAttribute('aria-pressed'),'true','routing selection must preserve the independent IP mode');
    assert.equal(await page.locator('#editNodeIPModeControl .active').count(),1);
+
+   // IP mode sync: selecting single-stack hides per-protocol IP capsule; reverting shows it again.
+   await page.locator('.segment-option[data-ipmode="1"]').click();
+   assert.equal(await page.locator('.proto-ipmode-capsule').first().isVisible(),false,'single-stack node must hide per-protocol IP mode');
+   await page.locator('.segment-option[data-ipmode="0"]').click();
+   assert.equal(await page.locator('.proto-ipmode-capsule').first().isVisible(),true,'follow-system dual-stack node must show per-protocol IP mode');
+   await page.waitForFunction(()=>editNodeAutoSaveTimer===null && editNodeSaveRunning===0);
+   await page.evaluate(()=>{ nodeWGEditor.baseline = nodeWGOrdinarySnapshot(); });
+
    assert.equal(await page.locator('.protocol-card[data-proto="reality"] #nodeWGCard').count(),1);
    assert.equal(await page.locator('#nodeWGPort').count(),0);
    assert.equal(await page.locator('#protocolListContainer .protocol-card').count(),1);
@@ -64,43 +73,29 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
    await page.evaluate(()=>document.getElementById('protoSelectOverlay').style.display='none');
    const box=await page.locator('#nodeWGCard').boundingBox();assert.ok(box.x>=-1 && box.x+box.width<=width+1,'outbound must fit viewport');
 
-   // Help uses progressive disclosure; one scroll area never squeezes protocols. No manual enrollment buttons.
+   // Minimalist de-texted WG card: no redundant tutorial drawers or manual enrollment buttons.
    assert.equal(await page.locator('#nodeWGPeerField').isVisible(),false,'direct must hide landing controls');
-   assert.equal(await page.locator('#nodeWGSetupDetails').evaluate(e=>e.open),false);
-   assert.equal(await page.locator('#nodeWGUsage').evaluate(e=>e.open),false);
+   assert.equal(await page.locator('#nodeWGSetupDetails').count(),0);
+   assert.equal(await page.locator('#nodeWGUsage').count(),0);
    assert.equal(await page.locator('#nodeWGBind').count(),0,'direct Agent WG requires no manual enrollment button');
-   assert.equal(await page.locator('#nodeWGRefresh').isVisible(),true,'refresh must be reachable with help closed');
+   assert.equal(await page.locator('#nodeWGRefresh').isVisible(),true);
+   assert.equal(await page.locator('#nodeWGSetup').evaluate(e=>e.classList.contains('is-compact')),true,'ready setup card stays compact');
    await page.locator('#nodeWGRefresh').focus();
    assert.equal(await page.evaluate(()=>document.activeElement.id),'nodeWGRefresh');
-   const snapshot=async(name,label=name)=>{
-    if(!process.env.NODECTL_UI_SCREENSHOT_DIR)return;
-    fs.mkdirSync(process.env.NODECTL_UI_SCREENSHOT_DIR,{recursive:true});
-    await page.locator('#'+name).screenshot({path:path.join(process.env.NODECTL_UI_SCREENSHOT_DIR,`${label}-${width}.png`)});
-   };
    await page.locator('#nodeWGRefresh').evaluate(e=>e.blur());
-   await snapshot('nodeWGSetup');await snapshot('nodeWGCard','direct');
-   if(process.env.NODECTL_UI_SCREENSHOT_DIR){
-    await page.evaluate(()=>document.querySelectorAll('.edit-right-col,.edit-body').forEach(e=>e.scrollTop=0));
-    await snapshot('editModalCard','editor');
-   }
    if(width>768){
-    const before=await page.locator('#protocolListContainer').boundingBox();
-    await page.locator('#nodeWGSetupDetails > summary').click();
-    const after=await page.locator('#protocolListContainer').boundingBox();
-    assert.ok(Math.abs(after.height-before.height)<2,'expanding authorization must not shrink protocols');
     assert.equal(await page.locator('#protocolListContainer').evaluate(e=>getComputedStyle(e).overflowY),'visible');
     assert.equal(await page.locator('.edit-right-col').evaluate(e=>getComputedStyle(e).overflowY),'auto');
-    await page.locator('#nodeWGSetupDetails > summary').click();
    }
 
    optionFailure=true;await page.evaluate(()=>loadNodeWGEditor('a'));
-   assert.equal(await page.locator('#nodeWGSetupBadge').innerText(),'待检查','failed refresh must not retain a green ready badge');
+   assert.equal(await page.locator('#nodeWGSetupBadge').innerText(),'检查中','failed refresh must not retain a green ready badge');
    assert.match(await page.locator('#nodeWGSetupStatus').innerText(),/刷新重试/);
    optionFailure=false;await page.locator('#nodeWGRefresh').click();await page.waitForFunction(()=>nodeWGEditor.loaded);
 
    // Backend reasons, unavailable peers, safe text rendering and stale-state clearing.
    diagnostics=true;ready=false;unavailablePeer=true;await page.evaluate(()=>loadNodeWGEditor('a'));
-   assert.equal(await page.locator('#nodeWGChecks .node-wg-check').count(),3);
+   assert.equal(await page.locator('#nodeWGChecks .node-wg-check').count(),1,'only failing checks are shown');
    assert.match(await page.locator('#nodeWGChecks').innerText(),/Agent 未连接/);
    await page.locator('#nodeWGMode').selectOption('wg');
    assert.equal(await page.locator('#nodeWGPeer option[value="c"]').isDisabled(),true);
@@ -111,23 +106,21 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
    assert.equal(await page.locator('#nodeWGPeerIssues').evaluate(e=>e.open),true,'refresh preserves expanded reasons');
    assert.equal(await page.evaluate(()=>document.activeElement.id),'nodeWGPeerIssuesSummary');
    const checkBox=await page.locator('#nodeWGChecks').boundingBox();assert.ok(checkBox.x>=0 && checkBox.x+checkBox.width<=width+1);
-   await snapshot('nodeWGSetup','readiness');await snapshot('nodeWGCard','peer-reasons');
    optionFailure=true;await page.evaluate(()=>loadNodeWGEditor('a'));
    assert.equal(await page.locator('#nodeWGChecks .node-wg-check').count(),0,'failed refresh must clear stale checks');
    assert.equal(await page.locator('#nodeWGPeerIssues').isVisible(),false);
    optionFailure=false;ready=true;unavailablePeer=false;await page.evaluate(()=>loadNodeWGEditor('a'));
-   assert.equal(await page.locator('#nodeWGChecks [data-tone="success"]').count(),3);
+   assert.equal(await page.locator('#nodeWGChecks').isVisible(),false,'all ready collapses checks');
    assert.equal(await page.locator('#nodeWGPeerIssues').isVisible(),false);
    await page.locator('#nodeWGMode').selectOption('direct');diagnostics=false;
 
    // Direct retains the ordinary endpoint and awaits a real command result.
    await push();await page.waitForFunction(()=>streams.length===1);
    assert.deepEqual(ordinary[0],{uuid:'a',protocols:['reality'],ports:{reality:443}});assert.equal(requests.length,0);
-   assert.equal(await page.locator('#nodeWGSetup').isVisible(),false,'help must not crowd the command log');
+   assert.equal(await page.locator('#nodeWGSetup').isVisible(),false,'setup must not crowd the command log');
    await page.evaluate(()=>{nodeWGEditor.mode='wg';nodeWGEditor.peer='b';pushConfigToAgent();});assert.equal(requests.length,0,'accepted is not success');
-   await complete();await page.evaluate(()=>closeCmdLogPanel());
+   await complete();await page.waitForFunction(()=>!nodeWGEditor.ordinaryPending);await page.evaluate(()=>closeCmdLogPanel());
    await selectWG();await push();await page.waitForFunction(()=>nodeWGEditor.pair?.status==='active');
-   await snapshot('nodeWGCard','active');
    assert.deepEqual(requests[0],{uuid:'a',peer_uuid:'b',entry_port:443,revision:1,enabled:true});
    await push();assert.equal(requests.length,1,'unchanged active is a no-op');assert.equal(ordinary.length,1);
 
@@ -142,20 +135,21 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
    const saveCount=saves.length;
    await page.locator('#editNodeName').fill('Changed A');await page.evaluate(()=>markAsModified());
    await push();assert.equal(ordinary.length,1);assert.equal(requests.length,1);assert.equal(saves.length,saveCount);
-   assert.match(await page.locator('#nodeWGStatus').innerText(),/先点击停用清理/);
+   assert.match(await page.locator('#nodeWGStatus').innerText(),/停用清理/);
    await page.locator('#nodeWGCleanup').click();await page.waitForFunction(()=>nodeWGEditor.pair?.status==='disabled');
    assert.equal(requests[1].enabled,false);assert.equal(requests[1].revision,2);
    assert.equal(ordinary.length,1,'cleanup never also applies ordinary edits');
    await selectWG();await push();assert.equal(requests.length,2,'dirty new WG must not ordinary-apply first');
-   assert.match(await page.locator('#nodeWGStatus').innerText(),/不能安全/);
+   assert.match(await page.locator('#nodeWGStatus').innerText(),/普通配置变更/);
+   assert.equal(await page.locator('#nodeWGStatus').getAttribute('data-tone'),'error');
 
    // Accessible staged preparation: autosave -> ordinary command -> SSE -> WG-only.
    await page.locator('#nodeWGMode').selectOption('direct');saveDelay=120;
    await push();await page.waitForFunction(()=>streams.length===2);saveDelay=0;
    assert.equal(saves.at(-1).name,'Changed A');assert.equal(ordinary.length,2);
-   await complete('error');await page.evaluate(()=>closeCmdLogPanel());
+   await complete('error');await page.waitForFunction(()=>!nodeWGEditor.ordinaryPending);await page.evaluate(()=>closeCmdLogPanel());
    await selectWG();await push();assert.equal(requests.length,2);assert.match(await page.locator('#nodeWGStatus').innerText(),/未确认成功/);
-   await page.locator('#nodeWGMode').selectOption('direct');await push();await page.waitForFunction(()=>streams.length===3);await complete();await page.evaluate(()=>closeCmdLogPanel());
+   await page.locator('#nodeWGMode').selectOption('direct');await push();await page.waitForFunction(()=>streams.length===3);await complete();await page.waitForFunction(()=>!nodeWGEditor.ordinaryPending);await page.evaluate(()=>closeCmdLogPanel());
    await selectWG();await push();await page.waitForFunction(()=>nodeWGEditor.pair?.status==='active');assert.equal(requests.length,3);assert.equal(ordinary.length,3);
 
    // Restart recovery polls without replaying deployment, retaining the user's draft.
@@ -163,8 +157,6 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
    assert.equal(await page.locator('#nodeWGPairBadge').innerText(),'恢复核验');
    assert.match(await page.locator('#nodeWGStatus').innerText(),/面板重启后正在核验双端连接/);
    assert.equal(await page.locator('#nodeWGCleanup').isVisible(),true);
-   await page.locator('#nodeWGUsageSummary').focus();await page.evaluate(()=>loadNodeWGEditor('a'));
-   assert.equal(await page.evaluate(()=>document.activeElement.id),'nodeWGUsageSummary','poll must preserve keyboard focus in help');
    await push();assert.equal(requests.length,3);assert.equal(ordinary.length,3);
    await page.locator('#nodeWGPeer').selectOption('c');await page.locator('#nodeWGMode').selectOption('direct');
    const pollRequest=await page.evaluate(()=>nodeWGEditor.request);
@@ -176,8 +168,7 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
    // Failed/disabled fail-closed pair still requires explicit restore direct.
    pair={...pair,enabled:false,status:'disabled',phase:'blocked',restore_direct:false};await page.evaluate(()=>loadNodeWGEditor('a'));
    assert.equal(await page.locator('#nodeWGPairBadge').innerText(),'已阻断');
-   await snapshot('nodeWGCard');
-   assert.match(await page.locator('#nodeWGStatus').innerText(),/仍被阻断/);await page.locator('#nodeWGCleanup').click();await page.waitForFunction(()=>nodeWGEditor.pair?.restore_direct);
+   assert.match(await page.locator('#nodeWGStatus').innerText(),/已阻断/);await page.locator('#nodeWGCleanup').click();await page.waitForFunction(()=>nodeWGEditor.pair?.restore_direct);
    assert.equal(requests.at(-1).enabled,false);
 
    // New WG cannot proceed on failed autosave or backend readiness.
@@ -187,7 +178,6 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
    saveFailure=false;await page.evaluate(()=>triggerNodeAutoSave(true));await page.waitForFunction(()=>!editNodeSaveFailed && editNodeSaveRunning===0 && editNodeAutoSaveTimer===null);
    ready=false;await push();assert.equal(requests.length,before);assert.match(await page.locator('#nodeWGStatus').innerText(),/未就绪/);ready=true;
    assert.equal(await page.locator('#nodeWGSetupBadge').innerText(),'待就绪');
-   await snapshot('nodeWGSetup','not-ready');
 
    // Superseded options and close cannot resurrect stale state.
    optionDelay=180;await page.evaluate(()=>{window.oldOptions=loadNodeWGEditor('a')});
@@ -204,15 +194,15 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
    await push();assert.equal(requests.length,before);await page.locator('#nodeWGCleanup').click();await page.waitForFunction(()=>nodeWGEditor.pair.status==='disabled');
    assert.equal(requests.at(-1).enabled,false);
 
-   // Landing shows readiness card without any fake WG protocol/card or manual enrollment prompt.
+   // Landing shows compact readiness bar without fake WG card; empty protocol placeholder clears on insert.
    await page.evaluate(()=>closeEditModal());await open('b');
-   assert.equal(await page.locator('#nodeWGCard').count(),0);assert.match(await page.locator('#nodeWGSetupStatus').innerText(),/落地 B/);
-   assert.equal(await page.locator('#nodeWGSetupDetails').evaluate(e=>e.open),false);
+   assert.equal(await page.locator('#nodeWGCard').count(),0);
+   assert.equal(await page.locator('#nodeWGSetupBadge').innerText(),'落地就绪');
    const overflow=await page.locator('#editNodeModal').evaluate(e=>Array.from(e.querySelectorAll('#nodeWGSetup, .edit-footer')).some(el=>el.scrollWidth>el.clientWidth+1));
-   assert.equal(overflow,false,'readiness card and footer must fit narrow screens');
+   assert.equal(overflow,false,'readiness bar and footer must fit narrow screens');
    await page.evaluate(()=>closeEditModal());
    assert.deepEqual(errors,[]);await page.close();
   }
-  console.log('PASS: real modal at 1280/375/320px, direct Agent WG readiness without manual enrollment, keyboard focus across polling, ordinary SSE staging, fail-closed guards, cleanup, autosave, revision, stale options, SS landing and legacy migration.');
+  console.log('PASS: real modal at 1280/375/320px, IP mode sync, minimalist Agent WG UI, high-contrast status tones, auto-refresh, and fail-closed guards.');
  } finally {await browser.close();}
 })().catch(e=>{console.error(e);process.exit(1)});

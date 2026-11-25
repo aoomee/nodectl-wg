@@ -145,15 +145,22 @@ type commandOwner struct {
 }
 
 func validAgentSession(installID string, session agentSession) bool {
-	if database.DB == nil {
+	return validAgentSessionWithDB(database.DB, installID, session)
+}
+
+func validAgentSessionWithDB(db *gorm.DB, installID string, session agentSession) bool {
+	if db == nil {
+		db = database.DB
+	}
+	if db == nil {
 		return false
 	}
 	var node database.NodePool
-	if database.DB.Select("uuid", "install_id").Where("install_id = ?", installID).First(&node).Error != nil {
+	if db.Select("uuid", "install_id").Where("install_id = ?", installID).First(&node).Error != nil {
 		return false
 	}
 	var id database.AgentIdentity
-	err := database.DB.Where("install_id = ?", installID).First(&id).Error
+	err := db.Where("install_id = ?", installID).First(&id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return !session.authenticated
 	}
@@ -225,6 +232,10 @@ func (h *TrafficHub) failAgentCommands(conn *websocket.Conn) {
 }
 
 func WGAgentReady(installID string) bool {
+	return WGAgentReadyWithDB(database.DB, installID)
+}
+
+func WGAgentReadyWithDB(db *gorm.DB, installID string) bool {
 	agentIdentityMu.Lock()
 	defer agentIdentityMu.Unlock()
 	h := GetTrafficHub()
@@ -232,16 +243,24 @@ func WGAgentReady(installID string) bool {
 	defer h.agentMu.RUnlock()
 	c := h.agentConns[installID]
 	s := h.agentSessions[c]
-	return c != nil && s.wg && validAgentSession(installID, s)
+	return c != nil && s.wg && validAgentSessionWithDB(db, installID, s)
 }
 
 func WGAgentV2Ready(installID string) bool {
-	return WGAgentV2Status(installID) == "ready"
+	return WGAgentV2StatusWithDB(database.DB, installID) == "ready"
+}
+
+func WGAgentV2ReadyWithDB(db *gorm.DB, installID string) bool {
+	return WGAgentV2StatusWithDB(db, installID) == "ready"
 }
 
 // A snapshot of the current control connection, not a claim that remote tools,
 // UDP reachability or the tunnel have passed deployment checks.
 func WGAgentV2Status(installID string) string {
+	return WGAgentV2StatusWithDB(database.DB, installID)
+}
+
+func WGAgentV2StatusWithDB(db *gorm.DB, installID string) string {
 	agentIdentityMu.Lock()
 	defer agentIdentityMu.Unlock()
 	h := GetTrafficHub()
@@ -252,7 +271,7 @@ func WGAgentV2Status(installID string) string {
 	if c == nil {
 		return "offline"
 	}
-	if !validAgentSession(installID, s) {
+	if !validAgentSessionWithDB(db, installID, s) {
 		return "unauthenticated"
 	}
 	if !s.wgV2 {

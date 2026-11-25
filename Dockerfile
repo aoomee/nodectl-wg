@@ -1,14 +1,12 @@
-FROM golang:1.25.6-bookworm AS build
+FROM golang:1.25.6-alpine AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X nodectl/internal/version.Version=wg-local" -o /nodectl .
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X nodectl/internal/version.Version=local" -o /nodectl .
 
-FROM python:3.12-slim-bookworm
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates tzdata curl unzip && rm -rf /var/lib/apt/lists/*
-COPY requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
+FROM alpine:3.21
+RUN apk add --no-cache ca-certificates tzdata curl unzip
 WORKDIR /app
 COPY --from=build /nodectl /app/nodectl
 ENV TZ=Asia/Shanghai

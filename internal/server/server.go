@@ -24,7 +24,6 @@ import (
 	"nodectl/internal/middleware"
 	"nodectl/internal/service"
 	"nodectl/internal/webassets"
-	"nodectl/internal/wgrelay"
 )
 
 // tmpl 设为包级全局变量，供同包下的 handlers.go 使用渲染页面
@@ -256,15 +255,9 @@ func Start(tmplFS embed.FS) {
 	}
 	tmpl = parsedTmpl
 
-	wgManager, err = wgrelay.New("data/wg-relay", nil)
-	if err != nil {
-		logger.Log.Error("WG 任务存储初始化失败", "error", err)
-	}
-
 	// 3. 创建路由器并注册所有路由 (只需执行一次，避免重复注册引发 panic)
 	mux := http.NewServeMux()
 	mux.HandleFunc(webassets.Prefix, withSecure(webassets.Handler))
-	registerWGRoutes(mux, wgManager)
 
 	// ========== A. 页面路由 (Page Routes) ==========
 	mux.HandleFunc("/login", withSecure(loginHandler))   // 登录页

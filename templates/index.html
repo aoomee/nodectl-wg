@@ -547,7 +547,7 @@
 
             .rule-actions {
                 display: grid;
-                grid-template-columns: repeat(7, minmax(0, 1fr));
+                grid-template-columns: repeat(6, minmax(0, 1fr));
                 gap: 12px;
                 flex: 1;
                 align-items: center;
@@ -692,7 +692,7 @@
                     grid-template-columns: 1fr;
                 }
                 .rule-actions {
-                    grid-template-columns: repeat(4, 1fr);
+                    grid-template-columns: repeat(3, 1fr);
                 }
             }
 
@@ -1413,21 +1413,6 @@
                         </a>
                         <a
                             href="javascript:void(0)"
-                            onclick="openWGRelayModal()"
-                            class="btn-edit-rule"
-                        >
-                            <span class="rule-icon-box ui-icon-badge green">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="17 1 21 5 17 9"></polyline>
-                                    <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
-                                    <polyline points="7 23 3 19 7 15"></polyline>
-                                    <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
-                                </svg>
-                            </span>
-                            <span class="rule-name">WG 中转</span>
-                        </a>
-                        <a
-                            href="javascript:void(0)"
                             onclick="openCustomNodesModal()"
                             class="btn-edit-rule"
                         >
@@ -1994,7 +1979,70 @@
         {{template "airport_sub_modal.html" .}} {{template "logs_modal.html" .}}
         {{template "cf_modal.html" .}}
         {{template "custom_nodes_modal.html" .}}
-        {{template "wg_relay_modal.html" .}}
         {{template "node_wg_editor.html" .}}
+
+        <style id="wirearc-ui-unified">
+            /* WireArc 全局统一视觉规范：圆润卡片、柔和遮罩、现代美化下拉选择框与表单控件 */
+            [class$="-modal-overlay"] {
+                backdrop-filter: saturate(180%) blur(10px);
+                -webkit-backdrop-filter: saturate(180%) blur(10px);
+            }
+            [class$="-modal-card"] {
+                border-radius: 26px !important;
+                border: 1px solid rgba(0, 0, 0, 0.06);
+                box-shadow: 0 24px 56px rgba(0, 0, 0, 0.14), 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+            }
+            [class$="-modal-card"] select:not(.no-custom-select) {
+                appearance: none;
+                -webkit-appearance: none;
+                border-radius: 12px !important;
+                border: 1px solid rgba(0, 0, 0, 0.09);
+                background-color: #f6f7f9;
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236e6e73' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+                background-repeat: no-repeat;
+                background-position: right 11px center;
+                background-size: 14px 14px;
+                padding-right: 34px;
+                cursor: pointer;
+                transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+            }
+            [class$="-modal-card"] .traffic-input-group select {
+                border: none !important;
+                border-radius: 0 !important;
+                background-color: transparent !important;
+                background-image: none !important;
+                padding-right: 24px !important;
+            }
+            [class$="-modal-card"] select:hover:not(:disabled) {
+                border-color: rgba(0, 122, 255, 0.35);
+            }
+            [class$="-modal-card"] select:focus {
+                outline: none;
+                border-color: #007aff;
+                background-color: #ffffff;
+                box-shadow: 0 0 0 3.5px rgba(0, 122, 255, 0.14);
+            }
+            [class$="-modal-card"] input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="range"]):not(.proto-port-input),
+            [class$="-modal-card"] textarea {
+                border-radius: 12px;
+                transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+            }
+            [class$="-modal-card"] .traffic-input-group input {
+                border-radius: 0;
+            }
+            [class$="-modal-card"] input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="range"]):focus,
+            [class$="-modal-card"] textarea:focus {
+                border-color: #007aff;
+                box-shadow: 0 0 0 3.5px rgba(0, 122, 255, 0.14);
+            }
+            [class$="-modal-card"] .traffic-input-group input:focus {
+                box-shadow: none;
+            }
+            @media (max-width: 768px) {
+                [class$="-modal-card"] {
+                    border-radius: 22px !important;
+                }
+            }
+        </style>
     </body>
 </html>

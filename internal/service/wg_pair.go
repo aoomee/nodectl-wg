@@ -96,6 +96,7 @@ func wgDTO(p database.WGPair) WGPairDTO {
 type wgPairCoordinator struct {
 	db          *gorm.DB
 	ready       func(string) bool
+	readyDB     func(*gorm.DB, string) bool
 	agentStatus func(string) string
 	legacyReady func(string) bool
 	send        func(context.Context, string, string, interface{}) (json.RawMessage, error)
@@ -108,7 +109,7 @@ type wgPairCoordinator struct {
 	generation uint64
 }
 
-var wgDefault = &wgPairCoordinator{ready: WGAgentV2Ready, agentStatus: WGAgentV2Status, legacyReady: WGAgentReady, send: SendWGCommand, now: time.Now, timeout: 75 * time.Second, confirmed: map[string]uint64{}}
+var wgDefault = &wgPairCoordinator{ready: WGAgentV2Ready, readyDB: WGAgentV2ReadyWithDB, agentStatus: WGAgentV2Status, legacyReady: WGAgentReady, send: SendWGCommand, now: time.Now, timeout: 75 * time.Second, confirmed: map[string]uint64{}}
 
 func (c *wgPairCoordinator) database() *gorm.DB {
 	if c.db != nil {
@@ -173,8 +174,16 @@ func (c *wgPairCoordinator) identity(db *gorm.DB, n database.NodePool) (string, 
 	return c.identityState(db, n, true)
 }
 func (c *wgPairCoordinator) identityState(db *gorm.DB, n database.NodePool, online bool) (string, error) {
-	if online && !c.ready(n.InstallID) {
-		return "", ErrWGUnavailable
+	if online {
+		isReady := false
+		if c.readyDB != nil {
+			isReady = c.readyDB(db, n.InstallID)
+		} else if c.ready != nil {
+			isReady = c.ready(n.InstallID)
+		}
+		if !isReady {
+			return "", ErrWGUnavailable
+		}
 	}
 	var i database.AgentIdentity
 	err := db.Where("node_uuid = ? AND install_id = ?", n.UUID, n.InstallID).First(&i).Error

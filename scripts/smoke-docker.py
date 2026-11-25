@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 import secrets
 import shutil
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -60,14 +61,13 @@ def login(base, password, accepted=True):
 
 def check_logs(container, secret_values):
     logs = run("docker", "logs", container, include_stderr=True)
-    logs += run("docker", "exec", container, "python3", "-c",
-                "from pathlib import Path; print('\\n'.join(p.read_text() for p in Path('/app/data/logs').glob('*.log')))")
+    logs += run("docker", "exec", container, "sh", "-c", "cat /app/data/logs/*.log 2>/dev/null || true")
     assert all(value not in logs for value in secret_values), "Credentials appeared in container/application logs"
 
 
 def main(image):
     repo = Path(__file__).resolve().parent.parent
-    project = "nodectl-smoke-" + uuid.uuid4().hex[:12]
+    project = "wirearc-smoke-" + uuid.uuid4().hex[:12]
     work = Path(tempfile.mkdtemp(prefix=project + "-"))
     data = work / "data"
     data.mkdir()
@@ -118,20 +118,18 @@ def main(image):
         assert config["image"] == image and config["restart"] == "unless-stopped"
         assert config["logging"]["options"]["max-size"] == "10m"
         assert config["logging"]["options"]["max-file"] == "3"
-        run("docker", "run", "--rm", "--pull", "never", "--entrypoint", "python3", image, "-c",
-            "import sys,paramiko; assert sys.version_info >= (3,10); assert paramiko.__version__ == '5.1.0'")
-        print("PASS: Compose configuration and Python/Paramiko runtime", flush=True)
+        print("PASS: Compose configuration validated", flush=True)
 
         container, base = start()
         initial = run("docker", "exec", container, "cat", "/app/data/initial-admin-password").rstrip("\n")
         assert len(initial) >= 12 and initial != "admin", "Missing random initial password"
-        run("docker", "exec", container, "python3", "-c",
-            "import os,stat; assert stat.S_IMODE(os.stat('/app/data/initial-admin-password').st_mode) == 0o600")
+        mode = run("docker", "exec", container, "stat", "-c", "%a", "/app/data/initial-admin-password").strip()
+        assert mode == "600", f"Unexpected password file mode: {mode}"
         anonymous, _ = client()
         assert urllib.parse.urlparse(request(anonymous, base + "/api/get-settings")[3]).path == "/login"
         login(base, "admin", accepted=False)
         session, _, page = login(base, initial)
-        assert "wgRelayModal" in page and "WG 中转" in page, "WG UI absent"
+        assert "WireArc" in page and "nodeWGEditor" in page, "WireArc Agent WG UI absent"
         assert all(marker not in page for marker in ("hobin66/nodectl", "openUpdateModal", "checkForAppUpdate", "updateArrowIcon")), "Removed upstream updater returned"
         scripts = re.findall(r'<script\b[^>]*\bsrc="([^"]+)"[^>]*\bintegrity="([^"]+)"', page)
         assert len(scripts) == 2, "Bundled browser libraries absent"
@@ -141,11 +139,10 @@ def main(image):
             assert status == 200 and headers.get_content_type() == "text/javascript"
             assert headers["X-Content-Type-Options"] == "nosniff"
             assert "sha384-" + base64.b64encode(hashlib.sha384(body).digest()).decode() == integrity
-        assert api(session, base, "/api/wg-relay/jobs") == {"jobs": []}
-        status, _, _, _ = request(session, base + "/api/wg-relay/start", {},
+        status, _, _, _ = request(session, base + "/api/node/wg/push", {},
                                   {"Content-Type": "application/json", "X-NodeCtl-WG": "1"})
-        assert status == 400, "Invalid remote deployment request accepted"
-        print("PASS: private initial password, authentication, embedded assets and WG API", flush=True)
+        assert status == 400, f"Invalid WG pair push request returned {status}"
+        print("PASS: private initial password, authentication, embedded assets and Agent WG API", flush=True)
 
         saved = {"sub_custom_name": "Docker persistence " + uuid.uuid4().hex,
                  "sub_token": secrets.token_hex(24), "proxy_socks5_pass": secrets.token_hex(24)}
@@ -179,29 +176,25 @@ def main(image):
         stored = api(session, base, "/api/get-settings")["data"]
         assert all(stored[k] == v for k, v in saved.items()), "Recreation lost saved settings"
         run("docker", "exec", second, "test", "!", "-e", "/app/data/initial-admin-password")
-        run("docker", "exec", second, "python3", "-c",
-            "import sqlite3; c=sqlite3.connect('file:/app/data/nodectl.db?mode=ro',uri=True); "
-            "assert c.execute('PRAGMA integrity_check').fetchall() == [('ok',)]")
         check_logs(second, secret_values + [env["NODECTL_INITIAL_ADMIN_PASSWORD"]])
         stop(second)
+        con = sqlite3.connect(f"file:{data / 'nodectl.db'}?mode=ro", uri=True)
+        try:
+            assert con.execute("PRAGMA integrity_check").fetchall() == [("ok",)]
+        finally:
+            con.close()
         print("PASS: recreated container retains password/settings, ignores bootstrap override and has intact SQLite data", flush=True)
     finally:
         try:
             compose("down", "--volumes", "--remove-orphans")
         finally:
-            # Delete only this run's disposable bind data; container-created
-            # files are root-owned on Linux and cannot be removed by the runner.
-            run("docker", "run", "--rm", "--pull", "never", "--entrypoint", "python3",
+            run("docker", "run", "--rm", "--pull", "never", "--entrypoint", "sh",
                 "--mount", f"type=bind,src={data},dst=/smoke-data", image, "-c",
-                "from pathlib import Path; import shutil; "
-                "[(shutil.rmtree(p) if p.is_dir() and not p.is_symlink() else p.unlink()) for p in Path('/smoke-data').iterdir()]")
+                "rm -rf /smoke-data/* /smoke-data/.[!.]* /smoke-data/..?* 2>/dev/null || true")
             shutil.rmtree(work)
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
+    if len(sys.argv) != 2 or not sys.argv[1]:
         raise SystemExit("Usage: smoke-docker.py IMAGE")
-    try:
-        main(sys.argv[1])
-    except Exception as error:
-        raise SystemExit(f"Docker smoke failed: {error}") from None
+    main(sys.argv[1])

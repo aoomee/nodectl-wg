@@ -62,8 +62,6 @@ func main() {
 		// 停止 CF 优选任务子进程
 		service.StopCFIPOptTask()
 
-		// Allow the WG worker to stop its remote operation and clean temporary credentials.
-		server.StopWGRelay()
 		stopWGPairs()
 		select {
 		case <-wgDone:

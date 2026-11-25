@@ -28,12 +28,14 @@ jobs:
       - name: Install test dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y nginx
+          sudo apt-get install -y nginx iproute2 wireguard-tools
           npm install --no-save --package-lock=false --ignore-scripts playwright@1.62.1
           npx playwright install --with-deps chromium
       - run: go test ./...
         env:
           NODECTL_TEST_NGINX: /usr/sbin/nginx
+      - name: Linux kernel WireGuard integration
+        run: sudo unshare -n env "PATH=$PATH" NODECTL_TEST_KERNEL_WG=1 "$(which go)" test -v -run TestRealLinuxKernelWireGuard ./internal/agent/wgrelay
       - run: go vet ./...
       - run: go test -race ./internal/database ./internal/requestmeta ./internal/service ./internal/agent/wgrelay ./internal/server
         env:

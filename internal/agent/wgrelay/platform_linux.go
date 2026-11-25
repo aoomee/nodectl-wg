@@ -18,10 +18,8 @@ var wgToolInstallMu sync.Mutex
 func ensureWGTools() {
 	wgToolInstallMu.Lock()
 	defer wgToolInstallMu.Unlock()
-	if _, err := exec.LookPath("ip"); err == nil {
-		if _, err := exec.LookPath("wg"); err == nil {
-			return
-		}
+	if hasJSONIP() && hasBinary("wg") {
+		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -53,20 +51,24 @@ func hasBinary(name string) bool {
 	return err == nil
 }
 
+func hasJSONIP() bool {
+	if !hasBinary("ip") {
+		return false
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	return exec.CommandContext(ctx, "ip", "-j", "link", "show", "lo").Run() == nil
+}
+
 func prerequisites() error {
 	if os.Geteuid() != 0 {
 		return ErrUnsupported
 	}
-	if s, err := os.Stat("/run/systemd/system"); err != nil || !s.IsDir() {
-		return ErrUnsupported
-	}
-	if !hasBinary("ip") || !hasBinary("wg") {
+	if !hasJSONIP() || !hasBinary("wg") {
 		ensureWGTools()
 	}
-	for _, name := range []string{"ip", "wg"} {
-		if !hasBinary(name) {
-			return ErrUnsupported
-		}
+	if !hasJSONIP() || !hasBinary("wg") {
+		return ErrUnsupported
 	}
 	return nil
 }

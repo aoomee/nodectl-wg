@@ -86,15 +86,44 @@ func TestUnknownRemovePersistsTombstoneWithoutHostAccess(t *testing.T) {
 }
 func TestRefusesForeignInterface(t *testing.T) {
 	p := testPayload()
-	f := &fakeRunner{links: `[{"ifname":"` + interfaceName(p.PairID) + `","ifalias":"foreign","linkinfo":{"info_kind":"wireguard"}}]`}
-	m := newManager(t.TempDir(), f)
-	if _, err := m.Execute(context.Background(), "wg-prepare", payload(p)); !errors.Is(err, ErrNotOwned) {
+	for _, field := range []string{`"alias":"foreign"`, `"ifalias":"foreign"`, `"alias":""`} {
+		f := &fakeRunner{links: `[{"ifname":"` + interfaceName(p.PairID) + `",` + field + `,"linkinfo":{"info_kind":"wireguard"}}]`}
+		m := newManager(t.TempDir(), f)
+		if _, err := m.Execute(context.Background(), "wg-prepare", payload(p)); !errors.Is(err, ErrNotOwned) {
+			t.Fatalf("expected ErrNotOwned for %s, got %v", field, err)
+		}
+		for _, c := range f.calls {
+			if !strings.HasPrefix(c, "ip -j") {
+				t.Fatal("mutated foreign interface", c)
+			}
+		}
+	}
+}
+
+func TestAdoptsOwnedUnaliasedInterfaceAndReadsStandardAlias(t *testing.T) {
+	p := testPayload()
+	dir := t.TempDir()
+	f := &fakeRunner{}
+	m := newManager(dir, f)
+	if _, err := m.Execute(context.Background(), "wg-prepare", payload(p)); err != nil {
 		t.Fatal(err)
 	}
-	for _, c := range f.calls {
-		if !strings.HasPrefix(c, "ip -j") {
-			t.Fatal("mutated foreign interface", c)
-		}
+	rec := m.records[p.PairID]
+	if rec == nil {
+		t.Fatal("missing persisted record")
+	}
+
+	// 1. Standard iproute2 JSON key `"alias"` is recognized as owned.
+	f.links = `[{"ifname":"` + rec.Interface + `","alias":"` + rec.alias() + `","linkinfo":{"info_kind":"wireguard"}}]`
+	owned, err := m.owned(context.Background(), rec)
+	if err != nil || !owned {
+		t.Fatalf("standard iproute2 alias not recognized: owned=%v err=%v", owned, err)
+	}
+
+	// 2. Unaliased interface left by v1.1.1 with matching persisted record self-heals on remove.
+	f.links = `[{"ifname":"` + rec.Interface + `","linkinfo":{"info_kind":"wireguard"}}]`
+	if _, err := m.Execute(context.Background(), "wg-remove", payload(Payload{PairID: p.PairID, Revision: 2})); err != nil {
+		t.Fatalf("expected self-healing remove to succeed, got: %v", err)
 	}
 }
 func TestPrepareIdempotentAndStaleRejected(t *testing.T) {

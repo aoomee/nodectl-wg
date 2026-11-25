@@ -880,13 +880,20 @@ func (rt *Runtime) executeCheckAgentUpdate(reply func(CommandResult)) {
 		reply(CommandResult{Type: "result", Status: "error", Message: "更新器未初始化"})
 		return
 	}
-	reply(CommandResult{Type: "progress", Status: "ok", Stage: "开始检查", Message: "正在检查 Agent 更新..."})
+	reply(CommandResult{Type: "progress", Status: "ok", Stage: "正在检查 GitHub 最新版本..."})
 	go func() {
-		if err := rt.updater.TriggerCheck(context.Background()); err != nil {
+		reexecNotified := false
+		err := rt.updater.TriggerCheckWithNotify(context.Background(), func(targetVersion string) {
+			reexecNotified = true
+			reply(CommandResult{Type: "result", Status: "ok", Message: fmt.Sprintf("Agent 已升级至 %s，正在原地重启重连...", targetVersion)})
+		})
+		if err != nil {
 			reply(CommandResult{Type: "result", Status: "error", Message: fmt.Sprintf("检查更新失败: %v", err)})
 			return
 		}
-		reply(CommandResult{Type: "result", Status: "ok", Message: "已触发更新检查，请查看节点日志确认结果"})
+		if !reexecNotified {
+			reply(CommandResult{Type: "result", Status: "ok", Message: fmt.Sprintf("当前已是最新版本 (%s)", AgentVersion)})
+		}
 	}()
 }
 

@@ -741,6 +741,12 @@ func TestSaveWGPairSQLiteSingleConnNoDeadlock(t *testing.T) {
 	connA := new(websocket.Conn)
 	connB := new(websocket.Conn)
 	hub.agentMu.Lock()
+	if hub.agentConns == nil {
+		hub.agentConns = make(map[string]*websocket.Conn)
+	}
+	if hub.agentSessions == nil {
+		hub.agentSessions = make(map[*websocket.Conn]agentSession)
+	}
 	hub.agentConns["aaaaaaaaaa01"] = connA
 	hub.agentConns["bbbbbbbbbb02"] = connB
 	hub.agentSessions[connA] = agentSession{installID: "aaaaaaaaaa01", wg: true, wgV2: true}

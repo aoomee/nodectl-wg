@@ -63,7 +63,7 @@ func apiSubClash(w http.ResponseWriter, r *http.Request) {
 	database.DB.Where("key = ?", "sub_custom_name").First(&nameConfig)
 	subName := nameConfig.Value
 	if subName == "" {
-		subName = "NodeCTL"
+		subName = "WireArc"
 	}
 
 	logger.Log.Info("成功下发 Clash 订阅模板", "ip", clientIP, "path", reqPath)
@@ -105,7 +105,7 @@ func apiSubV2ray(w http.ResponseWriter, r *http.Request) {
 	database.DB.Where("key = ?", "sub_custom_name").First(&nameConfig)
 	subName := nameConfig.Value
 	if subName == "" {
-		subName = "NodeCTL"
+		subName = "WireArc"
 	}
 
 	logger.Log.Info("成功下发 V2Ray Base64 订阅", "ip", clientIP, "path", reqPath)

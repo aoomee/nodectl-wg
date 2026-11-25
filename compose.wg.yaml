@@ -1,6 +1,6 @@
 services:
-  nodectl:
-    image: ${NODECTL_IMAGE:-ghcr.io/aoomee/nodectl-wg:latest}
+  wirearc:
+    image: ${NODECTL_IMAGE:-ghcr.io/aoomee/wirearc:latest}
     restart: unless-stopped
     init: true
     environment:

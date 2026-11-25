@@ -1,12 +1,12 @@
-name: Build and publish WG images
+name: Build and publish WireArc images
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Image and release version (e.g. v0.1.1-wg)'
+        description: 'Image and release version (e.g. v0.2.0)'
         required: true
-        default: 'v0.1.1-wg'
+        default: 'v0.2.0'
 
 permissions:
   contents: read
@@ -18,7 +18,7 @@ concurrency:
 env:
   # The application pins Asia/Shanghai at startup; upstream traffic tests assume it.
   TZ: Asia/Shanghai
-  IMAGE: ghcr.io/aoomee/nodectl-wg
+  IMAGE: ghcr.io/aoomee/wirearc
   VERSION: ${{ inputs.version }}
 
 jobs:
@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Validate version
-        run: '[[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-wg([.][0-9]+)?$ ]]'
+        run: '[[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-wg([.][0-9]+)?)?$ ]]'
 
   test:
     needs: validate-version
@@ -60,7 +60,7 @@ jobs:
         run: |
           mkdir -p bin dist
           go build -trimpath -ldflags="-s -w -X nodectl/internal/version.Version=$VERSION" -o "bin/nodectl-linux-$ARCH" .
-          go build -trimpath -ldflags="-s -w -X nodectl/internal/agent.AgentVersion=$VERSION -X nodectl/internal/agent.GitCommit=$GITHUB_SHA -X nodectl/internal/agent.UpdateRepoOwner=aoomee -X nodectl/internal/agent.UpdateRepoName=nodectl-wg" -o "dist/nodectl-agent-linux-$ARCH-$VERSION" ./cmd/nodectl-agent
+          go build -trimpath -ldflags="-s -w -X nodectl/internal/agent.AgentVersion=$VERSION -X nodectl/internal/agent.GitCommit=$GITHUB_SHA -X nodectl/internal/agent.UpdateRepoOwner=aoomee -X nodectl/internal/agent.UpdateRepoName=wirearc" -o "dist/nodectl-agent-linux-$ARCH-$VERSION" ./cmd/nodectl-agent
           (cd dist && sha256sum "nodectl-agent-linux-$ARCH-$VERSION" > "nodectl-agent-linux-$ARCH-$VERSION.sha256")
       - uses: docker/setup-buildx-action@v3
       - name: Build image for native smoke test
@@ -72,7 +72,7 @@ jobs:
           load: true
           tags: ${{ env.IMAGE }}:${{ env.VERSION }}-${{ matrix.arch }}
           labels: |
-            org.opencontainers.image.source=https://github.com/aoomee/nodectl-wg
+            org.opencontainers.image.source=https://github.com/aoomee/wirearc
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.version=${{ env.VERSION }}
       - name: Verify running container
@@ -86,11 +86,11 @@ jobs:
         run: |
           docker push "$IMAGE:$VERSION-$ARCH"
           docker tag "$IMAGE:$VERSION-$ARCH" "$IMAGE:$VERSION"
-          docker save "$IMAGE:$VERSION" | gzip -1 > "dist/nodectl-wg-$VERSION-linux-$ARCH.tar.gz"
+          docker save "$IMAGE:$VERSION" | gzip -1 > "dist/wirearc-$VERSION-linux-$ARCH.tar.gz"
           cp "bin/nodectl-linux-$ARCH" dist/
           cp compose.wg.yaml dist/
           cd dist
-          sha256sum "nodectl-wg-$VERSION-linux-$ARCH.tar.gz" "nodectl-linux-$ARCH" > "SHA256SUMS-$ARCH"
+          sha256sum "wirearc-$VERSION-linux-$ARCH.tar.gz" "nodectl-linux-$ARCH" > "SHA256SUMS-$ARCH"
       - uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.arch }}
@@ -127,20 +127,17 @@ jobs:
         run: |
           cp WG-README.md dist/WG-README.md
           cat > dist/release-notes.md <<'NOTES'
-          Docker 镜像和离线包发布，支持 Linux amd64 / arm64 面板机。
+          WireArc 多架构 Docker 镜像与离线包发布（支持 Linux amd64 / arm64 面板机）。
 
-          - 在线部署：`ghcr.io/aoomee/nodectl-wg:latest`，也可使用本发布版本标签。
-          - 离线部署：下载对应架构 `.tar.gz`，执行 `docker load -i 文件名`。
-          - 下载 `compose.wg.yaml` 或按仓库首页部署。
-          - `SHA256SUMS-amd64` / `SHA256SUMS-arm64` 提供镜像包与程序校验值。
+          - **在线部署**：`ghcr.io/aoomee/wirearc:latest`（或锁定本版本标签）
+          - **离线加载**：下载对应架构 `wirearc-*.tar.gz`，执行 `docker load -i 文件名`
+          - **配套文件**：`compose.wg.yaml` 与 `SHA256SUMS-amd64` / `SHA256SUMS-arm64`
 
-          两种架构均在原生 GitHub Linux runner 启动容器，检查登录、WG 页面、鉴权 API 和 Python / Paramiko 依赖后发布。Go 测试、vet、race 和 Python 引擎测试已通过。
-
-          远端 A/B 仍要求 Debian/Ubuntu x86_64，本发布没有声称已完成真实 VPS 的端到端 WG 验证。镜像包含面板和部署依赖；远端部署仍需联网下载代理组件。
+          两种架构均已在 GitHub Linux Runner 完成容器启动、登录鉴权、WG 页面与运行环境验证，并通过全量 Go（含 `-race`）、Python 与 Playwright 浏览器回归测试。
           NOTES
           if gh release view "$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release edit "$VERSION" --repo "$GITHUB_REPOSITORY" --title "NodeCtl WG $VERSION · Docker 镜像" --notes-file dist/release-notes.md
+            gh release edit "$VERSION" --repo "$GITHUB_REPOSITORY" --title "WireArc $VERSION" --notes-file dist/release-notes.md
           else
-            gh release create "$VERSION" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "NodeCtl WG $VERSION · Docker 镜像" --notes-file dist/release-notes.md --latest
+            gh release create "$VERSION" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "WireArc $VERSION" --notes-file dist/release-notes.md --latest
           fi
           gh release upload "$VERSION" dist/*.tar.gz dist/nodectl-linux-* dist/nodectl-agent-linux-* dist/SHA256SUMS-* dist/compose.wg.yaml dist/WG-README.md --repo "$GITHUB_REPOSITORY" --clobber

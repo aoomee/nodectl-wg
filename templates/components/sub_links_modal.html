@@ -608,7 +608,7 @@
         const data = subFormatData[formatKey];
         const link = data.getLink();
         const contentDiv = document.getElementById('subRightContent');
-        const subName = document.getElementById('inputSubName').value.trim() || 'NodeCTL';
+        const subName = document.getElementById('inputSubName').value.trim() || 'WireArc';
 
         let importBtnHtml = '';
         // 默认不加 has-import 类，这样只有复制按钮时会独占一行撑满
@@ -681,7 +681,7 @@
                 const data = result.data;
                 currentToken = data.sub_token || '';
                 currentBaseUrl = data.panel_url ? data.panel_url.replace(/\/+$/, '') : window.location.origin;
-                document.getElementById('inputSubName').value = data.sub_custom_name || 'NodeCTL';
+                document.getElementById('inputSubName').value = data.sub_custom_name || 'WireArc';
 
                 // 数据加载完毕，直接选中 Clash 并渲染
                 const clashCard = document.querySelector('#wrap_clash .sub-format-card');
@@ -713,7 +713,7 @@
         indicator.style.opacity = '1';
 
         subNameSaveTimer = setTimeout(async () => {
-            const newName = document.getElementById('inputSubName').value.trim() || 'NodeCTL';
+            const newName = document.getElementById('inputSubName').value.trim() || 'WireArc';
             try {
                 const res = await fetch('/api/update-settings', {
                     method: 'POST',

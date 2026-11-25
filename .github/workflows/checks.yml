@@ -73,13 +73,13 @@ jobs:
       - name: Build with the documented Compose files
         run: docker compose -f compose.wg.yaml -f compose.build.yaml build
       - name: Verify source-built image with persistent Compose data
-        run: bash scripts/smoke-docker.sh nodectl-wg:local
+        run: bash scripts/smoke-docker.sh wirearc:local
       - name: Build the release packaging from the tested native binary
         run: |
           mkdir -p bin
-          container=$(docker create nodectl-wg:local)
+          container=$(docker create wirearc:local)
           trap 'docker rm -v "$container" >/dev/null' EXIT
           docker cp "$container:/app/nodectl" "bin/nodectl-linux-$ARCH"
-          docker build --build-arg "TARGETARCH=$ARCH" -f .github/Dockerfile -t nodectl-wg:release-smoke .
+          docker build --build-arg "TARGETARCH=$ARCH" -f .github/Dockerfile -t wirearc:release-smoke .
       - name: Verify release image with persistent Compose data
-        run: bash scripts/smoke-docker.sh nodectl-wg:release-smoke
+        run: bash scripts/smoke-docker.sh wirearc:release-smoke

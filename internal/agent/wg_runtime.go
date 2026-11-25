@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"errors"
+	"log"
 	"path/filepath"
 	"strings"
 	"time"
@@ -45,6 +46,7 @@ func (rt *Runtime) executeWGCommand(cmd ServerCommand, reply func(CommandResult)
 	if strings.HasPrefix(cmd.Action, "wg-v2-") {
 		data, err := rt.executeWGV2(ctx, cmd)
 		if err != nil {
+			log.Printf("[Agent] WG v2 命令失败 (action=%s): %v", cmd.Action, err)
 			if errors.Is(err, wgrelay.ErrUnsupported) {
 				fail("WG 初始化失败：需 Linux/systemd、root 权限及 ip/wg 工具")
 				return
@@ -62,12 +64,14 @@ func (rt *Runtime) executeWGCommand(cmd ServerCommand, reply func(CommandResult)
 		return
 	}
 	if err := rt.ensureWGManager(); err != nil {
+		log.Printf("[Agent] WG 管理器初始化失败 (action=%s): %v", cmd.Action, err)
 		fail("WG 初始化失败：需 Linux/systemd、root 权限、ip/wg 工具及独占的安全状态目录")
 		return
 	}
 	reply(CommandResult{Type: "accepted", Status: "ok", Stage: "正在执行受管 WG 操作"})
 	data, err := rt.wgManager.Execute(ctx, cmd.Action, cmd.Payload)
 	if err != nil {
+		log.Printf("[Agent] WG 命令失败 (action=%s): %v", cmd.Action, err)
 		fail("WG 操作失败；请检查权限、端口/路由冲突及双端连接，等待面板完成清理后重试")
 		return
 	}

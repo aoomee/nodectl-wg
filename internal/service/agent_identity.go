@@ -16,6 +16,7 @@ import (
 	"gorm.io/gorm/clause"
 	"nhooyr.io/websocket"
 	"nodectl/internal/database"
+	"nodectl/internal/logger"
 	"nodectl/internal/requestmeta"
 )
 
@@ -338,6 +339,9 @@ func SendWGCommand(ctx context.Context, installID, action string, payload interf
 				continue
 			}
 			if result.Status != "ok" {
+				if logger.Log != nil {
+					logger.Log.Warn("WG Agent 命令返回失败", "install_id", installID, "action", action, "message", result.Message)
+				}
 				return nil, errors.New("WireGuard command failed")
 			}
 			return result.Data, nil

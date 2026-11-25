@@ -22,6 +22,7 @@ import (
 	"gorm.io/gorm"
 	"nodectl/internal/agent/wgrelay"
 	"nodectl/internal/database"
+	"nodectl/internal/logger"
 )
 
 var ErrWGConflict = errors.New("pair revision or node reservation conflict")
@@ -69,6 +70,7 @@ type WGPairDTO struct {
 	Enabled         bool   `json:"enabled"`
 	Status          string `json:"status"`
 	Phase           string `json:"phase"`
+	RetryCount      uint   `json:"retry_count,omitempty"`
 	Error           string `json:"error,omitempty"`
 }
 type WGPeerDTO struct {
@@ -85,7 +87,7 @@ type WGPairOptionsDTO struct {
 }
 
 func wgDTO(p database.WGPair) WGPairDTO {
-	out := WGPairDTO{ID: p.ID, UUID: p.EntryUUID, PeerUUID: p.PeerUUID, EntryPort: p.EntryPort, Revision: p.DesiredRevision, AppliedRevision: p.AppliedRevision, Enabled: p.Enabled, Status: p.Status, Phase: p.Phase, Error: p.Error, TopologyVersion: p.TopologyVersion, EntryWGPort: p.EntryWGPort, PeerWGPort: p.PeerWGPort, RestoreDirect: p.RestoreDirect}
+	out := WGPairDTO{ID: p.ID, UUID: p.EntryUUID, PeerUUID: p.PeerUUID, EntryPort: p.EntryPort, Revision: p.DesiredRevision, AppliedRevision: p.AppliedRevision, Enabled: p.Enabled, Status: p.Status, Phase: p.Phase, RetryCount: p.RetryCount, Error: p.Error, TopologyVersion: p.TopologyVersion, EntryWGPort: p.EntryWGPort, PeerWGPort: p.PeerWGPort, RestoreDirect: p.RestoreDirect}
 	if p.TopologyVersion == 2 {
 		out.SourceProtocol = "reality"
 		out.TargetProtocol = "ss"
@@ -205,11 +207,11 @@ func (c *wgPairCoordinator) identityState(db *gorm.DB, n database.NodePool, onli
 
 // WGPairNodeSummary 用于首页节点卡片展示当前 WG 配对角色与状态
 type WGPairNodeSummary struct {
-	Role      string `json:"role"`      // "entry" | "landing"
-	PeerUUID  string `json:"peer_uuid"` // 对端节点 UUID
-	PeerName  string `json:"peer_name"` // 对端节点名称
-	Status    string `json:"status"`    // "active" | "pending" | "applying" | "recovering" | "cleanup_pending" | "blocked" | "failed"
-	Topology  int    `json:"topology"`
+	Role     string `json:"role"`      // "entry" | "landing"
+	PeerUUID string `json:"peer_uuid"` // 对端节点 UUID
+	PeerName string `json:"peer_name"` // 对端节点名称
+	Status   string `json:"status"`    // "active" | "pending" | "applying" | "recovering" | "cleanup_pending" | "blocked" | "failed"
+	Topology int    `json:"topology"`
 }
 
 // ListWGPairNodeSummaries 返回所有尚未彻底停用/恢复直连的 WG 配对摘要（按 node_uuid 索引）。
@@ -698,6 +700,9 @@ func (c *wgPairCoordinator) advanceCleanup(ctx context.Context, p *database.WGPa
 		p.RetryCount++
 		p.NextRetryAt = c.now().Add(time.Second << min(p.RetryCount, 6))
 		p.Error = "cleanup pending; authenticated agent acknowledgement required"
+		if logger.Log != nil {
+			logger.Log.Warn("WG 清理阶段失败，等待重试", "pair_id", p.ID, "phase", p.Phase, "action", action, "retry", p.RetryCount, "error", err)
+		}
 		return
 	}
 	p.RetryCount = 0
@@ -778,6 +783,9 @@ func (c *wgPairCoordinator) advance(ctx context.Context, p *database.WGPair) {
 	if p.Phase == "prepare_a" {
 		secret, err := c.canonicalSS(ctx, *p)
 		if err != nil {
+			if logger.Log != nil {
+				logger.Log.Warn("WG 读取落地 SS 配置失败", "pair_id", p.ID, "phase", p.Phase, "error", err)
+			}
 			failWG(p)
 			return
 		}
@@ -785,6 +793,9 @@ func (c *wgPairCoordinator) advance(ctx context.Context, p *database.WGPair) {
 	}
 	result, err := c.command(ctx, *p, stage.entry, stage.action)
 	if err != nil {
+		if logger.Log != nil {
+			logger.Log.Warn("WG 部署阶段失败，转入清理", "pair_id", p.ID, "phase", p.Phase, "action", stage.action, "error", err)
+		}
 		failWG(p)
 		return
 	}

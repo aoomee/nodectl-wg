@@ -82,6 +82,8 @@ func (m *Manager) applyWGConfig(ctx context.Context) error {
 	if err := m.Stop(); err != nil {
 		return err
 	}
+	// Give the kernel a short grace window to release sockets before restart.
+	time.Sleep(300 * time.Millisecond)
 	// Command deadlines must never own the process lifetime. Shutdown/Stop and the
 	// Linux parent-death signal remain the lifecycle owners.
 	if err := m.StartAndVerify(context.Background(), 2*time.Second); err != nil {

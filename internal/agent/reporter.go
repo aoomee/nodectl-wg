@@ -235,8 +235,8 @@ func (r *Reporter) startReadLoop(ctx context.Context, conn *websocket.Conn) {
 			result.InstallID = r.cfg.InstallID
 			r.sendResultOnConnection(ctx, conn, result)
 		}
-		if strings.HasPrefix(cmd.Action, "wg-") && r.cfg.AgentToken == "" {
-			replyFunc(CommandResult{Type: "result", Status: "error", Message: "agent enrollment required"})
+		if strings.HasPrefix(cmd.Action, "wg-") && r.cfg.AgentToken != "" && validateAgentTransport(r.cfg) != nil {
+			replyFunc(CommandResult{Type: "result", Status: "error", Message: "trusted HTTPS/WSS transport required for bound agent"})
 			continue
 		}
 

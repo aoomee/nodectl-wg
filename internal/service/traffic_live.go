@@ -1289,8 +1289,9 @@ func CleanupNodeState(installID string, nodeUUID string) {
 // FireCommandToNode 异步下发命令，立即返回 commandID（不等待结果）
 func FireCommandToNode(installID string, action string, payload interface{}) (string, error) {
 	// All normal control paths, including Telegram/automatic operations, must
-	// respect relay dependencies. WG uses its authenticated typed transport.
-	if database.DB != nil && database.DB.Migrator().HasTable(&database.WGPairNode{}) {
+	// respect relay dependencies. Allow check-agent-update so outdated agents can
+	// self-upgrade and unblock pending WG operations or cleanup.
+	if action != "check-agent-update" && database.DB != nil && database.DB.Migrator().HasTable(&database.WGPairNode{}) {
 		var node database.NodePool
 		if err := database.DB.Select("uuid").Where("install_id = ?", installID).First(&node).Error; err == nil && WGNodeInUse(node.UUID) {
 			return "", fmt.Errorf("请先停用 WG 配对并等待清理完成，再执行节点控制")

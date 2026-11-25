@@ -781,3 +781,24 @@ func TestSaveWGPairSQLiteSingleConnNoDeadlock(t *testing.T) {
 		t.Fatalf("unexpected saved pair: %+v", dto)
 	}
 }
+
+func TestFireCommandAllowsAgentUpdateWhileWGInUse(t *testing.T) {
+	c, _ := newWGTest(t)
+	oldDB := database.DB
+	database.DB = c.db
+	t.Cleanup(func() { database.DB = oldDB })
+	_ = createWG(t, c)
+	var node database.NodePool
+	if err := c.db.First(&node, "uuid = ?", "entry").Error; err != nil {
+		t.Fatal(err)
+	}
+	if !WGNodeInUse(node.UUID) {
+		t.Fatal("expected entry node to be reserved by WG pair")
+	}
+	if _, err := FireCommandToNode(node.InstallID, "push-config", nil); err == nil || !strings.Contains(err.Error(), "请先停用 WG 配对") {
+		t.Fatalf("expected push-config to be blocked while WG in use, got: %v", err)
+	}
+	if _, err := FireCommandToNode(node.InstallID, "check-agent-update", map[string]interface{}{}); err == nil || strings.Contains(err.Error(), "请先停用 WG 配对") {
+		t.Fatalf("expected check-agent-update to bypass WG mutation block (fail only on offline), got: %v", err)
+	}
+}

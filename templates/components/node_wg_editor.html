@@ -274,19 +274,31 @@ async function nodeWGRequest(path, body) {
 function nodeWGPhaseText(p) {
     if (!p) return '';
     const map = {
-        guard_a: '1/4 正在初始化入口保护…',
-        apply_b: '2/4 正在配置落地 WG 与 SS…',
-        apply_a: '3/4 正在建立入口 WG 隧道…',
-        verify: '4/4 正在核验隧道连通性…',
+        guard_a: '1/8 正在初始化入口保护…',
+        prepare_a: '2/8 正在生成入口 WG 密钥…',
+        prepare_b: '3/8 正在生成落地 WG 密钥…',
+        configure_b: '4/8 正在配置落地 WG 隧道…',
+        configure_a: '5/8 正在配置入口 WG 隧道…',
+        verify_a: '6/8 正在核验入口连通性…',
+        verify_b: '7/8 正在核验落地连通性…',
+        activate_a: '8/8 正在切换入口路由至 WG…',
+        apply_b: '正在配置落地 WG 与 SS…',
+        apply_a: '正在建立入口 WG 隧道…',
+        verify: '正在核验隧道连通性…',
         verify_active: '正在核验双端隧道状态…',
         block_a: '正在阻断入口流量…',
-        remove_a: '正在清理入口隧道…',
-        remove_b: '正在清理落地隧道…',
+        remove_a: '正在清理入口 WG 隧道…',
+        remove_b: '正在清理落地 WG 隧道…',
+        direct_a: '正在恢复入口直连…',
         restore_a: '正在恢复入口直连…'
     };
     if (p.status === 'active') return 'WG 专线运行中';
     if (p.status === 'recovering') return '面板重启后正在核验双端连接…';
-    if (p.status === 'cleanup_pending') return map[p.phase] || '正在清理隧道并恢复直连…';
+    if (p.status === 'cleanup_pending') {
+        const base = map[p.phase] || '正在清理隧道并恢复直连…';
+        if ((p.retry_count || 0) >= 2) return `${base}（重试第 ${p.retry_count} 次，请确认节点在线且 Agent 已更新）`;
+        return base;
+    }
     if (p.status === 'pending' || p.status === 'applying') return map[p.phase] || '正在部署 WG 隧道…';
     if (p.status === 'disabled' && p.topology_version === 2 && !p.restore_direct) return 'REALITY 已阻断，需点击下方按钮恢复直连';
     if (p.status === 'failed') return p.error ? ('部署失败：' + p.error) : '部署失败，请停用清理后重试';
@@ -475,6 +487,7 @@ function renderNodeWGStatusOnly() {
         const txt = nodeWGPhaseText(p);
         statusEl.textContent = txt;
         if (blocked || p.status === 'failed') statusEl.dataset.tone = 'error';
+        else if (p.status === 'cleanup_pending' && (p.retry_count || 0) >= 2) statusEl.dataset.tone = 'warning';
         else if (p.status === 'active') statusEl.dataset.tone = 'success';
         else if (p.status !== 'disabled') statusEl.dataset.tone = 'progress';
         else delete statusEl.dataset.tone;

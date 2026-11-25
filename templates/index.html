@@ -8,7 +8,7 @@
         <link
             rel="icon"
             type="image/svg+xml"
-            href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23007aff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='2' y='2' width='20' height='8' rx='2' ry='2'></rect><rect x='2' y='14' width='20' height='8' rx='2' ry='2'></rect><line x1='6' y1='6' x2='6.01' y2='6'></line><line x1='6' y1='18' x2='6.01' y2='18'></line></svg>"
+            href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'><path d='M4.5 17C6.8 6.5 17.2 6.5 19.5 17' stroke='%23007aff' stroke-width='2.4' stroke-linecap='round'/><path d='M8.5 17C10 11.2 14 11.2 15.5 17' stroke='%2338bdf8' stroke-width='2' stroke-linecap='round'/><circle cx='4.5' cy='17' r='2.4' fill='%23007aff'/><circle cx='19.5' cy='17' r='2.4' fill='%23007aff'/></svg>"
         />
 
         <link rel="preconnect" href="https://flagcdn.com" crossorigin />
@@ -558,7 +558,7 @@
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                height: 96px;
+                height: 108px;
                 border: 1px solid rgba(0, 0, 0, 0.04);
                 border-radius: 20px;
                 background: #f7f8fa;
@@ -1084,17 +1084,23 @@
             <div class="top-navbar-inner">
                 <div style="display: flex; align-items: center">
                     <a href="/" class="nav-brand">
-                        <svg viewBox="0 0 1051 1024">
+                        <svg viewBox="0 0 24 24" fill="none">
                             <path
-                                d="M727.204 714.609m-135.255 0a135.255 135.255 0 1 0 270.511 0 135.255 135.255 0 1 0-270.511 0Z"
-                                fill="#cdcdcd"
+                                d="M4.5 17C6.8 6.5 17.2 6.5 19.5 17"
+                                stroke="#007aff"
+                                stroke-width="2.3"
+                                stroke-linecap="round"
                             ></path>
                             <path
-                                d="M779.225 492.834h-163.73c-50.378 0-91.995-41.069-91.995-91.995V237.655c0-50.378 41.069-91.995 91.995-91.995h163.73c50.378 0 91.995 41.069 91.995 91.995v163.73c-0.547 50.379-41.617 91.448-91.995 91.448z m-163.73-300.081c-24.641 0-44.902 20.261-44.902 44.902v163.73c0 24.642 20.261 44.903 44.902 44.903h163.73c24.642 0 44.903-20.261 44.903-44.903v-163.73c0-24.641-20.261-44.902-44.903-44.902h-163.73zM398.1 867.935H234.37c-50.378 0-91.995-41.069-91.995-91.995v-163.73c0-50.379 41.069-91.996 91.995-91.996h163.73c50.379 0 91.996 41.07 91.996 91.996v163.73c0 50.926-41.07 91.995-91.996 91.995z m-163.73-300.628c-24.642 0-44.903 20.261-44.903 44.902v163.73c0 24.642 20.261 44.903 44.903 44.903h163.73c24.642 0 44.903-20.261 44.903-44.903v-163.73c0-24.641-20.261-44.902-44.903-44.902H234.37z"
-                                fill="#0071e3"
+                                d="M8.5 17C10 11.2 14 11.2 15.5 17"
+                                stroke="#38bdf8"
+                                stroke-width="1.9"
+                                stroke-linecap="round"
                             ></path>
+                            <circle cx="4.5" cy="17" r="2.4" fill="#007aff"></circle>
+                            <circle cx="19.5" cy="17" r="2.4" fill="#007aff"></circle>
                         </svg>
-                        NodeCTL
+                        WireArc
                     </a>
 
                     <span class="top-version-badge" title="当前安装版本">{{.Version}}</span>
@@ -1434,16 +1440,6 @@
                             <span class="rule-name">自定义节点</span>
                         </a>
                     </div>
-                    <p
-                        style="
-                            text-align: center;
-                            font-size: 12px;
-                            color: #86868b;
-                            margin-top: 16px;
-                        "
-                    >
-                        点击图标在线编辑分流规则、脚本或配置文件模板
-                    </p>
                 </div>
             </div>
 
@@ -1568,7 +1564,7 @@
             {{template "traffic_stats_panel_v2.html" .}}
         </main>
 
-        <footer class="main-footer">Nodectl Core &copy; 2026</footer>
+        <footer class="main-footer">WireArc &copy; 2026</footer>
 
         <script>
             document.addEventListener("DOMContentLoaded", loadNodesList);

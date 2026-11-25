@@ -1,7 +1,7 @@
 services:
-  nodectl:
+  wirearc:
     build:
       context: .
       dockerfile: Dockerfile.wg
-    image: nodectl-wg:local
+    image: wirearc:local
     pull_policy: build

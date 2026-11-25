@@ -74,7 +74,7 @@ def main(image):
     env = dict(os.environ, NODECTL_IMAGE=image, NODECTL_BIND="127.0.0.1", NODECTL_PORT="0",
                NODECTL_INITIAL_ADMIN_PASSWORD="", NODECTL_TRUSTED_PROXIES="")
     override = work / "test.json"
-    override.write_text(json.dumps({"services": {"nodectl": {"volumes": [
+    override.write_text(json.dumps({"services": {"wirearc": {"volumes": [
         {"type": "bind", "source": str(data), "target": "/app/data"}
     ]}}}))
     compose_args = ("docker", "compose", "--project-name", project, "--env-file", os.devnull,
@@ -88,7 +88,7 @@ def main(image):
 
     def start():
         compose("up", "-d", "--pull", "never", "--no-build")
-        container = compose("ps", "-q", "nodectl").strip()
+        container = compose("ps", "-q", "wirearc").strip()
         info = inspect(container)
         bindings = info["NetworkSettings"]["Ports"]["8080/tcp"]
         assert len(bindings) == 1 and bindings[0]["HostIp"] == "127.0.0.1", "Backend exposed beyond loopback"
@@ -114,7 +114,7 @@ def main(image):
         assert state["ExitCode"] == 0 and not state["OOMKilled"], "Container did not shut down cleanly"
 
     try:
-        config = json.loads(compose("config", "--format", "json"))["services"]["nodectl"]
+        config = json.loads(compose("config", "--format", "json"))["services"]["wirearc"]
         assert config["image"] == image and config["restart"] == "unless-stopped"
         assert config["logging"]["options"]["max-size"] == "10m"
         assert config["logging"]["options"]["max-file"] == "3"
@@ -166,7 +166,7 @@ def main(image):
         secret_values = [initial, password, saved["sub_token"], saved["proxy_socks5_pass"]]
         check_logs(container, secret_values)
         stop(container)
-        compose("rm", "-f", "nodectl")
+        compose("rm", "-f", "wirearc")
         print("PASS: settings rollback, password rotation, credential-free logs and graceful stop", flush=True)
 
         # Existing data must survive replacement and take precedence over a new

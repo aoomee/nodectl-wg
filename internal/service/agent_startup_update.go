@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	agentReleasesAPI        = "https://api.github.com/repos/aoomee/nodectl-wg/releases"
+	agentReleasesAPI        = "https://api.github.com/repos/aoomee/wirearc/releases"
 	agentStartupCheckDelay  = 60 * time.Second
 	agentStartupCheckWindow = 60 * time.Second
 )

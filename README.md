@@ -1,139 +1,155 @@
-# NodeCtl WG 中转集成版
+<div align="center">
 
-基于 [hobin66/nodectl](https://github.com/hobin66/nodectl) 增加 WireGuard 双机中转部署，保留原有节点、订阅和 Agent 管理功能。
+# WireArc
 
-**本项目镜像：`ghcr.io/aoomee/nodectl-wg:latest`**
+**轻量自托管的多协议节点中枢与 WireGuard 双机中转控制台**
 
-[下载镜像离线包 / Linux 程序](https://github.com/aoomee/nodectl-wg/releases/latest) · [完整使用说明](WG-README.md) · [构建与验证记录](https://github.com/aoomee/nodectl-wg/actions/workflows/release-main.yml) · [集成来源](WG-SOURCES.md)
+[![Checks](https://github.com/aoomee/wirearc/actions/workflows/checks.yml/badge.svg)](https://github.com/aoomee/wirearc/actions/workflows/checks.yml)
+[![Release](https://img.shields.io/github/v/release/aoomee/wirearc?display_name=tag&color=007aff)](https://github.com/aoomee/wirearc/releases/latest)
+[![GHCR](https://img.shields.io/badge/GHCR-aoomee%2Fwirearc-1d1d1f?logo=docker)](https://github.com/aoomee/wirearc/pkgs/container/wirearc)
+[![Arch](https://img.shields.io/badge/Linux-amd64%20%7C%20arm64-34c759)](#docker-部署)
 
-## Docker 一键启动
+[核心特性](#核心特性) · [Docker 部署](#docker-部署) · [访问与反代](#访问与反代) · [双机中转](#wireguard-双机中转) · [更新与构建](#更新与构建) · [进阶文档](#进阶文档)
 
-**如果你使用网页里的「粘贴部署内容 / Compose YAML」输入框**，请只粘贴下面的 YAML（从 `services:` 开始），不要粘贴 `mkdir`、`curl` 或 `docker compose` 命令：
+</div>
+
+---
+
+## 核心特性
+
+- **双模 WireGuard 跨机专线** — 支持 **Agent 零配置直管**（自动分配隧道密钥与私网 IP、故障阻断防直连泄漏）与 **SSH 独立自动化部署**（一键完成双端安装、联调校验与回滚）。
+- **全协议统一编排** — 基于 Sing-box 可视化管理 Reality、Hysteria2、TUIC、Shadowsocks、Trojan、VMess / VLESS 多传输层及 Socks5 等 17 种协议。
+- **多端订阅与规则引擎** — 统一输出 Clash (Mihomo)、Sing-box、Surge 与通用 V2Ray 订阅；支持外部机场订阅聚合、内核级延迟与下载测速、自定义分流规则在线热编辑。
+- **实时遥测与自动化运维** — WebSocket 秒级速率图表、日/月流量历史日历、配额达标自动熔断，集成 Cloudflare 证书 / Tunnel / 优选 IP 与 Telegram Bot 告警。
+
+---
+
+## Docker 部署
+
+官方镜像 `ghcr.io/aoomee/wirearc:latest` 原生支持 `linux/amd64` 与 `linux/arm64`，所有配置、数据库与日志统一持久化在 `/app/data`。
+
+### 方式一：Docker Compose（推荐）
+
+在服务器终端执行以下命令即可启动：
+
+```bash
+mkdir -p /opt/wirearc && cd /opt/wirearc
+curl -fsSL https://raw.githubusercontent.com/aoomee/wirearc/main/compose.yaml -o compose.yaml
+docker compose up -d
+```
+
+若使用 1Panel、Portainer 或 Dockge 等容器面板，可直接粘贴以下 `compose.yaml`：
 
 ```yaml
 services:
-  nodectl:
-    image: ghcr.io/aoomee/nodectl-wg:latest
+  wirearc:
+    image: ghcr.io/aoomee/wirearc:latest
+    container_name: wirearc
     restart: unless-stopped
     init: true
     environment:
-      NODECTL_TRUSTED_PROXIES: "" # 按下方反代说明填写实际代理 IP
+      NODECTL_INITIAL_ADMIN_PASSWORD: ""
+      NODECTL_TRUSTED_PROXIES: ""
     ports:
       - "127.0.0.1:7878:8080"
     volumes:
       - ./data:/app/data
     stop_grace_period: 75s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 ```
 
-**如果你使用服务器终端**，先安装 Docker 和 Docker Compose，然后执行：
+### 方式二：Docker Run
 
 ```bash
-mkdir -p /opt/nodectl-wg
-cd /opt/nodectl-wg
-curl -fL https://raw.githubusercontent.com/aoomee/nodectl-wg/main/compose.wg.yaml -o compose.yaml
-docker compose pull
-docker compose up -d
-```
+mkdir -p /opt/wirearc/data
 
-容器默认只绑定 **`127.0.0.1:7878`**，给同机 NGINX 的 HTTP 上游填写 `http://127.0.0.1:7878`，通过自己的 HTTPS 域名访问。配置 **`NODECTL_TRUSTED_PROXIES` 为面板实际看到的代理 IP**，并让 NGINX 覆盖转发头、保留 Host 和支持 WebSocket，机器授权与 WG 即可使用 HTTP 回源；不需要给面板生成自签证书。[完整 NGINX 配置与 Docker 代理地址说明](REVERSE-PROXY.md)。
-
-可信代理功能需要包含该修复的新版本或自行构建；旧镜像不会因为添加环境变量就自动获得支持。默认不信任任何转发头，包括来自本机或 Docker 网关的头。
-
-尚未配置域名时，可以在自己的电脑执行 SSH 转发，再访问 `http://127.0.0.1:7878`：
-
-```bash
-ssh -L 7878:127.0.0.1:7878 root@你的面板服务器IP
-```
-
-包含本修复的版本首次安装使用账号 **`admin`**，密码自动随机生成。服务启动成功后，在面板服务器终端领取：
-
-```bash
-docker compose exec nodectl cat /app/data/initial-admin-password
-# 使用 compose.wg.yaml 时：
-# docker compose -f compose.wg.yaml exec nodectl cat /app/data/initial-admin-password
-```
-
-直接运行程序时读取工作目录下的 `data/initial-admin-password`。文件权限为 0600，密码不会打印到日志；登录后修改密码会清理对应的初始密码文件。新密码至少 12 个字符，且不超过 72 字节。
-
-已有数据卷沿用原账号密码，升级和重启不会重置；如果旧实例仍使用 `admin/admin`，请登录后修改。自动化部署可在首次启动时通过 `NODECTL_INITIAL_ADMIN_PASSWORD` 指定符合要求的密码，此时不生成密码文件；该变量对已有账号无效，不是密码重置开关。旧镜像仍按旧版行为运行。
-
-输入 VPS 密码时请使用 HTTPS 或可信的 SSH 本地转发。
-
-也可以直接使用 Docker Run：
-
-```bash
 docker run -d \
-  --name nodectl-wg \
+  --name wirearc \
   --restart unless-stopped \
   --init \
   --stop-timeout 75 \
   -p 127.0.0.1:7878:8080 \
-  -v /opt/nodectl-wg/data:/app/data \
-  ghcr.io/aoomee/nodectl-wg:latest
+  -v /opt/wirearc/data:/app/data \
+  --log-opt max-size=10m \
+  --log-opt max-file=3 \
+  ghcr.io/aoomee/wirearc:latest
 ```
 
-镜像支持 **Linux amd64 / arm64 面板机**，Docker 会自动选择架构。**被部署的 A/B VPS 目前只支持 x86_64**，与面板机架构无关。
+### 首次登录
 
-## 新增的 WG 功能
-
-在面板首页点击 **「WG 中转」**：
-
-| 模式 | 链路 | 客户端导入 |
-| --- | --- | --- |
-| Realm → VLESS（默认） | A Realm → WireGuard → B VLESS / REALITY | VLESS 链接 |
-| VLESS → SS | A VLESS / REALITY → WireGuard → B Shadowsocks | VLESS 链接 |
-
-填写两端 IP、SSH 账号密码和空闲业务端口，先检查连接，再部署。支持进度日志、任务停止、SSH 指纹记录、端口冲突检查和失败回滚。验证成功后可以一键加入 NodeCtl 的 Clash / V2Ray 订阅。
-
-SSH 密码不写入任务文件。关闭页面后后台任务继续运行；同一面板同时执行一个部署任务。预检查通过不等于 WG 部署成功，只有最终业务验证成功才开放导入。
-
-A/B 要求：Debian / Ubuntu、x86_64、systemd、Python 3、公网 IPv4、内核 WireGuard，以及 root 或能 sudo 的登录账号。云安全组需要放行实际使用的 SSH、业务 TCP 和 WG UDP 端口。
-
-已安装新版 Agent 的节点也可直接在「编辑节点」页开启 **Agent 托管 WG 出站（`REALITY → WG → SS`）**：无需输入 SSH 密码或手动绑定机器授权令牌，只要入口 A 已部署 `REALITY`、落地 B 已部署 `SS` 且两端 Agent 在线，即可一键建立内核 WireGuard 隧道并切换出站；节点编辑页会实时展示节点条件、协议与 Agent 就绪检查，不可选的落地节点可展开查看原因，首页节点卡片也会同步标记当前 WG 配对链路状态。
-
-## 离线加载镜像
-
-从 [Releases](https://github.com/aoomee/nodectl-wg/releases/latest) 下载对应架构的 `.tar.gz`、`SHA256SUMS-*` 和 `compose.wg.yaml`。以 x86_64 的 `v0.1.1-wg` 为例：
+首次启动会自动创建管理员账号 **`admin`** 并生成高强度随机密码（不会输出到容器日志）。在宿主机执行以下命令查看初始密码：
 
 ```bash
-# 只校验镜像包（校验文件中也列出了单独程序）
-grep 'tar.gz$' SHA256SUMS-amd64 | sha256sum -c -
-docker load -i nodectl-wg-v0.1.1-wg-linux-amd64.tar.gz
-NODECTL_IMAGE=ghcr.io/aoomee/nodectl-wg:v0.1.1-wg \
-  docker compose -f compose.wg.yaml up -d --pull never
+# Docker Compose 部署
+docker compose exec wirearc cat /app/data/initial-admin-password
+
+# Docker Run 部署
+docker exec wirearc cat /app/data/initial-admin-password
 ```
 
-这是可直接 `docker load` 的镜像包，已包含面板和 Python 部署依赖。**部署 A/B 时，远端服务器仍需联网下载 Xray、Realm 等组件。** 旧版 `v0.1.0-wg` 的 ZIP 是源码与程序整合包，不是离线镜像。
+> 登录控制台并在右上角修改密码后，初始密码文件会自动销毁。自动化部署可在首次创建容器时设置环境变量 `NODECTL_INITIAL_ADMIN_PASSWORD`（12–72 字符）。
 
-## 更新与迁移
+---
 
-更新前等待 WG 任务结束并备份 `data/`：
+## 访问与反代
+
+为保障安全，面板默认仅监听本机回环地址 `127.0.0.1:7878`，不向公网直接暴露未加密端口。
+
+- **本地 SSH 隧道访问（免域名快速管理）**
+  在本地电脑终端执行端口转发后，浏览器访问 `http://127.0.0.1:7878`：
+  ```bash
+  ssh -L 7878:127.0.0.1:7878 root@<服务器公网IP>
+  ```
+- **HTTPS 反向代理（生产环境 / 公网 Agent 接入推荐）**
+  使用 NGINX / Caddy 将 HTTPS 域名反代至 `http://127.0.0.1:7878`，保留 `Host`、开启 WebSocket `Upgrade` 并在环境变量 `NODECTL_TRUSTED_PROXIES` 中填入反代来源 IP。完整配置示例见 [NGINX HTTPS 反代指南](REVERSE-PROXY.md)。
+
+---
+
+## WireGuard 双机中转
+
+WireArc 同时提供两种跨机中转方案，按需选择：
+
+| 模式 | 入口位置 | 链路拓扑 | 适用场景与特点 |
+| :--- | :--- | :--- | :--- |
+| **Agent 直管模式** | 节点编辑 → `REALITY` 卡片 → **出站方式** | `VLESS+REALITY (A) → WG → Shadowsocks (B)` | **日常主力推荐**。双端安装 Agent 后下拉即连，自动完成密钥交换、路由下发、健康巡检与异常阻断，纳入实时流量统计。 |
+| **SSH 独立模式** | 控制台首页 → **WG 中转** | `Realm / VLESS (A) → WG → REALITY / SS (B)` | **无 Agent 纯净机器**。经 SSH 在双端部署独立 systemd 隧道与转发服务，端到端校验通过后一键导入自定义订阅。 |
+
+---
+
+## 更新与构建
+
+**日常平滑升级**（保留全部节点、订阅与历史数据）：
 
 ```bash
-cd /opt/nodectl-wg
+cd /opt/wirearc
 docker compose pull
 docker compose up -d
-docker compose logs --tail=80
 ```
 
-从原版 NodeCtl 迁移时，停止旧容器，将原数据目录挂载到新容器的 `/app/data`，不要让新旧容器同时操作同一份数据库。外置 PostgreSQL 需要另行备份。
-
-删除自定义节点只影响订阅，不会卸载两端 VPS 服务。部署失败或取消时也可能保留已经安装的服务，恢复方法见 [完整说明](WG-README.md)。
-
-## 自行构建
+**离线镜像部署**（从 [Releases](https://github.com/aoomee/wirearc/releases/latest) 下载对应架构 `.tar.gz`）：
 
 ```bash
-git clone https://github.com/aoomee/nodectl-wg.git
-cd nodectl-wg
-docker compose -f compose.wg.yaml -f compose.build.yaml up -d --build
+docker load -i wirearc-v0.2.0-linux-amd64.tar.gz
+NODECTL_IMAGE=ghcr.io/aoomee/wirearc:v0.2.0 docker compose up -d
 ```
 
-发布流程先执行 Go 和 Python 测试，再分别在 amd64 / arm64 Linux 环境构建并启动镜像；登录、WG 页面、鉴权 API 和运行依赖检查通过后推送 GHCR，并生成离线包。实际结果以 [Actions](https://github.com/aoomee/nodectl-wg/actions/workflows/release-main.yml) 和 Release 为准。
+**从源码本地构建**：
 
-提交检查也会在原生 amd64 / arm64 Linux 上验证 Docker：按上面的 Compose 文件构建，分别测试源码构建镜像和发布用镜像结构，检查首次登录、密码修改、设置保存、容器正常停止，以及删除并重建容器后密码和设置是否保留、SQLite 数据库是否完整。测试使用临时数据目录和随机本机端口，不发布镜像。结果见 [提交检查](https://github.com/aoomee/nodectl-wg/actions/workflows/checks.yml)。
+```bash
+git clone https://github.com/aoomee/wirearc.git
+cd wirearc
+docker compose -f compose.yaml -f compose.build.yaml up -d --build
+```
 
-已有本地测试镜像时，可执行 `bash scripts/smoke-docker.sh 镜像名` 重复验证，需要 Docker Compose 和宿主机 Python 3。该脚本会创建并清理独立的临时 Compose 项目；验证容器重建的数据持久化，不代表已验证任意旧版本的数据库迁移。
+---
 
-尚未完成真实 A/B VPS 的整合版端到端验证；实际线路的 UDP 可达性、WG 握手和客户端访问仍需部署时确认。
+## 进阶文档
 
-原项目的完整功能介绍保存在 [上游说明存档](README-UPSTREAM.md)。部署本版本请使用本页的 `aoomee/nodectl-wg` 镜像。
+- [NGINX HTTPS 反向代理与可信代理配置](REVERSE-PROXY.md)
+- [Agent 托管 WireGuard 专线架构说明](WG-AGENT-INTEGRATION.md)
+- [SSH 独立 WireGuard 中转引擎说明](WG-README.md)
+- [组件来源与开源致谢](WG-SOURCES.md) · 基于 [hobin66/nodectl](https://github.com/hobin66/nodectl) 演进开发

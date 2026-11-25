@@ -133,15 +133,15 @@ func apiDownloadAgent(w http.ResponseWriter, r *http.Request) {
 		channel = string(version.GetChannel())
 	}
 
-	// 获取 GitHub 仓库信息
-	githubRepo := loadSysConfigValue("github_repo")
-	if githubRepo == "" {
-		githubRepo = "aoomee/nodectl-wg" // 默认仓库
+	// 获取 GitHub 仓库信息（自动迁移旧默认仓库名）
+	githubRepo := strings.TrimSpace(loadSysConfigValue("github_repo"))
+	if githubRepo == "" || strings.EqualFold(githubRepo, "aoomee/nodectl-wg") || strings.EqualFold(githubRepo, "hobin66/nodectl") {
+		githubRepo = "aoomee/wirearc"
 	}
 
-	// WG fork releases contain their own Agent; never redirect a WG build to upstream.
+	// Fork releases contain their own Agent; never redirect to upstream.
 	if strings.Contains(version.Version, "-wg") {
-		githubRepo = "aoomee/nodectl-wg"
+		githubRepo = "aoomee/wirearc"
 	}
 
 	// 构造 Release Tag（使用面板版本号，因为 Agent 二进制附在面板的 Release 中）
@@ -393,8 +393,8 @@ var agentAssetCache = struct {
 
 // findAgentAssetURL 通过 GitHub API 查找指定 Release 中匹配前缀的 agent 二进制下载 URL
 // 参数：
-//   - repo: GitHub 仓库（如 "aoomee/nodectl-wg"）
-//   - tag:  Release tag（如 "v0.4.32-alpha"）
+//   - repo: GitHub 仓库（如 "aoomee/wirearc"）
+//   - tag:  Release tag（如 "v0.2.0"）
 //   - prefix: 文件名前缀（如 "nodectl-agent-linux-amd64-"）
 //
 // 返回匹配的第一个（非 .sha256）asset 的 browser_download_url

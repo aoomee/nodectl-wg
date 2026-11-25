@@ -1,64 +1,62 @@
-# NodeCtl · WG 中转集成版
+# WireArc · SSH WG 中转说明
 
-基于 `hobin66/nodectl` 的 `b2b2738`（2026-07-24）修改。WG 引擎来自用户提供的「松茸WG-Docker离线包-私密后台版-无自签证书.zip」。此整合版维护于 [aoomee/nodectl-wg](https://github.com/aoomee/nodectl-wg)，与上游项目分开维护。预编译程序与整合包见 [Releases](https://github.com/aoomee/nodectl-wg/releases/latest)。
+基于 `hobin66/nodectl` 的 `b2b2738`（2026-07-24）演进重构。此版本维护于 [aoomee/wirearc](https://github.com/aoomee/wirearc)，与上游项目独立维护。预编译程序与离线镜像见 [Releases](https://github.com/aoomee/wirearc/releases/latest)。
 
-## 加入了什么
+## 功能概览
 
-NodeCtl 首页新增「WG 中转」，复用原面板登录和自定义节点订阅。
+WireArc 首页内置「WG 中转」，与面板自定义节点及多端订阅无缝联动：
 
 - Realm → WireGuard → VLESS / REALITY：推荐默认模式。
 - VLESS / REALITY → WireGuard → Shadowsocks：A 接收 VLESS，B 提供 SS 出口。
 - SSH 连接、系统与端口检查、已有 WG 链路诊断；部署过程日志和停止任务。
-- 部署后检查入口连接、真实 VLESS 请求、HTTPS、出口 IP 和下载校验。成功后可复制 VLESS 链接或加入 NodeCtl 的 Clash / V2Ray 订阅。
+- 部署后检查入口连接、真实 VLESS 请求、HTTPS、出口 IP 和下载校验。成功后可复制 VLESS 链接或加入面板的 Clash / V2Ray 订阅。
 - 同一面板一次执行一个任务；最多保留 50 条记录。页面关闭不影响执行；进程重启会将未完成任务标为中断，不自动重跑。
 - SSH 密码只经子进程标准输入传递，不放入参数、环境变量或任务文件；日志进行跨输出分段脱敏。完成任务后删除临时工作目录，保留 SSH 主机指纹。
-- 保留原引擎的多实例隔离、端口冲突保护、凭据清理、校验和下载及失败回滚。不同入口端口可建立不同链路；同一入口的 SNI / MTU 不会静默覆盖。
+- 保留多实例隔离、端口冲突保护、凭据清理、校验和下载及失败回滚。不同入口端口可建立不同链路；同一入口的 SNI / MTU 不会静默覆盖。
 
-## 建议用 Docker 部署
+## 推荐 Docker 部署
 
-推荐直接使用本项目预构建镜像 `ghcr.io/aoomee/nodectl-wg:latest`，支持 amd64 / arm64 面板机：
+推荐直接使用预构建多架构镜像 `ghcr.io/aoomee/wirearc:latest`（支持 amd64 / arm64 面板机）：
 
 ```bash
-docker compose -f compose.wg.yaml pull
-docker compose -f compose.wg.yaml up -d
-docker compose -f compose.wg.yaml logs --tail=80
+docker compose pull
+docker compose up -d
+docker compose logs --tail=80
 ```
 
-Releases 中的 `.tar.gz` 为可 `docker load` 的离线镜像包；`v0.1.0-wg` 的 ZIP 仍是源码与程序包。离线加载、SSH 转发及 Docker Run 示例见 [首页](README.md)。目标 A/B 部署仍需联网下载代理组件。
+Releases 中的 `.tar.gz` 为可 `docker load` 的离线镜像包。离线加载、SSH 转发及 Docker Run 示例见 [项目首页](README.md)。目标 A/B 部署仍需联网下载代理组件。
 
 从源码构建则使用：
 
 ```bash
-docker compose -f compose.wg.yaml -f compose.build.yaml up -d --build
+docker compose -f compose.yaml -f compose.build.yaml up -d --build
 ```
 
-默认绑定 `127.0.0.1:7878`，通过自己的 HTTPS 反代或 SSH 转发访问。面板 HTTP 上游地址为 `http://127.0.0.1:7878`；反代需保留原始 Host、支持 WebSocket，并配置面板的可信代理 IP，见 [NGINX 反代说明](REVERSE-PROXY.md)。这个包不会生成自签证书。无论通过 HTTPS 反代还是可信的 SSH 本地转发访问面板，均可使用首页 SSH 部署与节点编辑页的 Agent 托管 WG 出站。
+默认绑定 `127.0.0.1:7878`，通过自己的 HTTPS 反代或 SSH 转发访问。面板 HTTP 上游地址为 `http://127.0.0.1:7878`；反代需保留原始 Host、支持 WebSocket，并配置面板的可信代理 IP，见 [NGINX 反代说明](REVERSE-PROXY.md)。面板不会生成自签证书。无论通过 HTTPS 反代还是可信的 SSH 本地转发访问面板，均可使用首页 SSH 部署与节点编辑页的 Agent 托管 WG 出站。
 
-包含本修复的版本首次安装使用账号 **`admin`**，密码自动随机生成。服务启动成功后，在面板服务器终端领取：
+首次安装默认账号为 **`admin`**，密码自动随机生成。服务启动成功后，在面板服务器终端查看：
 
 ```bash
-docker compose exec nodectl cat /app/data/initial-admin-password
-# 使用 compose.wg.yaml 时：
-# docker compose -f compose.wg.yaml exec nodectl cat /app/data/initial-admin-password
+docker compose exec wirearc cat /app/data/initial-admin-password
 ```
 
 直接运行程序时读取工作目录下的 `data/initial-admin-password`。文件权限为 0600，密码不会打印到日志；登录后修改密码会清理对应的初始密码文件。新密码至少 12 个字符，且不超过 72 字节。
 
-已有数据卷沿用原账号密码，升级和重启不会重置；如果旧实例仍使用 `admin/admin`，请登录后修改。自动化部署可在首次启动时通过 `NODECTL_INITIAL_ADMIN_PASSWORD` 指定符合要求的密码，此时不生成密码文件；该变量对已有账号无效，不是密码重置开关。旧镜像仍按旧版行为运行。
+已有数据卷沿用原账号密码，升级和重启不会重置；如果旧实例仍使用 `admin/admin`，请登录后修改。自动化部署可在首次启动时通过 `NODECTL_INITIAL_ADMIN_PASSWORD` 指定符合要求的密码，此时不生成密码文件；该变量对已有账号无效，不是密码重置开关。
 
 输入 VPS 密码时请使用 HTTPS 或可信的 SSH 本地转发。
 
-已有 NodeCtl：先停止旧实例，备份整个 `data/`（外置 PostgreSQL 还需备份数据库），再将原数据目录挂载到 `/app/data`。不要让新旧实例同时操作同一份数据。挂载此目录后保留原账号、节点、订阅及 WG 任务。
+已有旧实例迁移：先停止旧实例，备份整个 `data/`（外置 PostgreSQL 还需备份数据库），再将原数据目录挂载到 `/app/data`。不要让新旧实例同时操作同一份数据。挂载此目录后保留原账号、节点、订阅及 WG 任务。
 
-维护命令：
+日常维护命令：
 
 ```bash
-docker compose -f compose.wg.yaml logs --tail=100
-docker compose -f compose.wg.yaml down
-docker compose -f compose.wg.yaml up -d
+docker compose logs --tail=100
+docker compose down
+docker compose up -d
 ```
 
-不要把镜像改回 `ghcr.io/hobin66/nodectl:latest`：上游镜像不含本次修改。更换版本前等任务结束，并备份数据。
+不要把镜像改回 `ghcr.io/hobin66/nodectl:latest`：上游镜像不含 WireArc 功能。更换版本前等任务结束，并备份数据。
 
 ## 不用 Docker
 
@@ -75,12 +73,12 @@ NODECTL_WG_PYTHON="$PWD/.venv-wg/bin/python3" ./bin/nodectl-linux-amd64
 
 ## 使用顺序
 
-1. 登录 NodeCtl，在首页点击「WG 中转」。
+1. 登录 WireArc 控制台，在首页点击「WG 中转」。
 2. 选择链路模式，填写 A 中转、B 落地的公网 IPv4、SSH 端口、用户名、密码和空闲业务端口。默认 SNI 为 `addons.mozilla.org`，MTU 为 1280。
 3. 点击「检查连接 / 诊断」。检查通过不等于 WG 已连通；首次 SSH 连接会记录指纹，后续变化会拒绝连接。
 4. 重新输入密码，点击「部署并验证」。密码在提交成功后清空。
-5. 任务显示「部署及业务验证通过」后，点击「加入 NodeCtl 订阅」。重复点击同一结果不会重复添加。
-6. 在「自定义节点」管理链接和分流。默认加入可用节点组，沿用 NodeCtl 现有订阅配置；不额外加入 Agent 服务器列表，也不提供这条链路的 Agent 流量统计。
+5. 任务显示「部署及业务验证通过」后，点击「加入面板订阅」。重复点击同一结果不会重复添加。
+6. 在「自定义节点」管理链接和分流。默认加入可用节点组，沿用现有订阅配置；不额外加入 Agent 服务器列表，也不提供这条链路的 Agent 流量统计。
 
 A/B 要求：Debian / Ubuntu、x86_64、systemd、Python 3、支持内核 WireGuard；root 或可使用同一登录密码 sudo 的账号。暂不支持 IPv6、ARM 落地、LXC / OpenVZ 容器、SSH 私钥登录。
 

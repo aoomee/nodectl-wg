@@ -226,7 +226,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]interface{}{
-		"Title":      "Nodectl控制台",
+		"Title":      "WireArc 控制台",
 		"Protocols":  database.SupportedProtocols,
 		"Version":    version.Version,
 		"Stats":      stats,

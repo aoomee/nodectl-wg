@@ -1,55 +1,244 @@
 {{define "node_wg_editor.html"}}
 <style>
-.node-wg-outbound, .node-wg-setup { box-sizing:border-box; padding:16px; margin:0 0 12px; background:var(--editor-paper); border:1px solid var(--editor-border); border-radius:var(--editor-card-radius); min-width:0; overflow-wrap:anywhere; }
-.protocol-card > .node-wg-outbound { margin:0; border:0; border-top:1px solid var(--editor-border); border-radius:0; background:var(--editor-surface); }
-.node-wg-outbound details, .node-wg-setup details { margin-top:14px; border-top:1px solid var(--editor-border); padding-top:6px; }
-.node-wg-outbound summary, .node-wg-setup summary { cursor:pointer; font-size:12px; font-weight:600; color:var(--editor-muted); padding:8px 0; }
-.node-wg-setup-head, .node-wg-actions { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
-.node-wg-setup-head { justify-content:space-between; }
-.node-wg-setup-head strong { font-size:14px; line-height:1.5; font-weight:650; }
-.node-wg-actions { margin-top:14px; }
-.node-wg-badge { display:inline-flex; align-items:center; gap:5px; font-size:11px; line-height:1.5; font-weight:600; color:var(--editor-muted); }
-.node-wg-badge::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; }
-.node-wg-badge[data-tone="success"] { color:#23744b; }
-.node-wg-badge[data-tone="warning"] { color:#8a5800; }
-.node-wg-badge[data-tone="danger"] { color:#b42318; }
-.node-wg-badge[data-tone="progress"] { color:var(--editor-accent); }
-.node-wg-route { display:flex; align-items:center; flex-wrap:wrap; gap:7px; margin:12px 0; color:var(--editor-muted); font-size:12px; line-height:1.6; }
-.node-wg-route b { color:var(--editor-ink); font-family:ui-monospace, SFMono-Regular, Consolas, monospace; font-size:12px; font-weight:600; }
-.node-wg-route span { display:inline-flex; align-items:center; gap:4px; }
-.node-wg-route i { font-style:normal; color:#7a8ba0; }
-.node-wg-checks { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:12px; }
-.node-wg-check { padding:10px 12px; border-radius:var(--editor-radius); background:var(--editor-surface); min-width:0; }
-.node-wg-check-head { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:6px; font-size:12px; }
-.node-wg-check p, .node-wg-peer-issues p { margin:6px 0 0; }
-.node-wg-peer-issues ul { margin:4px 0 0; padding-left:18px; }
-.node-wg-peer-issues li { margin:10px 0; font-size:12px; color:var(--editor-ink); }
-.node-wg-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:12px; }
-.node-wg-fields[data-mode="direct"] { grid-template-columns:minmax(0,1fr); }
-.node-wg-outbound [hidden], .node-wg-setup [hidden] { display:none !important; }
-#nodeWGStatus, #nodeWGSetupStatus { margin:10px 0 0; }
-.node-wg-outbound label { display:block; margin:0 0 6px; font-size:12px; font-weight:600; color:var(--editor-muted); }
-.node-wg-outbound select { width:100%; min-width:0; max-width:100%; min-height:40px; box-sizing:border-box; padding:8px; border:1px solid var(--editor-border); border-radius:var(--editor-radius); background:var(--editor-paper); color:var(--editor-ink); font:inherit; font-size:13px; }
-.node-wg-outbound p, .node-wg-setup p { font-size:12px; line-height:1.75; color:var(--editor-muted); }
-.node-wg-outbound details p, .node-wg-setup details p { margin:6px 0 10px; }
-.node-wg-setup pre { white-space:pre-wrap; overflow-wrap:anywhere; font:12px/1.75 ui-monospace, SFMono-Regular, Consolas, monospace; margin:12px 0 0; padding:12px; border:1px solid var(--editor-border); border-radius:var(--editor-radius); background:var(--editor-surface); }
+.node-wg-outbound, .node-wg-setup {
+    box-sizing: border-box;
+    padding: 14px 16px;
+    margin: 12px 0 0;
+    background: var(--editor-surface);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: var(--editor-card-radius);
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+.protocol-card > .node-wg-outbound {
+    margin: 0;
+    border: 0;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 0;
+    background: #fafbfd;
+}
+.node-wg-setup.is-compact {
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+.node-wg-setup.is-compact .node-wg-setup-head {
+    flex: 1;
+    min-width: 0;
+}
+.node-wg-setup.is-compact .node-wg-actions {
+    margin-top: 0;
+}
+.node-wg-setup-head, .node-wg-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.node-wg-setup-head { justify-content: space-between; }
+.node-wg-setup-head strong {
+    font-size: 13px;
+    line-height: 1.4;
+    font-weight: 650;
+    color: var(--editor-ink);
+}
+.node-wg-actions { margin-top: 12px; }
+.node-wg-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    line-height: 1.4;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: #eef1f6;
+    color: var(--editor-muted);
+    white-space: nowrap;
+}
+.node-wg-badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+.node-wg-badge[data-tone="success"] { background: #e8fdf0; color: #16803d; }
+.node-wg-badge[data-tone="warning"] { background: #fff4e5; color: #b45309; }
+.node-wg-badge[data-tone="danger"] { background: #feeceb; color: #cf1322; }
+.node-wg-badge[data-tone="progress"] { background: #eaf4ff; color: #0066d6; }
+.node-wg-badge[data-tone="progress"]::before { animation: wgDotPulse 1.2s ease-in-out infinite; }
+@keyframes wgDotPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.35; transform: scale(0.8); }
+}
+.node-wg-route {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 10px 0 0;
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: #f0f5ff;
+    color: #34527a;
+    font-size: 11.5px;
+    line-height: 1.4;
+}
+.node-wg-route b {
+    color: #0055b3;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 11.5px;
+    font-weight: 700;
+}
+.node-wg-route i { font-style: normal; color: #8aa4c4; }
+.node-wg-checks {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+}
+.node-wg-check {
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    min-width: 0;
+}
+.node-wg-check-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    font-size: 12px;
+}
+.node-wg-check p, .node-wg-peer-issues p { margin: 5px 0 0; }
+.node-wg-peer-issues {
+    margin-top: 10px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: #fff9eb;
+    border: 1px solid #ffe4b5;
+}
+.node-wg-peer-issues summary {
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    color: #9a5b00;
+    list-style: none;
+}
+.node-wg-peer-issues ul { margin: 6px 0 0; padding-left: 16px; }
+.node-wg-peer-issues li { margin: 6px 0; font-size: 12px; color: var(--editor-ink); }
+.node-wg-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+.node-wg-fields[data-mode="direct"] { grid-template-columns: minmax(0, 1fr); }
+.node-wg-outbound [hidden], .node-wg-setup [hidden] { display: none !important; }
+#nodeWGStatus, #nodeWGSetupStatus {
+    margin: 10px 0 0;
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--editor-muted);
+}
+#nodeWGStatus:empty, #nodeWGSetupStatus:empty { display: none; }
+#nodeWGStatus[data-tone="progress"] {
+    padding: 9px 12px;
+    border-radius: 12px;
+    background: #eaf4ff;
+    border: 1px solid #bfdbfe;
+    color: #0055b3;
+    font-weight: 600;
+}
+#nodeWGStatus[data-tone="success"] {
+    padding: 9px 12px;
+    border-radius: 12px;
+    background: #e8fdf0;
+    border: 1px solid #bbf7d0;
+    color: #16803d;
+    font-weight: 600;
+}
+#nodeWGStatus[data-tone="error"] {
+    padding: 9px 12px;
+    border-radius: 12px;
+    background: #fff1f0;
+    border: 1px solid #ffccc7;
+    color: #cf1322;
+    font-weight: 600;
+}
+#nodeWGStatus[data-tone="warning"] {
+    padding: 9px 12px;
+    border-radius: 12px;
+    background: #fff7e6;
+    border: 1px solid #ffe7ba;
+    color: #ad6800;
+    font-weight: 600;
+}
+.node-wg-outbound label {
+    display: block;
+    margin: 0 0 5px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--editor-muted);
+}
+.node-wg-outbound select {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    height: 38px;
+    box-sizing: border-box;
+    padding: 0 34px 0 12px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    background-color: #ffffff;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236e6e73' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 11px center;
+    background-size: 14px 14px;
+    color: var(--editor-ink);
+    font: 600 13px/1.4 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+    cursor: pointer;
+    transition: border-color .2s, box-shadow .2s, background-color .2s;
+}
+.node-wg-outbound select:hover:not(:disabled) {
+    border-color: rgba(0, 122, 255, 0.35);
+}
+.node-wg-outbound select:focus {
+    outline: none;
+    border-color: #007aff;
+    box-shadow: 0 0 0 3.5px rgba(0, 122, 255, 0.14);
+}
+.node-wg-outbound p, .node-wg-setup p { font-size: 12px; line-height: 1.6; color: var(--editor-muted); }
+#nodeWGRefresh.node-editor-button {
+    min-height: 30px;
+    padding: 4px 12px;
+    font-size: 12px;
+}
 @media (max-width:768px) {
-    .node-wg-outbound, .node-wg-setup { padding:14px; }
-    .node-wg-fields { grid-template-columns:minmax(0,1fr); }
-    .node-wg-checks { grid-template-columns:minmax(0,1fr); }
-    .node-wg-actions > button { flex:1 1 auto; }
+    .node-wg-outbound, .node-wg-setup { padding: 12px 14px; }
+    .node-wg-fields { grid-template-columns: minmax(0, 1fr); }
+    .node-wg-checks { grid-template-columns: minmax(0, 1fr); }
+    .node-wg-actions > button { flex: 1 1 auto; }
 }
 </style>
 <script>
-let nodeWGEditor = {uuid:'', pair:null, peers:[], ready:false, timer:null, generation:0, request:0, loaded:false, mode:null, peer:null, busy:false, baseline:null};
+let nodeWGEditor = {uuid:'', pair:null, peers:[], ready:false, timer:null, generation:0, request:0, loaded:false, mode:null, peer:null, busy:false, baseline:null, error:'', errorTone:''};
 function resetNodeWGEditor() {
     clearTimeout(nodeWGEditor.timer);
     const button = document.getElementById('btnPushConfig');
+    const textEl = document.getElementById('btnPushConfigText');
     if (button) { button.disabled = false; button.style.opacity = '1'; }
-    nodeWGEditor = {uuid:'', pair:null, peers:[], ready:false, timer:null, generation:nodeWGEditor.generation+1, request:0, loaded:false, mode:null, peer:null, busy:false, baseline:null};
+    if (textEl) textEl.textContent = '推送配置';
+    nodeWGEditor = {uuid:'', pair:null, peers:[], ready:false, timer:null, generation:nodeWGEditor.generation+1, request:0, loaded:false, mode:null, peer:null, busy:false, baseline:null, error:'', errorTone:''};
     for (const id of ['nodeWGCard','nodeWGSetup']) document.getElementById(id)?.remove();
 }
-// Compare the user's ordinary configuration, not the frequently refreshed node cache.
 function nodeWGOrdinarySnapshot() {
     const fields = Array.from(document.querySelectorAll('#editNodeModal input, #editNodeModal select, #editNodeModal textarea'))
         .filter(el => !el.closest('#nodeWGCard, #nodeWGSetup') && el.id !== 'editNodeUUID')
@@ -62,19 +251,46 @@ function nodeWGBlocksOrdinary() {
     const p = nodeWGEditor.pair;
     return !!p && (p.status !== 'disabled' || (p.topology_version === 2 && !p.restore_direct));
 }
-function nodeWGMessage(message) {
-    nodeWGEditor.error = message;
+function nodeWGMessage(message, tone = 'error') {
+    nodeWGEditor.error = message || '';
+    nodeWGEditor.errorTone = message ? tone : '';
     const status = document.getElementById('nodeWGStatus') || document.getElementById('nodeWGSetupStatus');
-    if (status) status.textContent = message;
+    if (status) {
+        status.textContent = message || '';
+        if (message && tone) status.dataset.tone = tone;
+        else delete status.dataset.tone;
+        if (message && tone === 'error') status.scrollIntoView({block:'nearest', behavior:'smooth'});
+    }
 }
 async function nodeWGRequest(path, body) {
     const response = await fetch(path, body === undefined ? {cache:'no-store'} : {method:'POST', headers:{'Content-Type':'application/json','X-NodeCtl-WG':'1'}, body:JSON.stringify(body)});
     if (response.redirected || !response.headers.get('Content-Type')?.includes('application/json')) {
-        throw new Error('登录已失效或服务响应异常，请刷新页面后重试');
+        throw new Error('登录已失效或服务响应异常，请刷新页面重试');
     }
     const result = await response.json();
     if (!response.ok || result.status === 'error' || result.error) throw new Error(result.message || result.error || 'WG 请求失败');
     return result.data || result;
+}
+function nodeWGPhaseText(p) {
+    if (!p) return '';
+    const map = {
+        guard_a: '1/4 正在初始化入口保护…',
+        apply_b: '2/4 正在配置落地 WG 与 SS…',
+        apply_a: '3/4 正在建立入口 WG 隧道…',
+        verify: '4/4 正在核验隧道连通性…',
+        verify_active: '正在核验双端隧道状态…',
+        block_a: '正在阻断入口流量…',
+        remove_a: '正在清理入口隧道…',
+        remove_b: '正在清理落地隧道…',
+        restore_a: '正在恢复入口直连…'
+    };
+    if (p.status === 'active') return 'WG 专线运行中';
+    if (p.status === 'recovering') return '面板重启后正在核验双端连接…';
+    if (p.status === 'cleanup_pending') return map[p.phase] || '正在清理隧道并恢复直连…';
+    if (p.status === 'pending' || p.status === 'applying') return map[p.phase] || '正在部署 WG 隧道…';
+    if (p.status === 'disabled' && p.topology_version === 2 && !p.restore_direct) return 'REALITY 已阻断，需点击下方按钮恢复直连';
+    if (p.status === 'failed') return p.error ? ('部署失败：' + p.error) : '部署失败，请停用清理后重试';
+    return '';
 }
 async function loadNodeWGEditor(uuid) {
     if (!uuid) return false;
@@ -93,7 +309,7 @@ async function loadNodeWGEditor(uuid) {
         nodeWGEditor.ready = data.ready === true;
         nodeWGEditor.readiness = data.readiness || null;
         nodeWGEditor.loaded = true;
-        nodeWGEditor.error = '';
+        if (!nodeWGEditor.busy) { nodeWGEditor.error = ''; nodeWGEditor.errorTone = ''; }
         if (nodeWGEditor.mode === null) nodeWGEditor.mode = nodeWGBlocksOrdinary() ? 'wg' : 'direct';
         if (nodeWGEditor.peer === null) nodeWGEditor.peer = data.pair?.peer_uuid || '';
         renderNodeWGCard();
@@ -106,6 +322,7 @@ async function loadNodeWGEditor(uuid) {
         if (generation === nodeWGEditor.generation && request === nodeWGEditor.request) {
             nodeWGEditor.loaded = false;
             nodeWGEditor.error = error.message;
+            nodeWGEditor.errorTone = 'error';
             renderNodeWGCard();
             scheduleNodeWGPoll();
         }
@@ -119,7 +336,7 @@ function scheduleNodeWGPoll() {
     const uuid = nodeWGEditor.uuid, generation = nodeWGEditor.generation;
     nodeWGEditor.timer = setTimeout(() => {
         if (generation === nodeWGEditor.generation) loadNodeWGEditor(uuid);
-    }, 2000);
+    }, 1500);
 }
 function renderNodeWGCard() {
     if (!nodeWGEditor.uuid) return;
@@ -130,20 +347,12 @@ function renderNodeWGCard() {
     let setup = document.getElementById('nodeWGSetup');
     if (!setup) {
         setup = document.createElement('div'); setup.id = 'nodeWGSetup'; setup.className = 'node-wg-setup';
-        setup.innerHTML = `<div class="node-wg-setup-head"><strong>WG 中转就绪检查</strong><span id="nodeWGSetupBadge" class="node-wg-badge"></span></div>
+        setup.innerHTML = `<div class="node-wg-setup-head"><strong>WG 中转状态</strong><span id="nodeWGSetupBadge" class="node-wg-badge"></span></div>
             <p id="nodeWGSetupStatus" role="status" aria-live="polite"></p>
             <div id="nodeWGChecks" class="node-wg-checks" aria-label="WG 就绪检查"></div>
-            <p id="nodeWGCheckNote" hidden>检查基于已保存的节点配置与实时 Agent 连接；内核 WireGuard 工具与 UDP 连通性将在部署时自动核验。</p>
             <div class="node-wg-actions">
-                <button type="button" id="nodeWGRefresh" class="node-editor-button">刷新状态</button>
-            </div>
-            <details id="nodeWGSetupDetails"><summary>WG 双机中转原理 · 3 步快速启用</summary>
-                <p>WG 出站由两端 Agent 直接协同管理（无需输入 SSH 密码或手动绑定令牌）：入口 A 收到的客户端 REALITY 流量经内核 WireGuard 隧道转发给落地 B 的 Shadowsocks 访问互联网。</p>
-                <p>① 打开落地节点 B：设为“落地”，启用 SS 并点击底部“推送配置”，等待命令执行成功。</p>
-                <p>② 打开入口节点 A：设为“入口”，在直连模式下启用 REALITY 并点击底部“推送配置”，等待成功。</p>
-                <p>③ 两端 Agent 在线就绪后，在 A 上方的 REALITY 卡片将“出站方式”改为“经 WG → SS 出站”，选择落地 B 并点击底部“推送配置”，等待状态显示“运行中”即可。</p>
-                <p>若目标机器尚未安装 iproute2 / wireguard-tools，Linux systemd 环境下的 root Agent 会在首次建隧道时自动尝试安装；云厂商安全组仍需放行 B 的 WG UDP 端口。</p>
-            </details>`;
+                <button type="button" id="nodeWGRefresh" class="node-editor-button">刷新</button>
+            </div>`;
         list.insertAdjacentElement('afterend', setup);
         setup.querySelector('#nodeWGRefresh').onclick = () => loadNodeWGEditor(nodeWGEditor.uuid);
     }
@@ -152,117 +361,156 @@ function renderNodeWGCard() {
     const refreshBtn = setup.querySelector('#nodeWGRefresh');
     if (refreshBtn) refreshBtn.disabled = nodeWGEditor.busy;
     const checks = nodeWGEditor.loaded && Array.isArray(readiness?.checks) ? readiness.checks : [];
+    const failedChecks = checks.filter(c => !c.ready);
     const machineReady = readiness ? readiness.ready === true : nodeWGEditor.ready;
-    setupBadge.textContent = !nodeWGEditor.loaded ? '待检查' : machineReady ? (landing ? '落地已就绪' : '入口已就绪') : '待就绪';
+    setupBadge.textContent = !nodeWGEditor.loaded ? '检查中' : machineReady ? (landing ? '落地就绪' : '入口就绪') : '待就绪';
     setupBadge.dataset.tone = !nodeWGEditor.loaded ? '' : machineReady ? 'success' : 'warning';
-    setup.querySelector('#nodeWGSetupStatus').textContent = nodeWGEditor.error || (landing
-        ? (!nodeWGEditor.loaded ? '落地 B · 正在检查 Agent 连接与 SS 协议…' : machineReady ? '落地 B · 已就绪，无需额外授权；可直接前往入口 A 的 REALITY 卡片选择本机。' : '落地 B · 请完成下方待处理项，再到入口 A 选择本机。')
-        : `${document.getElementById('editNodeUIState').value === '1' ? '入口 A' : '已屏蔽'} · ${!nodeWGEditor.loaded ? '正在检查 Agent 连接与 REALITY 协议…' : nodeWGEditor.ready ? '已就绪；请在上方 REALITY 协议卡片选择出站方式和落地 B，再点击底部“推送配置”。' : checks.length ? '请完成下方待处理项，再点击“刷新状态”。' : '未就绪。请检查 Agent 在线与 REALITY 部署状态。'}`);
+    const compactSetup = nodeWGEditor.loaded && machineReady && !nodeWGEditor.error && failedChecks.length === 0;
+    setup.classList.toggle('is-compact', compactSetup);
+    const setupStatusEl = setup.querySelector('#nodeWGSetupStatus');
+    setupStatusEl.textContent = compactSetup ? '' : (nodeWGEditor.error || (!nodeWGEditor.loaded ? '正在检测 Agent 连接…' : ''));
     const checkList = setup.querySelector('#nodeWGChecks');
-    checkList.replaceChildren(); checkList.hidden = checks.length === 0;
-    setup.querySelector('#nodeWGCheckNote').hidden = checks.length === 0;
-    for (const check of checks) {
+    checkList.replaceChildren();
+    const visibleChecks = compactSetup ? [] : failedChecks;
+    checkList.hidden = visibleChecks.length === 0;
+    for (const check of visibleChecks) {
         const item = document.createElement('div'); item.className = 'node-wg-check';
         const head = document.createElement('div'); head.className = 'node-wg-check-head';
         const label = document.createElement('strong'); label.textContent = check.label;
-        const badge = document.createElement('span'); badge.className = 'node-wg-badge'; badge.dataset.tone = check.ready ? 'success' : 'warning'; badge.textContent = check.ready ? '已满足' : '待处理';
+        const badge = document.createElement('span'); badge.className = 'node-wg-badge'; badge.dataset.tone = 'warning'; badge.textContent = '待处理';
         head.append(label, badge); item.append(head);
-        if (!check.ready) { const detail = document.createElement('p'); detail.textContent = check.detail; item.append(detail); }
+        if (check.detail) { const detail = document.createElement('p'); detail.textContent = check.detail; item.append(detail); }
         checkList.append(item);
     }
-    const helpOpen = document.getElementById('nodeWGUsage')?.open || false;
+
     const peerIssuesOpen = document.getElementById('nodeWGPeerIssues')?.open || false;
     const focusedControl = document.activeElement?.closest('#nodeWGCard') ? document.activeElement.id : '';
     document.getElementById('nodeWGCard')?.remove();
-    // Outside a REALITY card, only an existing pair's cleanup panel is allowed.
     if ((!reality || landing) && !p) return;
+
     const card = document.createElement('div'); card.id = 'nodeWGCard'; card.className = 'node-wg-outbound';
-    card.innerHTML = `<div class="node-wg-setup-head"><strong>${reality && !landing ? 'REALITY 出站' : '已有配对清理'}</strong><span id="nodeWGPairBadge" class="node-wg-badge"></span></div>
+    card.innerHTML = `<div class="node-wg-setup-head"><strong>${reality && !landing ? '出站设置' : 'WG 配对清理'}</strong><span id="nodeWGPairBadge" class="node-wg-badge"></span></div>
+        <div id="nodeWGChoices" class="node-wg-fields">
+            <div><label for="nodeWGMode">出站方式</label><select id="nodeWGMode"><option value="direct">直连</option><option value="wg">经 WG → SS 出站</option></select></div>
+            <div id="nodeWGPeerField"><label for="nodeWGPeer">SS 落地节点</label><select id="nodeWGPeer"></select></div>
+        </div>
         <div id="nodeWGTopology" class="node-wg-route"></div>
-        <div id="nodeWGChoices" class="node-wg-fields"><div><label for="nodeWGMode">出站方式</label><select id="nodeWGMode"><option value="direct">直连</option><option value="wg">经 WG → SS 出站</option></select></div>
-        <div id="nodeWGPeerField"><label for="nodeWGPeer">SS 落地节点</label><select id="nodeWGPeer"></select></div></div>
         <details id="nodeWGPeerIssues" class="node-wg-peer-issues"><summary id="nodeWGPeerIssuesSummary"></summary><ul></ul></details>
         <p id="nodeWGStatus" role="status" aria-live="polite"></p>
-        <details id="nodeWGUsage"><summary id="nodeWGUsageSummary">部署步骤与注意事项</summary>
-            <p>先让落地 B 的 SS 与入口 A 的 REALITY 推送成功并确保两端 Agent 在线。随后将“出站方式”改为“经 WG → SS 出站”，选择“SS 落地节点”B，点击底部“推送配置”，等待显示“运行中”。</p>
-            <p>普通协议有修改时，需先在直连模式完成部署，再启用 WG；两步不是原子部署，准备期间为直连。应用出站可能短暂重启 A 的 sing-box。</p>
-            <p>配对期间修改协议或落地前需先点击下方“停用 WG 并恢复直连”完成清理；隧道异常时会保持阻断，不会静默回退直连暴露入口出口 IP。</p>
-        </details>
         <div class="node-wg-actions" id="nodeWGCleanupRow"><button type="button" id="nodeWGCleanup" class="node-editor-button node-editor-button-danger">停用 WG 并恢复直连</button></div>`;
     if (reality && !landing) reality.appendChild(card); else list.insertAdjacentElement('afterend', card);
+
     card.querySelector('#nodeWGChoices').hidden = !reality || landing;
     const topology = card.querySelector('#nodeWGTopology');
-    if (p && p.topology_version !== 2) topology.textContent = '检测到旧版配对。必须先停用并等待清理完成，随后才可部署 REALITY → WG → SS。';
-    else topology.innerHTML = '<span>客户端</span><i aria-hidden="true">→</i><span><b>A</b> REALITY</span><i aria-hidden="true">→</i><span><b>WG</b> 隧道</span><i aria-hidden="true">→</i><span><b>B</b> SS</span><i aria-hidden="true">→</i><span>互联网</span>';
-    card.querySelector('#nodeWGUsage').open = helpOpen;
+    if (p && p.topology_version !== 2) topology.textContent = '旧版配对，请先停用清理';
+    else topology.innerHTML = '<span><b>A</b> REALITY</span><i aria-hidden="true">→</i><span><b>WG</b> 隧道</span><i aria-hidden="true">→</i><span><b>B</b> SS</span>';
+
     const mode = card.querySelector('#nodeWGMode'), select = card.querySelector('#nodeWGPeer');
     const issues = card.querySelector('#nodeWGPeerIssues');
     issues.open = peerIssuesOpen;
     const unavailable = nodeWGEditor.peers.filter(peer => !peer.ready);
-    issues.querySelector('summary').textContent = unavailable.length ? `${unavailable.length} 个落地未就绪 · 查看原因` : '暂无落地节点 · 查看下一步';
+    issues.querySelector('summary').textContent = unavailable.length ? `${unavailable.length} 个落地未就绪` : '暂无可用落地节点';
     if (!nodeWGEditor.peers.length) {
-        const li = document.createElement('li'); li.textContent = '请先添加一台落地节点并部署 SS，然后刷新状态。'; issues.querySelector('ul').append(li);
+        const li = document.createElement('li'); li.textContent = '请先添加落地节点并推送 SS 协议'; issues.querySelector('ul').append(li);
     }
     for (const peer of unavailable) {
         const li = document.createElement('li'); const name = document.createElement('strong'); name.textContent = peer.name; li.append(name);
         const failures = peer.readiness?.checks?.filter(check => !check.ready) || [];
-        const detail = document.createElement('p'); detail.textContent = failures.length ? failures.map(check => check.detail).join(' ') : '请打开该节点，检查 SS 协议部署与 Agent 连接状态。'; li.append(detail); issues.querySelector('ul').append(li);
+        const detail = document.createElement('p'); detail.textContent = failures.length ? failures.map(check => check.detail).join(' ') : '请检查 SS 协议与 Agent 在线状态'; li.append(detail); issues.querySelector('ul').append(li);
     }
+
     mode.value = nodeWGEditor.mode || 'direct';
     const syncPeerVisibility = () => {
-        select.disabled = mode.value !== 'wg'; card.querySelector('#nodeWGPeerField').hidden = mode.value !== 'wg';
+        select.disabled = mode.value !== 'wg';
+        card.querySelector('#nodeWGPeerField').hidden = mode.value !== 'wg';
         card.querySelector('#nodeWGChoices').dataset.mode = mode.value;
         issues.hidden = !nodeWGEditor.loaded || mode.value !== 'wg' || (nodeWGEditor.peers.length > 0 && unavailable.length === 0);
-        // Keep the live pair's path visible while the user drafts a direct change.
         topology.hidden = !p && mode.value !== 'wg';
     };
-    mode.onchange = () => { nodeWGEditor.mode = mode.value; syncPeerVisibility(); };
-    const placeholder = document.createElement('option'); placeholder.value = ''; placeholder.textContent = '请选择已就绪的 SS 落地'; select.appendChild(placeholder);
+    mode.onchange = () => { nodeWGEditor.mode = mode.value; nodeWGEditor.error = ''; nodeWGEditor.errorTone = ''; syncPeerVisibility(); renderNodeWGStatusOnly(); };
+
+    const placeholder = document.createElement('option'); placeholder.value = ''; placeholder.textContent = '选择落地节点'; select.append(placeholder);
     for (const peer of nodeWGEditor.peers) {
         const reason = peer.readiness?.checks?.find(check => !check.ready)?.label;
-        const option = document.createElement('option'); option.value = peer.uuid; option.textContent = peer.name + (peer.ready ? '' : `（${reason || '未就绪'}${reason ? '待处理' : ''}）`); option.disabled = !peer.ready; select.appendChild(option);
+        const option = document.createElement('option');
+        option.value = peer.uuid;
+        option.textContent = peer.name + (peer.ready ? '' : `（${reason || '未就绪'}）`);
+        option.disabled = !peer.ready;
+        select.append(option);
     }
     if (nodeWGEditor.peer && !Array.from(select.options).some(o => o.value === nodeWGEditor.peer)) {
-        const option = document.createElement('option'); option.value = nodeWGEditor.peer; option.textContent = nodeWGEditor.peer + '（当前选择，需重新检查就绪）'; select.appendChild(option);
+        const option = document.createElement('option'); option.value = nodeWGEditor.peer; option.textContent = nodeWGEditor.peer + '（需重新检查）'; select.append(option);
     }
-    select.value = nodeWGEditor.peer || ''; syncPeerVisibility();
-    select.onchange = () => { nodeWGEditor.peer = select.value; };
+    select.value = nodeWGEditor.peer || '';
+    syncPeerVisibility();
+    select.onchange = () => { nodeWGEditor.peer = select.value; nodeWGEditor.error = ''; nodeWGEditor.errorTone = ''; renderNodeWGStatusOnly(); };
+
     const blocked = p?.topology_version === 2 && !p.enabled && !p.restore_direct;
     const pairBadge = card.querySelector('#nodeWGPairBadge');
-    const labels = {active:'运行中', pending:'部署中', applying:'部署中', recovering:'恢复核验', cleanup_pending:'清理中', disabled:blocked ? '已阻断' : '已停用', failed:'需处理'};
-    pairBadge.textContent = p ? (labels[p.status] || '处理中') : '未启用 WG';
+    const labels = {active:'运行中', pending:'部署中', applying:'部署中', recovering:'恢复核验', cleanup_pending:'清理中', disabled:blocked ? '已阻断' : '直连', failed:'异常'};
+    pairBadge.textContent = p ? (labels[p.status] || '处理中') : '直连';
     pairBadge.dataset.tone = blocked || p?.status === 'failed' ? 'danger' : p?.status === 'active' ? 'success' : p && p.status !== 'disabled' ? 'progress' : '';
-    const stateLabel = p?.status === 'recovering'
-        ? '面板重启后正在核验双端连接，核验通过后恢复订阅；失败会保持阻断'
-        : `${labels[p?.status] || '处理中'}${p?.status === 'pending' ? '，请等待双端配置完成' : ''}`;
-    card.querySelector('#nodeWGStatus').textContent = nodeWGEditor.error || (p
-        ? `状态：${stateLabel} · 修订 ${p.revision}${blocked ? ' · REALITY 仍被阻断；需明确恢复直连' : ''}${p.error && p.status !== 'recovering' ? ' · '+p.error : ''}${nodeWGBlocksOrdinary() ? ' · 普通配置已锁定，变更前须先停用清理' : ''}`
-        : (nodeWGEditor.ready ? '入口就绪；选择出站后使用推送配置' : '等待入口 REALITY / Agent 就绪'));
-    const cleanup = card.querySelector('#nodeWGCleanup'); cleanup.hidden = !nodeWGBlocksOrdinary(); cleanup.disabled = nodeWGEditor.busy;
+
+    renderNodeWGStatusOnly();
+
+    const cleanup = card.querySelector('#nodeWGCleanup');
+    cleanup.hidden = !nodeWGBlocksOrdinary();
+    cleanup.disabled = nodeWGEditor.busy;
     card.querySelector('#nodeWGCleanupRow').hidden = cleanup.hidden;
     cleanup.onclick = () => pushNodeWGConfig(true);
     if (focusedControl) card.querySelector('#'+focusedControl)?.focus({preventScroll:true});
 }
+function renderNodeWGStatusOnly() {
+    const statusEl = document.getElementById('nodeWGStatus');
+    if (!statusEl) return;
+    const p = nodeWGEditor.pair;
+    const blocked = p?.topology_version === 2 && !p.enabled && !p.restore_direct;
+    if (nodeWGEditor.error) {
+        statusEl.textContent = nodeWGEditor.error;
+        if (nodeWGEditor.errorTone) statusEl.dataset.tone = nodeWGEditor.errorTone;
+        else delete statusEl.dataset.tone;
+        return;
+    }
+    if (p) {
+        const txt = nodeWGPhaseText(p);
+        statusEl.textContent = txt;
+        if (blocked || p.status === 'failed') statusEl.dataset.tone = 'error';
+        else if (p.status === 'active') statusEl.dataset.tone = 'success';
+        else if (p.status !== 'disabled') statusEl.dataset.tone = 'progress';
+        else delete statusEl.dataset.tone;
+        return;
+    }
+    statusEl.textContent = '';
+    delete statusEl.dataset.tone;
+}
 function nodeWGRealityPort() {
     const card = document.querySelector('#protocolListContainer .protocol-card[data-proto="reality"]');
-    if (!card?.querySelector('.proto-switch')?.checked) throw new Error('请先启用并部署 A 的 REALITY');
-    let actual;
-    try { actual = Number(new URL(card.querySelector('.link-textarea')?.value.trim()).port); } catch (_) { /* unavailable or protected link */ }
+    if (!card?.querySelector('.proto-switch')?.checked) throw new Error('请先启用入口 REALITY 协议');
     const configured = Number(card.querySelector('.proto-port-input')?.value);
-    if (!Number.isInteger(actual) || actual < 1 || actual > 65535 || (configured && configured !== actual)) throw new Error('REALITY 实际链接端口与配置不一致；请先在直连模式完成普通部署');
-    return actual;
+    let actual = 0;
+    const linkVal = card.querySelector('.link-textarea')?.value?.trim() || '';
+    if (linkVal && !linkVal.includes('🔒')) {
+        try { actual = Number(new URL(linkVal).port); } catch (_) { actual = 0; }
+    }
+    if (actual >= 1 && actual <= 65535) {
+        if (configured && configured !== actual) {
+            throw new Error('REALITY 端口已修改，请先在直连模式推送配置');
+        }
+        return actual;
+    }
+    if (configured >= 1 && configured <= 65535) return configured;
+    return 0;
 }
-// Return true when the unified push has handled or safely blocked the request.
 async function handleNodeWGPush() {
     if (!nodeWGEditor.uuid) return false;
     if (nodeWGEditor.busy) return true;
-    if (nodeWGEditor.ordinaryPending) { nodeWGMessage('普通部署尚未收到成功结果；请等待命令日志完成。'); return true; }
+    if (nodeWGEditor.ordinaryPending) { nodeWGMessage('普通推送尚未完成，请稍候', 'warning'); return true; }
     if (!nodeWGEditor.loaded && !await loadNodeWGEditor(nodeWGEditor.uuid)) return true;
     if (nodeWGBlocksOrdinary()) {
         if (nodeWGEditor.mode === 'direct') await pushNodeWGConfig(true);
-        else if (nodeWGEditor.pair.topology_version !== 2) nodeWGMessage('旧版配对必须先停用并等待清理完成。');
-        else if (nodeWGOrdinaryChanged() || nodeWGEditor.peer !== nodeWGEditor.pair.peer_uuid) nodeWGMessage('配对期间不能修改普通配置或落地。请先点击停用清理，等待完成后再部署；不会自动切换直连。');
-        else nodeWGMessage(`当前配对：${nodeWGEditor.pair.status} / ${nodeWGEditor.pair.phase}。${nodeWGEditor.pair.status === 'active' ? '配置未变，无需重复推送。' : '请等待完成；失败或阻断时可明确停用并恢复直连。'}`);
+        else if (nodeWGEditor.pair.topology_version !== 2) nodeWGMessage('请先停用并清理旧版配对', 'warning');
+        else if (nodeWGOrdinaryChanged() || nodeWGEditor.peer !== nodeWGEditor.pair.peer_uuid) nodeWGMessage('WG 运行期间请先停用清理，再修改配置或切换落地', 'warning');
+        else nodeWGMessage(nodeWGEditor.pair.status === 'active' ? '当前 WG 专线已运行中，无需重复推送' : nodeWGPhaseText(nodeWGEditor.pair), nodeWGEditor.pair.status === 'active' ? 'success' : 'progress');
         return true;
     }
     if (nodeWGEditor.mode !== 'wg') return false;
@@ -271,41 +519,53 @@ async function handleNodeWGPush() {
 }
 async function pushNodeWGConfig(disable = false) {
     if (nodeWGEditor.busy) return;
-    if (disable && !confirm('停用配对并清理后将明确恢复 A 的 REALITY 直连。普通配置变更不会同时推送。继续？')) return;
+    if (disable && !confirm('确定停用 WG 专线并恢复入口直连？')) return;
     const uuid = nodeWGEditor.uuid, generation = nodeWGEditor.generation;
     const draftMode = nodeWGEditor.mode, draftPeer = nodeWGEditor.peer;
     const button = document.getElementById('btnPushConfig');
-    nodeWGEditor.busy = true; if (button) button.disabled = true;
+    const textEl = document.getElementById('btnPushConfigText');
+    nodeWGEditor.busy = true;
+    if (button) button.disabled = true;
+    if (textEl) textEl.textContent = disable ? '正在停用 WG…' : '正在配置 WG…';
+    nodeWGMessage(disable ? '正在提交停用与清理请求…' : '正在提交 WG 隧道配置…', 'progress');
     try {
         if (!disable) {
-            if (nodeWGEditor.ordinaryPending || nodeWGEditor.ordinaryFailed) throw new Error('普通部署未确认成功，请先在直连模式完成普通推送并等待命令成功');
-            if (nodeWGOrdinaryChanged()) throw new Error('普通配置有变更：不能安全地同时部署 WG。请明确选择直连并先推送普通配置，等待成功后再选择 WG。准备阶段是直连。');
+            if (!draftPeer) throw new Error('请先选择一个已就绪的 SS 落地节点');
+            if (nodeWGEditor.ordinaryPending || nodeWGEditor.ordinaryFailed) throw new Error('普通部署未确认成功，请先在直连模式推送成功');
+            if (nodeWGOrdinaryChanged()) throw new Error('检测到普通配置变更，请先切换直连完成推送，再启用 WG');
             await waitForNodeAutoSave();
         }
         if (generation !== nodeWGEditor.generation) return;
-        if (!await loadNodeWGEditor(uuid)) throw new Error('无法确认最新配对状态，请刷新重试');
+        if (!await loadNodeWGEditor(uuid)) throw new Error('无法读取最新配对状态，请刷新重试');
         if (generation !== nodeWGEditor.generation) return;
         const p = nodeWGEditor.pair;
         let peer_uuid = p?.peer_uuid, entry_port = p?.entry_port;
         if (!disable) {
-            if (nodeWGEditor.mode !== draftMode || nodeWGEditor.peer !== draftPeer || nodeWGOrdinaryChanged()) throw new Error('配置在等待期间发生变化，请重新推送');
-            if (nodeWGBlocksOrdinary()) throw new Error('已有配对尚未清理；请先明确停用并等待清理完成');
-            if (!nodeWGEditor.ready || !nodeWGEditor.peers.some(peer => peer.uuid === draftPeer && peer.ready)) throw new Error('A REALITY / B SS 或 Agent 未就绪。请先完成两端协议部署并确认 Agent 在线，再刷新重试');
-            peer_uuid = draftPeer; entry_port = nodeWGRealityPort();
-        } else if (!p) throw new Error('没有需要清理的配对');
+            if (nodeWGEditor.mode !== draftMode || nodeWGEditor.peer !== draftPeer || nodeWGOrdinaryChanged()) throw new Error('配置已变化，请重新推送');
+            if (nodeWGBlocksOrdinary()) throw new Error('已有配对未清理，请先停用清理');
+            if (!nodeWGEditor.ready || !nodeWGEditor.peers.some(peer => peer.uuid === draftPeer && peer.ready)) throw new Error('入口或落地节点未就绪，请确认两端协议与 Agent 在线');
+            peer_uuid = draftPeer;
+            entry_port = nodeWGRealityPort();
+        } else if (!p) {
+            throw new Error('没有需要清理的配对');
+        }
         const data = await nodeWGRequest('/api/node/wg/push',{uuid,peer_uuid,entry_port,revision:(p?.revision || 0)+1,enabled:!disable});
         if (generation !== nodeWGEditor.generation) return;
-        // Invalidate options requests started before this mutation committed.
         ++nodeWGEditor.request;
         nodeWGEditor.pair = data.pair;
         nodeWGEditor.error = '';
+        nodeWGEditor.errorTone = '';
         if (disable && nodeWGEditor.mode === draftMode) nodeWGEditor.mode = 'direct';
-        renderNodeWGCard(); scheduleNodeWGPoll();
+        renderNodeWGCard();
+        scheduleNodeWGPoll();
         if (typeof loadNodesList === 'function') loadNodesList();
-    } catch (error) { if (generation === nodeWGEditor.generation) nodeWGMessage(error.message); }
-    finally {
+    } catch (error) {
+        if (generation === nodeWGEditor.generation) nodeWGMessage(error.message, 'error');
+    } finally {
         if (generation === nodeWGEditor.generation) {
-            nodeWGEditor.busy = false; if (button) button.disabled = false;
+            nodeWGEditor.busy = false;
+            if (button) button.disabled = false;
+            if (textEl) textEl.textContent = '推送配置';
             const cleanup = document.getElementById('nodeWGCleanup'); if (cleanup) cleanup.disabled = false;
         }
     }

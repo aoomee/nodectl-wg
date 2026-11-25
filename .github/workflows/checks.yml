@@ -22,9 +22,6 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -32,27 +29,24 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y nginx
-          python -m pip install -r requirements.txt
           npm install --no-save --package-lock=false --ignore-scripts playwright@1.62.1
           npx playwright install --with-deps chromium
       - run: go test ./...
         env:
           NODECTL_TEST_NGINX: /usr/sbin/nginx
       - run: go vet ./...
-      - run: go test -race ./internal/database ./internal/requestmeta ./internal/service ./internal/agent/wgrelay ./internal/wgrelay ./internal/server
+      - run: go test -race ./internal/database ./internal/requestmeta ./internal/service ./internal/agent/wgrelay ./internal/server
         env:
           NODECTL_TEST_NGINX: /usr/sbin/nginx
-      - run: python -m unittest discover -s tests -v
       - name: Browser interaction regressions
         run: |
           export CHROME_PATH="$(node -e 'process.stdout.write(require("playwright").chromium.executablePath())')"
           node tests/node-wg-ui.cjs
-          node tests/wg-ui.cjs
           node tests/traffic-calendar-ui.cjs
           node tests/browser-assets-ui.cjs
           node tests/password-ui.cjs
           node tests/settings-ui.cjs
-      - run: bash -n scripts/smoke-docker.sh internal/wgrelay/engine/vendor/wg-multi-relay.sh
+      - run: bash -n scripts/smoke-docker.sh
 
   docker:
     name: Docker (${{ matrix.arch }})

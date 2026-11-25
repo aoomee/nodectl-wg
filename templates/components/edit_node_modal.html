@@ -2,16 +2,16 @@
 
 <style>
     #editNodeModal {
-        --editor-ink: #1d2939;
-        --editor-muted: #52647c;
-        --editor-border: #dce3ec;
-        --editor-surface: #f6f8fb;
+        --editor-ink: #1d1d1f;
+        --editor-muted: #6e6e73;
+        --editor-border: rgba(0, 0, 0, 0.08);
+        --editor-surface: #f5f6f8;
         --editor-paper: #ffffff;
-        --editor-accent: #0066d6;
-        --editor-radius: 16px;
+        --editor-accent: #007aff;
+        --editor-radius: 12px;
         --editor-card-radius: 18px;
         --editor-pill: 999px;
-        font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
         color: var(--editor-ink);
     }
 
@@ -213,26 +213,41 @@
         margin-bottom: 10px;
     }
 
-    /* 基础输入组件 */
+    /* 基础输入组件与美化下拉框 */
     .title-input {
         width: 100%;
         box-sizing: border-box;
-        padding: 8px 12px;
+        padding: 8px 13px;
         min-height: 40px;
-        font-size: 14px;
+        font-size: 13.5px;
         font-weight: 600;
         border: 1px solid var(--editor-border);
         border-radius: var(--editor-radius);
         outline: none;
-        transition: border 0.2s;
+        transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
         color: #1d1d1f;
-        background: #fafbfc;
+        background: #f6f7f9;
+    }
+
+    select.title-input {
+        appearance: none;
+        -webkit-appearance: none;
+        padding-right: 34px;
+        cursor: pointer;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236e6e73' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        background-size: 14px 14px;
+    }
+
+    .title-input:hover {
+        background-color: #f0f2f5;
     }
 
     .title-input:focus {
         border-color: #007aff;
-        background: #fff;
-        box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.1);
+        background-color: #fff;
+        box-shadow: 0 0 0 3.5px rgba(0, 122, 255, 0.14);
     }
 
     /* 灰色底槽与白色胶囊，选中态不依赖颜色区分。 */
@@ -426,8 +441,8 @@
     .proto-badge {
         font-size: 12px;
         font-weight: 700;
-        padding: 2px 6px;
-        border-radius: 4px;
+        padding: 3px 9px;
+        border-radius: 8px;
         border: 1px solid transparent;
     }
 
@@ -437,10 +452,22 @@
         gap: 10px;
     }
 
-    /* 仅双栈节点才显示 IP 模式选择设置 */
+    /* 仅双栈且节点未锁定单栈时才显示单协议 IP 模式选择 */
     #editNodeModal:not(.dual-stack-available) #editNodeIPModeSection,
-    #editNodeModal:not(.dual-stack-available) .proto-ipmode-capsule {
+    #editNodeModal:not(.dual-stack-available) .proto-ipmode-capsule,
+    #editNodeModal.node-ip-locked .proto-ipmode-capsule {
         display: none !important;
+    }
+
+    .proto-empty-state {
+        text-align: center;
+        color: #8e8e93;
+        padding: 28px 16px;
+        font-size: 12.5px;
+        border: 1px dashed rgba(0, 0, 0, 0.1);
+        border-radius: var(--editor-card-radius);
+        background: #fafbfd;
+        margin-bottom: 12px;
     }
 
     /* 协议级 IP 模式胶囊按钮组样式 */
@@ -513,25 +540,26 @@
 
     /* 协议端口输入框 */
     .proto-port-input {
-        width: 68px;
-        padding: 9px 8px;
+        width: 72px;
+        height: 32px;
+        padding: 0 8px;
         font-size: 12px;
         font-weight: 600;
-        font-family: monospace;
-        border: 1px solid #d1d1d6;
-        border-radius: 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        border: 1px solid var(--editor-border);
+        border-radius: 10px;
         outline: none;
         text-align: center;
-        color: #333;
-        background: #fafbfc;
-        transition: border 0.2s;
+        color: #1d1d1f;
+        background: #ffffff;
+        transition: border-color 0.2s, box-shadow 0.2s;
         box-sizing: border-box;
     }
 
     .proto-port-input:focus {
         border-color: #007aff;
         background: #fff;
-        box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.1);
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.14);
     }
 
     .proto-port-input::placeholder {
@@ -589,11 +617,13 @@
     .btn-icon.delete {
         background: transparent;
         border: none;
-        color: #999;
+        color: #8e8e93;
         cursor: pointer;
-        padding: 4px;
+        padding: 6px;
         display: flex;
-        border-radius: 4px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 9px;
         transition: all 0.2s;
     }
 
@@ -607,7 +637,8 @@
         background: #d74242;
         color: white;
         width: auto;
-        padding: 4px 8px;
+        padding: 4px 10px;
+        border-radius: 999px;
         font-size: 11px;
     }
 
@@ -683,17 +714,38 @@
 
     /* 顶部警告条 */
     .security-warning-bar {
-        background: #fff8dc;
-        border: 1px solid #f5c6cb;
-        color: #856404;
-        padding: 12px;
-        border-radius: 8px;
-        font-size: 13px;
-        margin-bottom: 20px;
+        background: #fff8e6;
+        border: 1px solid #ffe4a3;
+        color: #8a5a00;
+        padding: 10px 14px;
+        border-radius: 14px;
+        font-size: 12.5px;
+        margin-bottom: 14px;
         display: flex;
         align-items: center;
+        justify-content: space-between;
         gap: 10px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
+    }
+    .security-warning-bar .warn-text {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+    }
+    .security-warning-bar .warn-action {
+        flex-shrink: 0;
+        border: 1px solid #f0c96c;
+        background: #ffffff;
+        color: #8a5a00;
+        border-radius: 999px;
+        padding: 4px 11px;
+        font-size: 11.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.15s;
+    }
+    .security-warning-bar .warn-action:hover {
+        background: #fff3d1;
     }
 
     .edit-footer {
@@ -969,7 +1021,7 @@
                                 <span id="editNodeAgentVersion"
                                     style="font-size: 11px; color: #999; font-weight: normal;"></span>
                                 <button type="button" id="btnCheckAgentUpdate" onclick="confirmCheckAgentUpdate()"
-                                    style="height:24px; border:1px solid #d0d7de; background:#fff; color:#333; border-radius:6px; font-size:11px; padding:0 8px; cursor:pointer;">检查更新</button>
+                                    style="height:26px; border:1px solid rgba(0,0,0,0.08); background:#fff; color:#1d1d1f; border-radius:999px; font-size:11.5px; font-weight:600; padding:0 10px; cursor:pointer;">检查更新</button>
                             </div>
                         </div>
 
@@ -977,9 +1029,9 @@
                             style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
                             <span style="font-size: 12px; color: #555; width: 35px; font-weight: 600;">上传</span>
                             <div
-                                style="flex: 1; height: 18px; background: #f0f0f5; border-radius: 6px; margin-left: 10px; position: relative; overflow: hidden;">
+                                style="flex: 1; height: 18px; background: #eef0f4; border-radius: 999px; margin-left: 10px; position: relative; overflow: hidden;">
                                 <div id="editNodeTrafficUpBar"
-                                    style="position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: #34c759; transition: width 0.5s ease;">
+                                    style="position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: #34c759; border-radius: 999px; transition: width 0.5s ease;">
                                 </div>
                                 <div id="editNodeTrafficUpText"
                                     style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #1d1d1f; text-shadow: 0 0 4px rgba(255,255,255,0.9); z-index: 1;">
@@ -990,9 +1042,9 @@
                         <div style="display: flex; align-items: center; justify-content: space-between;">
                             <span style="font-size: 12px; color: #555; width: 35px; font-weight: 600;">下载</span>
                             <div
-                                style="flex: 1; height: 18px; background: #f0f0f5; border-radius: 6px; margin-left: 10px; position: relative; overflow: hidden;">
+                                style="flex: 1; height: 18px; background: #eef0f4; border-radius: 999px; margin-left: 10px; position: relative; overflow: hidden;">
                                 <div id="editNodeTrafficDownBar"
-                                    style="position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: #007aff; transition: width 0.5s ease;">
+                                    style="position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: #007aff; border-radius: 999px; transition: width 0.5s ease;">
                                 </div>
                                 <div id="editNodeTrafficDownText"
                                     style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #1d1d1f; text-shadow: 0 0 4px rgba(255,255,255,0.9); z-index: 1;">
@@ -1002,13 +1054,13 @@
                         <div
                             style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px;">
                             <div
-                                style="background: #fff; border: 1px solid #e5e5ea; border-radius: 8px; padding: 8px 10px;">
+                                style="background: #fff; border: 1px solid rgba(0,0,0,0.06); border-radius: 12px; padding: 8px 10px;">
                                 <div style="font-size: 11px; color: #8e8e93; margin-bottom: 4px;">上次重置时间</div>
                                 <div id="editNodeTrafficResetAt"
                                     style="font-size: 12px; color: #1d1d1f; font-weight: 600; word-break: break-word;">未重置</div>
                             </div>
                             <div
-                                style="background: #fff; border: 1px solid #e5e5ea; border-radius: 8px; padding: 8px 10px;">
+                                style="background: #fff; border: 1px solid rgba(0,0,0,0.06); border-radius: 12px; padding: 8px 10px;">
                                 <div style="font-size: 11px; color: #8e8e93; margin-bottom: 4px;">流量更新时间</div>
                                 <div id="editNodeTrafficUpdateAt"
                                     style="font-size: 12px; color: #1d1d1f; font-weight: 600; word-break: break-word;">--</div>
@@ -1073,10 +1125,10 @@
 </div>
 
 <div id="protoSelectOverlay"
-    style="display: none; position: fixed; top:0; left:0; width:100%; height:100%; z-index: 3100; justify-content:center; align-items:center; background:rgba(0,0,0,0.05);"
+    style="display: none; position: fixed; top:0; left:0; width:100%; height:100%; z-index: 3100; justify-content:center; align-items:center; background:rgba(15,15,20,0.28); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);"
     onclick="this.style.display='none'">
     <div id="protoSelectList"
-        style="background:white; padding:10px; border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,0.2); border: 1px solid #eee; width: 200px; display:flex; flex-direction:column; gap:4px; animation: fadeIn 0.15s;"
+        style="background:#ffffff; padding:16px; border-radius:22px; box-shadow:0 20px 50px rgba(0,0,0,0.18); border: 1px solid rgba(0,0,0,0.06); width: 320px; max-width:90vw; max-height:70vh; overflow-y:auto; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; animation: fadeIn 0.15s;"
         onclick="event.stopPropagation()">
     </div>
 </div>
@@ -1311,11 +1363,13 @@
         }
 
         if (isLinksLocked) {
-            // HTTP 模式：显示顶部大警告
             container.innerHTML = `
                 <div class="security-warning-bar">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                    <span><b>HTTP 安全模式：</b>仅允许写入、管理启停和删除协议。允许在安全证书界面强制开启忽略安全保护。</span>
+                    <div class="warn-text">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                        <span><b>HTTP 保护模式：</b>链接已隐藏，可在系统设置放行反代回源</span>
+                    </div>
+                    <button type="button" class="warn-action" onclick="closeEditModal(); if(typeof openSystemSettingsModal==='function') openSystemSettingsModal();">系统设置</button>
                 </div>
             `;
         }
@@ -1333,15 +1387,14 @@
             for (const proto of sortedProtos) {
                 const link = node.links[proto];
                 const isEnabled = !disabledSet.has(proto);
-                const protoIPMode = node.link_ip_modes && node.link_ip_modes[proto] ? node.link_ip_modes[proto] : 3;
+                const protoIPMode = node.link_ip_modes && node.link_ip_modes[proto] ? node.link_ip_modes[proto] : (ipMode === 1 || ipMode === 2 ? ipMode : 3);
                 // 从 link_ports 读取节点个性化端口（创建时从 SysConfig 导入的默认端口，或用户后续修改的值）
                 const protoPort = node.link_ports && node.link_ports[proto] ? node.link_ports[proto] : 0;
                 // 核心：传入 isLinksLocked 状态
                 renderProtocolCard(proto, link, isEnabled, false, isLinksLocked, protoIPMode, protoPort);
             }
         } else if (!isLinksLocked) {
-            // 无协议时显示引导提示（新版 Agent 会自动上报协议）
-            container.innerHTML += `<div style="text-align:center; color:#999; padding:20px; font-size:12px;">暂无协议配置，部署 Agent 后将自动上报</div>`;
+            container.innerHTML += `<div class="proto-empty-state">暂无协议配置，点击下方添加协议</div>`;
         }
 
         updateLayoutState();
@@ -1415,6 +1468,7 @@
         div.innerHTML = html;
 
         const container = document.getElementById('protocolListContainer');
+        container.querySelector('.proto-empty-state')?.remove();
         container.appendChild(div);
         if (proto === 'reality' && typeof renderNodeWGCard === 'function') renderNodeWGCard();
 
@@ -1467,6 +1521,10 @@
             // 第二次点击：执行删除
             const card = btn.closest('.protocol-card');
             card.remove();
+            const container = document.getElementById('protocolListContainer');
+            if (container && container.querySelectorAll('.protocol-card').length === 0 && !container.querySelector('.security-warning-bar') && !container.querySelector('.proto-empty-state')) {
+                container.innerHTML += `<div class="proto-empty-state">暂无协议配置，点击下方添加协议</div>`;
+            }
             updateLayoutState();
             triggerNodeAutoSave(true);
         } else {
@@ -1487,6 +1545,17 @@
                 const selected = parseInt(el.getAttribute('data-ipmode')) === val;
                 el.classList.toggle('active', selected);
                 el.setAttribute('aria-pressed', String(selected));
+            });
+        }
+        const modal = document.getElementById('editNodeModal');
+        const lockedSingleStack = val === 1 || val === 2;
+        if (modal) modal.classList.toggle('node-ip-locked', lockedSingleStack);
+        if (lockedSingleStack) {
+            document.querySelectorAll('#protocolListContainer .proto-ipmode-capsule').forEach(capsule => {
+                capsule.classList.remove('expanded');
+                capsule.querySelectorAll('.proto-ipmode-item').forEach(btn => {
+                    btn.classList.toggle('active', parseInt(btn.getAttribute('data-val')) === val);
+                });
             });
         }
         if (!skipSave) triggerNodeAutoSave(true);
@@ -1730,9 +1799,9 @@
         .then(res => res.json())
         .then(data => {
             if (data.status === 'success' && data.command_id) {
-                streamCommandLog(data.command_id);
+                streamCommandLog(data.command_id, ok => { if (ok) refreshOpenNodeModalData(uuid); });
             } else if (data.status === 'success' && data.data && data.data.command_id) {
-                streamCommandLog(data.data.command_id);
+                streamCommandLog(data.data.command_id, ok => { if (ok) refreshOpenNodeModalData(uuid); });
             } else {
                 appendCmdLog({ type: 'error', message: data.message || (data.data && typeof data.data === 'string' ? data.data : '命令下发失败') });
             }
@@ -2065,7 +2134,7 @@
     function showAddProtocolMenu() {
         const container = document.getElementById('protocolListContainer');
         const listEl = document.getElementById('protoSelectList');
-        listEl.innerHTML = '<div style="font-size:11px; color:#999; margin-bottom:6px; padding-left:6px; font-weight: 600;">选择协议类型</div>';
+        listEl.innerHTML = '<div style="grid-column:1 / -1; font-size:12px; color:#6e6e73; margin-bottom:4px; padding-left:4px; font-weight: 600;">选择协议类型</div>';
 
         const existingProtos = new Set();
         container.querySelectorAll('.protocol-card').forEach(card => {
@@ -2082,14 +2151,17 @@
         availableProtos.forEach(proto => {
             const item = document.createElement('div');
             item.innerText = proto.toUpperCase();
-            item.style.padding = '8px 12px';
+            item.style.padding = '10px 12px';
             item.style.cursor = 'pointer';
-            item.style.borderRadius = '6px';
-            item.style.fontSize = '13px';
+            item.style.borderRadius = '12px';
+            item.style.fontSize = '12.5px';
             item.style.fontWeight = '600';
-            item.style.color = '#333';
-            item.onmouseover = () => item.style.background = '#f0f7ff';
-            item.onmouseout = () => item.style.background = 'white';
+            item.style.color = '#1d1d1f';
+            item.style.background = '#f5f6f8';
+            item.style.textAlign = 'center';
+            item.style.transition = 'background-color 0.15s, color 0.15s';
+            item.onmouseover = () => { item.style.background = '#eaf4ff'; item.style.color = '#007aff'; };
+            item.onmouseout = () => { item.style.background = '#f5f6f8'; item.style.color = '#1d1d1f'; };
             item.onclick = () => {
                 insertProtocolCard(proto);
                 document.getElementById('protoSelectOverlay').style.display = 'none';
@@ -2109,7 +2181,9 @@
         if (node && node.link_ports && node.link_ports[proto]) {
             defaultPort = node.link_ports[proto];
         }
-        renderProtocolCard(proto, '', true, true, false, 3, defaultPort);
+        const nodeIPMode = parseInt(document.getElementById('editNodeIPMode')?.value || '0') || 0;
+        const initProtoIPMode = (nodeIPMode === 1 || nodeIPMode === 2) ? nodeIPMode : 3;
+        renderProtocolCard(proto, '', true, true, false, initProtoIPMode, defaultPort);
         updateLayoutState();
         triggerNodeAutoSave();
     }
@@ -2228,12 +2302,15 @@
         .then(res => res.json())
         .then(data => {
             if (pushGeneration !== null && pushGeneration !== nodeWGEditor.generation) return;
-            const completed = success => {
+            const completed = async success => {
                 if (pushGeneration === null || pushGeneration !== nodeWGEditor.generation) return;
                 nodeWGEditor.ordinaryPending = false;
                 nodeWGEditor.ordinaryFailed = !success;
-                if (success) nodeWGEditor.baseline = ordinarySnapshot;
-                nodeWGMessage(success ? '普通部署执行成功；关闭日志并刷新后可选择 WG，尚未启用 WG。' : '普通部署未确认成功，请重试普通推送。');
+                if (success) {
+                    nodeWGEditor.baseline = ordinarySnapshot;
+                    await refreshOpenNodeModalData(uuid);
+                }
+                nodeWGMessage(success ? '协议部署完成，已同步最新状态' : '部署未确认成功，请重试', success ? 'success' : 'error');
             };
             if (data.status === 'success' && data.command_id) {
                 streamCommandLog(data.command_id, completed);
@@ -2255,6 +2332,40 @@
             if (pushGeneration !== null && pushGeneration !== nodeWGEditor.generation) return;
             if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
         });
+    }
+
+    async function refreshOpenNodeModalData(uuid) {
+        if (!uuid || document.getElementById('editNodeUUID')?.value !== uuid) return;
+        try {
+            const resp = await fetch('/api/get-nodes', { cache: 'no-store' });
+            const result = await resp.json();
+            if (result.status !== 'success' || !result.data) return;
+            window.allNodesData = window.allNodesData || {};
+            const cacheNodes = (nodes) => {
+                if (nodes) nodes.forEach(n => (window.allNodesData[n.uuid] = n));
+            };
+            cacheNodes(result.data.direct_nodes);
+            cacheNodes(result.data.land_nodes);
+            const node = window.allNodesData[uuid];
+            if (node && document.getElementById('editNodeUUID')?.value === uuid) {
+                const links = node.links || {};
+                document.querySelectorAll('#protocolListContainer .protocol-card').forEach(card => {
+                    const proto = card.getAttribute('data-proto');
+                    const ta = card.querySelector('.link-textarea');
+                    if (ta && links[proto] && !links[proto].includes('🔒')) {
+                        ta.value = links[proto];
+                        if (card.classList.contains('expanded')) autoResizeTextarea(ta);
+                    }
+                });
+                if (typeof nodeWGEditor !== 'undefined' && typeof nodeWGOrdinarySnapshot === 'function') {
+                    nodeWGEditor.baseline = nodeWGOrdinarySnapshot();
+                }
+            }
+            if (typeof loadNodesList === 'function') loadNodesList();
+            if (typeof loadNodeWGEditor === 'function') loadNodeWGEditor(uuid);
+        } catch (e) {
+            console.warn('自动刷新节点数据失败:', e);
+        }
     }
 </script>
 {{end}}

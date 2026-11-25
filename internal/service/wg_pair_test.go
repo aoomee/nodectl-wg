@@ -15,6 +15,7 @@ import (
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+	"nhooyr.io/websocket"
 	"nodectl/internal/agent/wgrelay"
 	"nodectl/internal/database"
 )
@@ -701,5 +702,82 @@ func TestWGPairLegacyCleanupOnly(t *testing.T) {
 				t.Fatalf("explicit reconfiguration failed: %+v %v", migrated, e)
 			}
 		})
+	}
+}
+
+func TestSaveWGPairSQLiteSingleConnNoDeadlock(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(t.TempDir()+"/single.db"), &gorm.Config{Logger: logger.Discard})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetMaxIdleConns(1)
+	t.Cleanup(func() { _ = sqlDB.Close() })
+	if err := db.AutoMigrate(&database.NodePool{}, &database.AgentIdentity{}, &database.WGPair{}, &database.WGPairNode{}); err != nil {
+		t.Fatal(err)
+	}
+
+	oldDB := database.DB
+	database.DB = db
+	t.Cleanup(func() { database.DB = oldDB })
+
+	key := base64.RawURLEncoding.EncodeToString(make([]byte, 32))
+	reality := fmt.Sprintf("vless://11111111-1111-4111-8111-111111111111@203.0.113.1:20000?encryption=none&security=reality&sni=example.com&pbk=%s&sid=0102&type=tcp#a", key)
+	nodes := []database.NodePool{
+		{UUID: "entry-1", InstallID: "aaaaaaaaaa01", Name: "001", RoutingType: 1, IPV4: "203.0.113.1", Links: map[string]string{"reality": reality}, LinkPorts: map[string]int{"reality": 20000}},
+		{UUID: "land-1", InstallID: "bbbbbbbbbb02", Name: "002", RoutingType: 2, IPV4: "203.0.113.2", Links: map[string]string{"ss": "ss://mock@203.0.113.2:20000#b"}, LinkPorts: map[string]int{"ss": 20000}},
+	}
+	for _, n := range nodes {
+		if err := db.Create(&n).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	hub := GetTrafficHub()
+	connA := new(websocket.Conn)
+	connB := new(websocket.Conn)
+	hub.agentMu.Lock()
+	if hub.agentConns == nil {
+		hub.agentConns = make(map[string]*websocket.Conn)
+	}
+	if hub.agentSessions == nil {
+		hub.agentSessions = make(map[*websocket.Conn]agentSession)
+	}
+	hub.agentConns["aaaaaaaaaa01"] = connA
+	hub.agentConns["bbbbbbbbbb02"] = connB
+	hub.agentSessions[connA] = agentSession{installID: "aaaaaaaaaa01", wg: true, wgV2: true}
+	hub.agentSessions[connB] = agentSession{installID: "bbbbbbbbbb02", wg: true, wgV2: true}
+	hub.agentMu.Unlock()
+	t.Cleanup(func() {
+		hub.agentMu.Lock()
+		delete(hub.agentConns, "aaaaaaaaaa01")
+		delete(hub.agentConns, "bbbbbbbbbb02")
+		delete(hub.agentSessions, connA)
+		delete(hub.agentSessions, connB)
+		hub.agentMu.Unlock()
+	})
+
+	coord := &wgPairCoordinator{
+		db:          db,
+		ready:       WGAgentV2Ready,
+		readyDB:     WGAgentV2ReadyWithDB,
+		agentStatus: WGAgentV2Status,
+		legacyReady: WGAgentReady,
+		now:         time.Now,
+		timeout:     5 * time.Second,
+		confirmed:   map[string]uint64{},
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	dto, err := coord.save(ctx, WGPairPush{UUID: "entry-1", PeerUUID: "land-1", EntryPort: 20000, Revision: 1, Enabled: true})
+	if err != nil {
+		t.Fatalf("SaveWGPair deadlocked or failed on MaxOpenConns(1): %v", err)
+	}
+	if dto.Status != "pending" || dto.Phase != "guard_a" {
+		t.Fatalf("unexpected saved pair: %+v", dto)
 	}
 }

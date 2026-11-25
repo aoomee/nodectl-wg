@@ -4,6 +4,6 @@
 - **核心网络与订阅组件**：
   - [SagerNet/sing-box](https://github.com/SagerNet/sing-box) — 节点多协议内核与 Agent 托管路由编排。
   - [MetaCubeX/mihomo](https://github.com/MetaCubeX/mihomo) — Clash Meta 订阅与内核级延迟/下载测速。
-  - [WireGuard](https://www.wireguard.com/) / [XTLS/Xray-core](https://github.com/XTLS/Xray-core) / [zhboner/realm](https://github.com/zhboner/realm) — 跨机加密隧道与高性能转发引擎（固定版本并校验 SHA-256）。
+  - [WireGuard](https://www.wireguard.com/) — 内核级跨机加密隧道，由双端 Agent 自动协同配置与巡检。
 
 保留各上游开源项目的原始署名与许可证权利。

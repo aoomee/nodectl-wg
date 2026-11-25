@@ -224,8 +224,12 @@ func loadTrafficTotalPersistIntervalSec() int {
 }
 
 func loadTrafficPointPersistIntervalSec() int {
+	db := database.DB
+	if db == nil {
+		return 0
+	}
 	var cfg database.SysConfig
-	if err := database.DB.Where("key = ?", "pref_traffic_point_persist_interval_sec").First(&cfg).Error; err != nil {
+	if err := db.Where("key = ?", "pref_traffic_point_persist_interval_sec").First(&cfg).Error; err != nil {
 		return 0 // 默认关闭
 	}
 	parsed, err := strconv.Atoi(strings.TrimSpace(cfg.Value))
@@ -236,8 +240,12 @@ func loadTrafficPointPersistIntervalSec() int {
 }
 
 func loadNodeTrafficBase(installID string) (rxBase, txBase int64) {
+	db := database.DB
+	if db == nil {
+		return 0, 0
+	}
 	var node database.NodePool
-	if err := database.DB.Select("traffic_down", "traffic_up").Where("install_id = ?", installID).First(&node).Error; err != nil {
+	if err := db.Select("traffic_down", "traffic_up").Where("install_id = ?", installID).First(&node).Error; err != nil {
 		return 0, 0
 	}
 	return node.TrafficDown, node.TrafficUp

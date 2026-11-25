@@ -78,7 +78,7 @@ def main(image):
         {"type": "bind", "source": str(data), "target": "/app/data"}
     ]}}}))
     compose_args = ("docker", "compose", "--project-name", project, "--env-file", os.devnull,
-                    "-f", str(repo / "compose.wg.yaml"), "-f", str(override))
+                    "-f", str(repo / "compose.yaml"), "-f", str(override))
 
     def compose(*args):
         return run(*compose_args, *args, env=env)

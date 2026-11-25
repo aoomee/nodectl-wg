@@ -1,4 +1,4 @@
-name: Validate panel and proxy integration
+name: CI
 
 on:
   pull_request:
@@ -32,7 +32,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y nginx
-          python -m pip install -r requirements-wg.txt
+          python -m pip install -r requirements.txt
           npm install --no-save --package-lock=false --ignore-scripts playwright@1.62.1
           npx playwright install --with-deps chromium
       - run: go test ./...
@@ -55,7 +55,7 @@ jobs:
       - run: bash -n scripts/smoke-docker.sh internal/wgrelay/engine/vendor/wg-multi-relay.sh
 
   docker:
-    name: Docker deployment (${{ matrix.arch }})
+    name: Docker (${{ matrix.arch }})
     strategy:
       fail-fast: false
       matrix:
@@ -70,16 +70,16 @@ jobs:
       ARCH: ${{ matrix.arch }}
     steps:
       - uses: actions/checkout@v4
-      - name: Build with the documented Compose files
-        run: docker compose -f compose.wg.yaml -f compose.build.yaml build
-      - name: Verify source-built image with persistent Compose data
+      - name: Build with Compose
+        run: docker compose -f compose.yaml -f compose.build.yaml build
+      - name: Verify source-built image
         run: bash scripts/smoke-docker.sh wirearc:local
-      - name: Build the release packaging from the tested native binary
+      - name: Build release packaging from native binary
         run: |
           mkdir -p bin
           container=$(docker create wirearc:local)
           trap 'docker rm -v "$container" >/dev/null' EXIT
           docker cp "$container:/app/nodectl" "bin/nodectl-linux-$ARCH"
           docker build --build-arg "TARGETARCH=$ARCH" -f .github/Dockerfile -t wirearc:release-smoke .
-      - name: Verify release image with persistent Compose data
+      - name: Verify release image
         run: bash scripts/smoke-docker.sh wirearc:release-smoke

@@ -7,8 +7,8 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X nodectl/internal/version
 
 FROM python:3.12-slim-bookworm
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates tzdata curl unzip && rm -rf /var/lib/apt/lists/*
-COPY requirements-wg.txt /tmp/requirements-wg.txt
-RUN pip install --no-cache-dir -r /tmp/requirements-wg.txt
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
 WORKDIR /app
 COPY --from=build /nodectl /app/nodectl
 ENV TZ=Asia/Shanghai

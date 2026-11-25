@@ -2,8 +2,8 @@ FROM python:3.12-slim-bookworm
 
 # 安装基础证书和时区数据
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates tzdata curl unzip && rm -rf /var/lib/apt/lists/*
-COPY requirements-wg.txt /tmp/requirements-wg.txt
-RUN pip install --no-cache-dir -r /tmp/requirements-wg.txt
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 # 设定工作目录为 /app
 WORKDIR /app

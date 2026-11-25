@@ -1,22 +1,21 @@
-name: Build and publish WireArc images
+name: Release
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Image and release version (e.g. v0.2.0)'
+        description: 'Release tag (e.g. v1.0.0)'
         required: true
-        default: 'v0.2.0'
+        default: 'v1.0.0'
 
 permissions:
   contents: read
 
 concurrency:
-  group: publish-wg
+  group: release
   cancel-in-progress: false
 
 env:
-  # The application pins Asia/Shanghai at startup; upstream traffic tests assume it.
   TZ: Asia/Shanghai
   IMAGE: ghcr.io/aoomee/wirearc
   VERSION: ${{ inputs.version }}
@@ -26,7 +25,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Validate version
-        run: '[[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-wg([.][0-9]+)?)?$ ]]'
+        run: '[[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]'
 
   test:
     needs: validate-version
@@ -54,12 +53,13 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - name: Build native Linux panel
+      - name: Build native Linux binaries
         env:
           CGO_ENABLED: '0'
         run: |
-          mkdir -p bin dist
+          mkdir -p bin dist digests
           go build -trimpath -ldflags="-s -w -X nodectl/internal/version.Version=$VERSION" -o "bin/nodectl-linux-$ARCH" .
+          cp "bin/nodectl-linux-$ARCH" "dist/wirearc-linux-$ARCH"
           go build -trimpath -ldflags="-s -w -X nodectl/internal/agent.AgentVersion=$VERSION -X nodectl/internal/agent.GitCommit=$GITHUB_SHA -X nodectl/internal/agent.UpdateRepoOwner=aoomee -X nodectl/internal/agent.UpdateRepoName=wirearc" -o "dist/nodectl-agent-linux-$ARCH-$VERSION" ./cmd/nodectl-agent
           (cd dist && sha256sum "nodectl-agent-linux-$ARCH-$VERSION" > "nodectl-agent-linux-$ARCH-$VERSION.sha256")
       - uses: docker/setup-buildx-action@v3
@@ -70,33 +70,48 @@ jobs:
           file: .github/Dockerfile
           platforms: linux/${{ matrix.arch }}
           load: true
-          tags: ${{ env.IMAGE }}:${{ env.VERSION }}-${{ matrix.arch }}
+          tags: ${{ env.IMAGE }}:${{ env.VERSION }}
           labels: |
             org.opencontainers.image.source=https://github.com/aoomee/wirearc
+            org.opencontainers.image.description=WireArc multi-protocol proxy and WireGuard relay control plane
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.version=${{ env.VERSION }}
       - name: Verify running container
-        run: bash scripts/smoke-docker.sh "$IMAGE:$VERSION-$ARCH"
+        run: bash scripts/smoke-docker.sh "$IMAGE:$VERSION"
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Push tested image and create offline archive
+      - name: Push tested image by digest
+        id: push_digest
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: .github/Dockerfile
+          platforms: linux/${{ matrix.arch }}
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          labels: |
+            org.opencontainers.image.source=https://github.com/aoomee/wirearc
+            org.opencontainers.image.description=WireArc multi-protocol proxy and WireGuard relay control plane
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ env.VERSION }}
+      - name: Export digest and create offline archive
         run: |
-          docker push "$IMAGE:$VERSION-$ARCH"
-          docker tag "$IMAGE:$VERSION-$ARCH" "$IMAGE:$VERSION"
+          digest="${{ steps.push_digest.outputs.digest }}"
+          touch "digests/${digest#sha256:}"
           docker save "$IMAGE:$VERSION" | gzip -1 > "dist/wirearc-$VERSION-linux-$ARCH.tar.gz"
-          cp "bin/nodectl-linux-$ARCH" dist/
-          cp compose.wg.yaml dist/
-          cd dist
-          sha256sum "wirearc-$VERSION-linux-$ARCH.tar.gz" "nodectl-linux-$ARCH" > "SHA256SUMS-$ARCH"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.arch }}
+          path: digests/*
+          retention-days: 1
       - uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.arch }}
           path: dist/*
           compression-level: 0
-          retention-days: 7
+          retention-days: 3
 
   publish:
     needs: image
@@ -112,32 +127,83 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: digests-*
+          path: digests
+          merge-multiple: true
       - name: Publish multi-architecture tags
         run: |
-          docker buildx imagetools create --tag "$IMAGE:$VERSION" --tag "$IMAGE:latest" "$IMAGE:$VERSION-amd64" "$IMAGE:$VERSION-arm64"
+          refs=()
+          for f in digests/*; do
+            refs+=("$IMAGE@sha256:$(basename "$f")")
+          done
+          docker buildx imagetools create --tag "$IMAGE:$VERSION" --tag "$IMAGE:latest" "${refs[@]}"
           docker buildx imagetools inspect "$IMAGE:$VERSION"
+      - name: Prune legacy packages and stale tags
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess
+
+          def gh_api(method, path):
+              r = subprocess.run(["gh", "api", "-X", method, path], capture_output=True, text=True)
+              return r.returncode, r.stdout
+
+          for prefix in ("/users/aoomee", "/user"):
+              rc, _ = gh_api("DELETE", f"{prefix}/packages/container/nodectl-wg")
+              if rc == 0:
+                  print("Deleted legacy package nodectl-wg")
+                  break
+
+          keep = {"latest", os.environ["VERSION"]}
+          for prefix in ("/users/aoomee", "/user"):
+              rc, out = gh_api("GET", f"{prefix}/packages/container/wirearc/versions?per_page=100")
+              if rc != 0:
+                  continue
+              for v in json.loads(out):
+                  tags = v.get("metadata", {}).get("container", {}).get("tags", [])
+                  if not tags or any(t in keep for t in tags):
+                      continue
+                  vid = v["id"]
+                  c, _ = gh_api("DELETE", f"{prefix}/packages/container/wirearc/versions/{vid}")
+                  print(f"Pruned stale tag version {vid} ({tags}): rc={c}")
+              break
+          PY
       - uses: actions/download-artifact@v4
         with:
           pattern: release-*
           path: dist
           merge-multiple: true
-      - name: Publish release downloads
+      - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cp WG-README.md dist/WG-README.md
-          cat > dist/release-notes.md <<'NOTES'
-          WireArc 多架构 Docker 镜像与离线包发布（支持 Linux amd64 / arm64 面板机）。
+          cp compose.yaml dist/compose.yaml
+          (cd dist && sha256sum wirearc-*-linux-*.tar.gz wirearc-linux-* nodectl-agent-linux-* | grep -v '\.sha256$' > SHA256SUMS)
+          cat > dist/release-notes.md <<NOTES
+          ### Docker 快速部署
 
-          - **在线部署**：`ghcr.io/aoomee/wirearc:latest`（或锁定本版本标签）
-          - **离线加载**：下载对应架构 `wirearc-*.tar.gz`，执行 `docker load -i 文件名`
-          - **配套文件**：`compose.wg.yaml` 与 `SHA256SUMS-amd64` / `SHA256SUMS-arm64`
+          \`\`\`bash
+          mkdir -p /opt/wirearc && cd /opt/wirearc
+          curl -fsSL https://raw.githubusercontent.com/aoomee/wirearc/main/compose.yaml -o compose.yaml
+          docker compose up -d
+          \`\`\`
 
-          两种架构均已在 GitHub Linux Runner 完成容器启动、登录鉴权、WG 页面与运行环境验证，并通过全量 Go（含 `-race`）、Python 与 Playwright 浏览器回归测试。
+          ### 发行产物说明
+
+          | 文件 | 说明 |
+          | :--- | :--- |
+          | \`ghcr.io/aoomee/wirearc:${VERSION}\` | 官方多架构容器镜像（\`linux/amd64\` / \`linux/arm64\`） |
+          | \`wirearc-${VERSION}-linux-<arch>.tar.gz\` | 离线 Docker 镜像包（\`docker load -i\` 导入） |
+          | \`wirearc-linux-<arch>\` | 面板原生二进制程序 |
+          | \`nodectl-agent-linux-<arch>-${VERSION}\` | 节点端受管 Agent 二进制 |
+          | \`compose.yaml\` / \`SHA256SUMS\` | 标准编排文件与完整 SHA-256 校验清单 |
           NOTES
           if gh release view "$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release edit "$VERSION" --repo "$GITHUB_REPOSITORY" --title "WireArc $VERSION" --notes-file dist/release-notes.md
           else
             gh release create "$VERSION" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "WireArc $VERSION" --notes-file dist/release-notes.md --latest
           fi
-          gh release upload "$VERSION" dist/*.tar.gz dist/nodectl-linux-* dist/nodectl-agent-linux-* dist/SHA256SUMS-* dist/compose.wg.yaml dist/WG-README.md --repo "$GITHUB_REPOSITORY" --clobber
+          gh release upload "$VERSION" dist/*.tar.gz dist/wirearc-linux-* dist/nodectl-agent-linux-* dist/compose.yaml dist/SHA256SUMS --repo "$GITHUB_REPOSITORY" --clobber

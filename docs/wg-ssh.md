@@ -24,7 +24,7 @@ docker compose up -d
 docker compose logs --tail=80
 ```
 
-Releases 中的 `.tar.gz` 为可 `docker load` 的离线镜像包。离线加载、SSH 转发及 Docker Run 示例见 [项目首页](README.md)。目标 A/B 部署仍需联网下载代理组件。
+Releases 中的 `.tar.gz` 为可 `docker load` 的离线镜像包。离线加载、SSH 转发及 Docker Run 示例见 [项目首页](../README.md)。目标 A/B 部署仍需联网下载代理组件。
 
 从源码构建则使用：
 
@@ -32,7 +32,7 @@ Releases 中的 `.tar.gz` 为可 `docker load` 的离线镜像包。离线加载
 docker compose -f compose.yaml -f compose.build.yaml up -d --build
 ```
 
-默认绑定 `127.0.0.1:7878`，通过自己的 HTTPS 反代或 SSH 转发访问。面板 HTTP 上游地址为 `http://127.0.0.1:7878`；反代需保留原始 Host、支持 WebSocket，并配置面板的可信代理 IP，见 [NGINX 反代说明](REVERSE-PROXY.md)。面板不会生成自签证书。无论通过 HTTPS 反代还是可信的 SSH 本地转发访问面板，均可使用首页 SSH 部署与节点编辑页的 Agent 托管 WG 出站。
+默认绑定 `127.0.0.1:7878`，通过自己的 HTTPS 反代或 SSH 转发访问。面板 HTTP 上游地址为 `http://127.0.0.1:7878`；反代需保留原始 Host、支持 WebSocket，并配置面板的可信代理 IP，见 [NGINX 反代说明](reverse-proxy.md)。面板不会生成自签证书。无论通过 HTTPS 反代还是可信的 SSH 本地转发访问面板，均可使用首页 SSH 部署与节点编辑页的 Agent 托管 WG 出站。
 
 首次安装默认账号为 **`admin`**，密码自动随机生成。服务启动成功后，在面板服务器终端查看：
 
@@ -58,15 +58,15 @@ docker compose up -d
 
 不要把镜像改回 `ghcr.io/hobin66/nodectl:latest`：上游镜像不含 WireArc 功能。更换版本前等任务结束，并备份数据。
 
-## 不用 Docker
+## 二进制原生运行
 
-整合 ZIP 中的 `bin/nodectl-linux-amd64` 可用于 Linux x86_64 面板机，无需 Go 编译器。源码目录 `outputs/nodectl-linux-amd64` 是同一份本地构建产物。运行需要 Python 3.10+、Paramiko；可用虚拟环境隔离安装：
+Releases 中的 `wirearc-linux-amd64` / `wirearc-linux-arm64` 可直接用于 Linux 面板机，无需 Go 编译器。运行需要 Python 3.10+、Paramiko；可用虚拟环境隔离安装：
 
 ```bash
 python3 -m venv .venv-wg
-.venv-wg/bin/pip install -r requirements-wg.txt
-chmod +x bin/nodectl-linux-amd64
-NODECTL_WG_PYTHON="$PWD/.venv-wg/bin/python3" ./bin/nodectl-linux-amd64
+.venv-wg/bin/pip install -r requirements.txt
+chmod +x ./wirearc-linux-amd64
+NODECTL_WG_PYTHON="$PWD/.venv-wg/bin/python3" ./wirearc-linux-amd64
 ```
 
 请始终在同一个工作目录运行，数据写入该目录下的 `data/`。面板进程不需要加载本机 WireGuard 模块；隧道部署在远端 A/B。
@@ -111,4 +111,4 @@ python3 -m unittest discover -s tests -v
 node tests/wg-ui.cjs
 ```
 
-来源与保留事项见 `WG-SOURCES.md`。
+来源与致谢说明见 [credits.md](credits.md)。

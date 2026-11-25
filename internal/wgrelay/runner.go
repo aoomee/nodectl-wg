@@ -44,7 +44,7 @@ func CheckRuntime() error {
 			return fmt.Errorf("WG 需要 Python 3.10+（当前解释器 %s 版本过低）；请使用 WG 版 Docker 镜像，或设置 NODECTL_WG_PYTHON", py)
 		}
 		if strings.Contains(string(out), "paramiko") {
-			return fmt.Errorf("WG 缺少 Python 依赖 paramiko；请使用 WG 版 Docker 镜像，或安装 requirements-wg.txt")
+			return fmt.Errorf("WG 缺少 Python 依赖 paramiko；请使用官方 Docker 镜像，或安装 requirements.txt")
 		}
 		return fmt.Errorf("WG 需要 Python 3.10+ 和 Paramiko；请使用 WG 版 Docker 镜像，或设置 NODECTL_WG_PYTHON")
 	}

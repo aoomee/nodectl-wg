@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"nodectl/internal/database"
@@ -183,6 +184,7 @@ type TrafficHub struct {
 
 // globalHub 全局单例（在 for 循环外持有生命周期）
 var globalHub *TrafficHub
+var globalHubPtr atomic.Pointer[TrafficHub]
 var hubOnce sync.Once
 
 // GetTrafficHub 返回全局 TrafficHub 单例
@@ -199,6 +201,7 @@ func GetTrafficHub() *TrafficHub {
 			cmdLogs:            make(map[string]*CommandLog),
 			pointPersistWakeCh: make(chan struct{}, 1),
 		}
+		globalHubPtr.Store(globalHub)
 		go globalHub.runTotalPersistLoop()
 		go globalHub.runPointPersistLoop()
 	})
@@ -277,9 +280,10 @@ func GetTrafficPointPersistIntervalSec() int {
 	return loadTrafficPointPersistIntervalSec()
 }
 
-// NotifyTrafficPointPersistIntervalChanged 通知点数据落库循环配置已变更，立即生效并采一次点。
+// NotifyTrafficPointPersistIntervalChanged 通知已运行的点数据落库循环配置已变更，立即生效并采一次点。
+// 若 TrafficHub 尚未初始化，则不在此处惰性启动后台落库协程（首次启动时会直接读取最新配置）。
 func NotifyTrafficPointPersistIntervalChanged() {
-	hub := GetTrafficHub()
+	hub := globalHubPtr.Load()
 	if hub == nil || hub.pointPersistWakeCh == nil {
 		return
 	}

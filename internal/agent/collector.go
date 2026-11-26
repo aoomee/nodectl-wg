@@ -34,10 +34,69 @@ func NewCollector(iface string) *Collector {
 	}
 }
 
-// detectInterface 自动检测出口网卡
-// 优先选择 eth0，其次遍历 /sys/class/net 找第一个非 lo/docker/veth/br/wg/tun/tailscale 的接口
+// isVirtualInterface 判断网卡是否为回环/容器/隧道等虚拟接口（不应作为物理出口网卡采集）
+func isVirtualInterface(name string) bool {
+	if name == "" || name == "lo" {
+		return true
+	}
+	prefixes := []string{
+		"docker",
+		"veth",
+		"br-",
+		"virbr",
+		"wg",
+		"nw", // WireArc / nodectl WG 内核隧道接口（nw<13hex>）
+		"tun",
+		"tap",
+		"tailscale",
+		"cni",
+		"flannel",
+		"cali",
+		"podman",
+		"zt",
+		"utun",
+	}
+	for _, p := range prefixes {
+		if strings.HasPrefix(name, p) {
+			return true
+		}
+	}
+	return false
+}
+
+// parseDefaultRouteInterface 从 /proc/net/route 内容中解析默认路由出口网卡名
+func parseDefaultRouteInterface(routeContent string) string {
+	lines := strings.Split(routeContent, "\n")
+	for i, line := range lines {
+		if i == 0 {
+			continue // 跳过表头
+		}
+		fields := strings.Fields(line)
+		if len(fields) < 4 {
+			continue
+		}
+		iface := fields[0]
+		dest := fields[1]
+		// Destination == 00000000 表示 IPv4 默认路由 (0.0.0.0/0)
+		if dest == "00000000" && !isVirtualInterface(iface) {
+			return iface
+		}
+	}
+	return ""
+}
+
+// detectInterface 自动检测物理出口网卡
+// 优先级：1. /proc/net/route 默认路由非虚拟网卡 -> 2. eth0 -> 3. /sys/class/net 首个非虚拟接口
 func detectInterface() (string, error) {
-	// 优先检测 eth0
+	if raw, err := os.ReadFile("/proc/net/route"); err == nil {
+		if iface := parseDefaultRouteInterface(string(raw)); iface != "" {
+			if _, statErr := os.Stat(filepath.Join("/sys/class/net", iface, "statistics/rx_bytes")); statErr == nil {
+				return iface, nil
+			}
+		}
+	}
+
+	// 其次检测 eth0
 	if _, err := os.Stat("/sys/class/net/eth0/statistics/rx_bytes"); err == nil {
 		return "eth0", nil
 	}
@@ -49,15 +108,7 @@ func detectInterface() (string, error) {
 
 	for _, e := range entries {
 		name := e.Name()
-		// 跳过回环、Docker 虚拟接口、veth 对、网桥、WireGuard、VPN tun、tailscale
-		if name == "lo" ||
-			strings.HasPrefix(name, "docker") ||
-			strings.HasPrefix(name, "veth") ||
-			strings.HasPrefix(name, "br-") ||
-			strings.HasPrefix(name, "virbr") ||
-			strings.HasPrefix(name, "wg") ||
-			strings.HasPrefix(name, "tun") ||
-			strings.HasPrefix(name, "tailscale") {
+		if isVirtualInterface(name) {
 			continue
 		}
 		// 确认该接口有 statistics 目录

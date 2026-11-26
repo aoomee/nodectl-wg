@@ -2299,7 +2299,444 @@
                     animation: none !important;
                 }
             }
+            /* ================= 全局统一极简下拉菜单 (WireArc Custom Select) ================= */
+            select:not(.ts-hidden):focus-visible {
+                outline: none;
+            }
+            select.wa-select-open:not(.ts-hidden) {
+                border-color: #007aff !important;
+                background-color: #ffffff !important;
+                box-shadow: 0 0 0 3.5px rgba(0, 122, 255, 0.14) !important;
+            }
+            .traffic-input-group select.wa-select-open,
+            .add-traffic-input-group select.wa-select-open {
+                border: none !important;
+                background-color: transparent !important;
+                box-shadow: none !important;
+            }
+            .wa-select-popover {
+                position: fixed;
+                z-index: 99999;
+                background: rgba(255, 255, 255, 0.98);
+                backdrop-filter: saturate(180%) blur(20px);
+                -webkit-backdrop-filter: saturate(180%) blur(20px);
+                border: 1px solid rgba(0, 0, 0, 0.08);
+                border-radius: 16px;
+                padding: 6px;
+                box-shadow:
+                    0 18px 44px rgba(15, 23, 42, 0.14),
+                    0 2px 8px rgba(15, 23, 42, 0.05);
+                max-height: 272px;
+                overflow-y: auto;
+                overscroll-behavior: contain;
+                box-sizing: border-box;
+                opacity: 0;
+                transform: translateY(-4px) scale(0.97);
+                transform-origin: top center;
+                transition:
+                    opacity 0.16s cubic-bezier(0.22, 1, 0.36, 1),
+                    transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+                pointer-events: none;
+                font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+                scrollbar-width: thin;
+                scrollbar-color: rgba(0, 0, 0, 0.16) transparent;
+            }
+            .wa-select-popover.is-above {
+                transform: translateY(4px) scale(0.97);
+                transform-origin: bottom center;
+            }
+            .wa-select-popover.is-open {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+                pointer-events: auto;
+            }
+            .wa-select-popover::-webkit-scrollbar {
+                width: 5px;
+            }
+            .wa-select-popover::-webkit-scrollbar-thumb {
+                background: rgba(0, 0, 0, 0.16);
+                border-radius: 999px;
+            }
+            .wa-select-group-label {
+                padding: 6px 10px 4px;
+                font-size: 11px;
+                font-weight: 600;
+                color: #86868b;
+                letter-spacing: 0.02em;
+                user-select: none;
+            }
+            .wa-select-item {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 10px;
+                width: 100%;
+                box-sizing: border-box;
+                padding: 8.5px 12px;
+                border: none;
+                border-radius: 10px;
+                background: transparent;
+                color: #1d1d1f;
+                font-size: 13px;
+                font-weight: 500;
+                line-height: 1.35;
+                text-align: left;
+                cursor: pointer;
+                transition: background-color 0.12s ease, color 0.12s ease;
+                font-family: inherit;
+            }
+            .wa-select-item + .wa-select-item {
+                margin-top: 2px;
+            }
+            .wa-select-item-label {
+                flex: 1;
+                min-width: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .wa-select-item-check {
+                width: 14px;
+                height: 14px;
+                flex-shrink: 0;
+                color: #007aff;
+                opacity: 0;
+                transform: scale(0.8);
+                transition: opacity 0.14s ease, transform 0.14s ease;
+            }
+            .wa-select-item:hover:not(.is-disabled),
+            .wa-select-item.is-focused:not(.is-disabled) {
+                background: #f2f4f8;
+            }
+            .wa-select-item.is-selected {
+                background: #eaf4ff;
+                color: #007aff;
+                font-weight: 600;
+            }
+            .wa-select-item.is-selected:hover:not(.is-disabled),
+            .wa-select-item.is-selected.is-focused:not(.is-disabled) {
+                background: #dfeeff;
+            }
+            .wa-select-item.is-selected .wa-select-item-check {
+                opacity: 1;
+                transform: scale(1);
+            }
+            .wa-select-item.is-disabled {
+                color: #a1a1a6;
+                cursor: not-allowed;
+                opacity: 0.65;
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .wa-select-popover,
+                .wa-select-item,
+                .wa-select-item-check {
+                    transition: none !important;
+                }
+            }
         </style>
+        <script id="wirearc-custom-select">
+            (function () {
+                let popover = null;
+                let activeSelect = null;
+                let activeGroup = null;
+                let focusedIdx = -1;
+                let hideTimer = null;
+
+                function isEnhanceableSelect(el) {
+                    if (!el || el.tagName !== "SELECT") return false;
+                    if (el.disabled || el.multiple || (el.size && el.size > 1)) return false;
+                    if (el.classList.contains("ts-hidden")) return false;
+                    if (el.dataset.nativeSelect === "true") return false;
+                    return true;
+                }
+
+                function ensurePopover() {
+                    if (popover) return popover;
+                    popover = document.createElement("div");
+                    popover.id = "waSelectPopover";
+                    popover.className = "wa-select-popover";
+                    popover.setAttribute("role", "listbox");
+                    popover.hidden = true;
+                    popover.addEventListener("mousedown", function (e) {
+                        // 阻止点击菜单时触发底层 select 失焦闪动
+                        e.preventDefault();
+                    });
+                    document.body.appendChild(popover);
+                    return popover;
+                }
+
+                function getInteractiveItems() {
+                    if (!popover) return [];
+                    return Array.from(popover.querySelectorAll(".wa-select-item:not(.is-disabled)"));
+                }
+
+                function highlightItem(idx) {
+                    const items = getInteractiveItems();
+                    items.forEach((el) => el.classList.remove("is-focused"));
+                    if (!items.length) {
+                        focusedIdx = -1;
+                        return;
+                    }
+                    focusedIdx = ((idx % items.length) + items.length) % items.length;
+                    const target = items[focusedIdx];
+                    target.classList.add("is-focused");
+                    target.scrollIntoView({ block: "nearest" });
+                }
+
+                function selectOptionByIndex(optionIndex) {
+                    if (!activeSelect) return;
+                    const sel = activeSelect;
+                    const opt = sel.options[optionIndex];
+                    if (!opt || opt.disabled) return;
+                    const changed = sel.selectedIndex !== optionIndex;
+                    sel.selectedIndex = optionIndex;
+                    closePopover(true);
+                    if (changed) {
+                        sel.dispatchEvent(new Event("input", { bubbles: true }));
+                        sel.dispatchEvent(new Event("change", { bubbles: true }));
+                    }
+                }
+
+                function closePopover(restoreFocus) {
+                    if (hideTimer) {
+                        clearTimeout(hideTimer);
+                        hideTimer = null;
+                    }
+                    const prevSelect = activeSelect;
+                    if (activeSelect) {
+                        activeSelect.classList.remove("wa-select-open");
+                        activeSelect = null;
+                    }
+                    if (activeGroup) {
+                        activeGroup.classList.remove("wa-select-group-open");
+                        activeGroup = null;
+                    }
+                    focusedIdx = -1;
+                    if (popover) {
+                        popover.classList.remove("is-open");
+                        hideTimer = setTimeout(function () {
+                            if (!activeSelect && popover) {
+                                popover.hidden = true;
+                                popover.innerHTML = "";
+                            }
+                        }, 180);
+                    }
+                    if (restoreFocus && prevSelect && document.contains(prevSelect)) {
+                        try {
+                            prevSelect.focus({ preventScroll: true });
+                        } catch (_) {}
+                    }
+                }
+
+                function buildOptionItem(opt) {
+                    const btn = document.createElement("button");
+                    btn.type = "button";
+                    btn.className = "wa-select-item";
+                    btn.setAttribute("role", "option");
+                    btn.dataset.optionIndex = String(opt.index);
+                    const isSelected = opt.selected;
+                    const isDisabled = opt.disabled || (opt.parentElement && opt.parentElement.tagName === "OPTGROUP" && opt.parentElement.disabled);
+                    if (isSelected) {
+                        btn.classList.add("is-selected");
+                        btn.setAttribute("aria-selected", "true");
+                    } else {
+                        btn.setAttribute("aria-selected", "false");
+                    }
+                    if (isDisabled) {
+                        btn.classList.add("is-disabled");
+                        btn.disabled = true;
+                    }
+                    const label = document.createElement("span");
+                    label.className = "wa-select-item-label";
+                    label.textContent = opt.textContent || opt.label || "";
+                    const check = document.createElement("span");
+                    check.className = "wa-select-item-check";
+                    check.innerHTML =
+                        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                    btn.append(label, check);
+                    if (!isDisabled) {
+                        btn.addEventListener("click", function (e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            selectOptionByIndex(opt.index);
+                        });
+                    }
+                    return btn;
+                }
+
+                function positionPopover(sel) {
+                    if (!popover || !sel) return;
+                    const rect = sel.getBoundingClientRect();
+                    const vw = window.innerWidth;
+                    const vh = window.innerHeight;
+                    const gap = 6;
+                    const margin = 10;
+
+                    const inCompositeGroup = !!sel.closest(".traffic-input-group, .add-traffic-input-group");
+                    const minWidth = inCompositeGroup ? Math.max(rect.width, 132) : Math.max(rect.width, 140);
+                    const width = Math.min(Math.max(minWidth, rect.width), vw - margin * 2);
+                    popover.style.width = width + "px";
+
+                    // 测量真实内容高度
+                    const popHeight = Math.min(popover.scrollHeight || 200, 272);
+                    const spaceBelow = vh - rect.bottom - margin;
+                    const spaceAbove = rect.top - margin;
+                    const openAbove = spaceBelow < popHeight + gap && spaceAbove > spaceBelow;
+
+                    popover.classList.toggle("is-above", openAbove);
+                    const top = openAbove
+                        ? Math.max(margin, rect.top - popHeight - gap)
+                        : Math.min(vh - popHeight - margin, rect.bottom + gap);
+
+                    let left = inCompositeGroup ? rect.right - width : rect.left;
+                    if (left + width > vw - margin) left = vw - width - margin;
+                    if (left < margin) left = margin;
+
+                    popover.style.left = Math.round(left) + "px";
+                    popover.style.top = Math.round(top) + "px";
+                }
+
+                function openPopover(sel) {
+                    if (!isEnhanceableSelect(sel)) return;
+                    if (activeSelect === sel && popover && !popover.hidden && popover.classList.contains("is-open")) {
+                        closePopover(false);
+                        return;
+                    }
+                    closePopover(false);
+                    if (hideTimer) {
+                        clearTimeout(hideTimer);
+                        hideTimer = null;
+                    }
+
+                    const pop = ensurePopover();
+                    pop.innerHTML = "";
+
+                    const frag = document.createDocumentFragment();
+                    Array.from(sel.children).forEach(function (child) {
+                        if (child.tagName === "OPTGROUP") {
+                            const grpLabel = document.createElement("div");
+                            grpLabel.className = "wa-select-group-label";
+                            grpLabel.textContent = child.label || "";
+                            frag.appendChild(grpLabel);
+                            Array.from(child.children).forEach(function (opt) {
+                                if (opt.tagName === "OPTION") frag.appendChild(buildOptionItem(opt));
+                            });
+                        } else if (child.tagName === "OPTION") {
+                            frag.appendChild(buildOptionItem(child));
+                        }
+                    });
+                    pop.appendChild(frag);
+
+                    activeSelect = sel;
+                    sel.classList.add("wa-select-open");
+                    activeGroup = sel.closest(".traffic-input-group, .add-traffic-input-group");
+                    if (activeGroup) activeGroup.classList.add("wa-select-group-open");
+
+                    pop.hidden = false;
+                    positionPopover(sel);
+
+                    requestAnimationFrame(function () {
+                        if (activeSelect !== sel) return;
+                        pop.classList.add("is-open");
+                        const selectedEl = pop.querySelector(".wa-select-item.is-selected");
+                        if (selectedEl) {
+                            selectedEl.scrollIntoView({ block: "nearest" });
+                            const items = getInteractiveItems();
+                            focusedIdx = items.indexOf(selectedEl);
+                        }
+                    });
+                }
+
+                document.addEventListener(
+                    "mousedown",
+                    function (e) {
+                        if (e.button !== 0) return;
+                        const sel = e.target && e.target.closest ? e.target.closest("select") : null;
+                        if (sel && isEnhanceableSelect(sel)) {
+                            e.preventDefault();
+                            try {
+                                sel.focus({ preventScroll: true });
+                            } catch (_) {}
+                            openPopover(sel);
+                            return;
+                        }
+                        if (activeSelect && popover && !popover.contains(e.target)) {
+                            closePopover(false);
+                        }
+                    },
+                    true,
+                );
+
+                document.addEventListener(
+                    "keydown",
+                    function (e) {
+                        if (activeSelect && popover && popover.classList.contains("is-open")) {
+                            if (e.key === "Escape") {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                closePopover(true);
+                                return;
+                            }
+                            if (e.key === "Tab") {
+                                closePopover(false);
+                                return;
+                            }
+                            if (e.key === "ArrowDown") {
+                                e.preventDefault();
+                                highlightItem(focusedIdx + 1);
+                                return;
+                            }
+                            if (e.key === "ArrowUp") {
+                                e.preventDefault();
+                                highlightItem(focusedIdx <= 0 ? getInteractiveItems().length - 1 : focusedIdx - 1);
+                                return;
+                            }
+                            if (e.key === "Home") {
+                                e.preventDefault();
+                                highlightItem(0);
+                                return;
+                            }
+                            if (e.key === "End") {
+                                e.preventDefault();
+                                highlightItem(getInteractiveItems().length - 1);
+                                return;
+                            }
+                            if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                const items = getInteractiveItems();
+                                if (focusedIdx >= 0 && items[focusedIdx]) {
+                                    selectOptionByIndex(Number(items[focusedIdx].dataset.optionIndex));
+                                } else {
+                                    closePopover(true);
+                                }
+                                return;
+                            }
+                        } else if (
+                            document.activeElement &&
+                            isEnhanceableSelect(document.activeElement) &&
+                            (e.key === "Enter" || e.key === " " || e.key === "ArrowDown" || e.key === "ArrowUp")
+                        ) {
+                            e.preventDefault();
+                            openPopover(document.activeElement);
+                        }
+                    },
+                    true,
+                );
+
+                window.addEventListener("resize", function () {
+                    if (activeSelect) closePopover(false);
+                });
+                window.addEventListener(
+                    "scroll",
+                    function (e) {
+                        if (!activeSelect) return;
+                        if (popover && e.target && (e.target === popover || popover.contains(e.target))) return;
+                        closePopover(false);
+                    },
+                    true,
+                );
+            })();
+        </script>
         <script id="wirearc-micro-interactions">
             (function () {
                 // 同步弹窗打开状态与首页触发图标（如 ChatGPT Tools / Mail 打开保持展开姿态）

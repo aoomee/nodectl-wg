@@ -191,10 +191,18 @@
         height: 100%;
     }
 
-    .add-traffic-input-group:focus-within {
+    .add-traffic-input-group:focus-within,
+    .add-traffic-input-group.wa-select-group-open {
         border-color: #007aff;
         background: #fff;
-        box-shadow: 0 0 0 3.5px rgba(0, 122, 255, 0.12);
+        box-shadow: 0 0 0 3.5px rgba(0, 122, 255, 0.14);
+    }
+
+    .add-traffic-input-group :is(input, select):focus,
+    .add-traffic-input-group :is(input, select):focus-visible {
+        outline: none !important;
+        box-shadow: none !important;
+        border: none !important;
     }
 
     .add-traffic-input-group input {

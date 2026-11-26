@@ -377,15 +377,21 @@ function nodeWGPhaseText(p) {
     if (p.status === 'failed') return p.error ? ('部署失败：' + p.error) : '部署失败，请停用清理后重试';
     return '';
 }
-async function loadNodeWGEditor(uuid) {
+async function loadNodeWGEditor(uuid, prefetched = null) {
     if (!uuid) return false;
     if (nodeWGEditor.uuid && nodeWGEditor.uuid !== uuid) resetNodeWGEditor();
     nodeWGEditor.uuid = uuid;
     if (nodeWGEditor.baseline === null) nodeWGEditor.baseline = nodeWGOrdinarySnapshot();
     const generation = nodeWGEditor.generation, request = ++nodeWGEditor.request;
-    renderNodeWGCard();
+    if (!prefetched && !nodeWGEditor.loaded) renderNodeWGCard();
     try {
-        const data = await nodeWGRequest('/api/node/wg/options?uuid='+encodeURIComponent(uuid));
+        let data;
+        if (prefetched && typeof prefetched === 'object') {
+            if (!prefetched.ok) throw (prefetched.error || new Error('WG 请求失败'));
+            data = prefetched.data;
+        } else {
+            data = await nodeWGRequest('/api/node/wg/options?uuid='+encodeURIComponent(uuid));
+        }
         if (generation !== nodeWGEditor.generation || request !== nodeWGEditor.request || document.getElementById('editNodeUUID').value !== uuid) return false;
         const prevStatus = nodeWGEditor.pair?.status || '';
         const prevLoaded = nodeWGEditor.loaded;

@@ -2,8 +2,8 @@
 <style>
 .node-wg-outbound, .node-wg-setup {
     box-sizing: border-box;
-    padding: 14px 16px;
-    margin: 12px 0 0;
+    padding: 12px 14px;
+    margin: 10px 0 0;
     background: var(--editor-surface);
     border: 1px solid rgba(0, 0, 0, 0.06);
     border-radius: var(--editor-card-radius);
@@ -12,21 +12,34 @@
 }
 .protocol-card > .node-wg-outbound {
     margin: 0;
+    padding: 10px 14px 12px;
     border: 0;
-    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    border-top: 1px solid rgba(0, 0, 0, 0.045);
     border-radius: 0;
     background: #fafbfd;
 }
+/* 就绪正常态：去掉厚重卡片外框，收口为轻盈单行状态条 */
 .node-wg-setup.is-compact {
-    padding: 10px 14px;
+    margin: 6px 0 0;
+    padding: 6px 6px 2px;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: 8px;
 }
 .node-wg-setup.is-compact .node-wg-setup-head {
     flex: 1;
     min-width: 0;
+    justify-content: flex-start;
+    gap: 8px;
+}
+.node-wg-setup.is-compact .node-wg-setup-head strong {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--editor-muted);
 }
 .node-wg-setup.is-compact .node-wg-actions {
     margin-top: 0;
@@ -35,24 +48,34 @@
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
 }
 .node-wg-setup-head { justify-content: space-between; }
-.node-wg-setup-head strong {
-    font-size: 13px;
-    line-height: 1.4;
-    font-weight: 650;
-    color: var(--editor-ink);
+.node-wg-head-left {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
 }
-.node-wg-actions { margin-top: 12px; }
+.node-wg-setup-head strong {
+    font-size: 12.5px;
+    line-height: 1.4;
+    font-weight: 600;
+    color: var(--editor-muted);
+}
+.node-wg-actions { margin-top: 10px; }
+.node-wg-head-actions {
+    margin-top: 0;
+    gap: 6px;
+}
 .node-wg-badge {
     display: inline-flex;
     align-items: center;
     gap: 5px;
     font-size: 11px;
-    line-height: 1.4;
+    line-height: 1.35;
     font-weight: 600;
-    padding: 3px 9px;
+    padding: 2px 8px;
     border-radius: 999px;
     background: #eef1f6;
     color: var(--editor-muted);
@@ -60,8 +83,8 @@
 }
 .node-wg-badge::before {
     content: '';
-    width: 6px;
-    height: 6px;
+    width: 5.5px;
+    height: 5.5px;
     border-radius: 50%;
     background: currentColor;
 }
@@ -79,11 +102,11 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 6px;
-    margin: 10px 0 0;
-    padding: 6px 10px;
-    border-radius: 10px;
-    background: #f0f5ff;
-    color: #34527a;
+    margin: 8px 0 0;
+    padding: 5px 10px;
+    border-radius: 9px;
+    background: #fff7e6;
+    color: #ad6800;
     font-size: 11.5px;
     line-height: 1.4;
 }
@@ -98,11 +121,11 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
-    margin-top: 10px;
+    margin-top: 8px;
 }
 .node-wg-check {
-    padding: 10px 12px;
-    border-radius: 12px;
+    padding: 9px 11px;
+    border-radius: 11px;
     background: #ffffff;
     border: 1px solid rgba(0, 0, 0, 0.05);
     min-width: 0;
@@ -115,65 +138,65 @@
     gap: 6px;
     font-size: 12px;
 }
-.node-wg-check p, .node-wg-peer-issues p { margin: 5px 0 0; }
+.node-wg-check p, .node-wg-peer-issues p { margin: 4px 0 0; }
 .node-wg-peer-issues {
-    margin-top: 10px;
-    padding: 8px 12px;
-    border-radius: 12px;
+    margin-top: 8px;
+    padding: 7px 10px;
+    border-radius: 10px;
     background: #fff9eb;
     border: 1px solid #ffe4b5;
 }
 .node-wg-peer-issues summary {
     cursor: pointer;
-    font-size: 12px;
+    font-size: 11.5px;
     font-weight: 600;
     color: #9a5b00;
     list-style: none;
 }
-.node-wg-peer-issues ul { margin: 6px 0 0; padding-left: 16px; }
-.node-wg-peer-issues li { margin: 6px 0; font-size: 12px; color: var(--editor-ink); }
+.node-wg-peer-issues ul { margin: 5px 0 0; padding-left: 16px; }
+.node-wg-peer-issues li { margin: 5px 0; font-size: 11.5px; color: var(--editor-ink); }
 .node-wg-fields {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    margin-top: 10px;
+    gap: 8px;
+    margin-top: 8px;
 }
 .node-wg-fields[data-mode="direct"] { grid-template-columns: minmax(0, 1fr); }
 .node-wg-outbound [hidden], .node-wg-setup [hidden] { display: none !important; }
 #nodeWGStatus, #nodeWGSetupStatus {
-    margin: 10px 0 0;
-    font-size: 12px;
-    line-height: 1.55;
+    margin: 8px 0 0;
+    font-size: 11.5px;
+    line-height: 1.5;
     color: var(--editor-muted);
 }
 #nodeWGStatus:empty, #nodeWGSetupStatus:empty { display: none; }
 #nodeWGStatus[data-tone="progress"] {
-    padding: 9px 12px;
-    border-radius: 12px;
+    padding: 7px 10px;
+    border-radius: 10px;
     background: #eaf4ff;
     border: 1px solid #bfdbfe;
     color: #0055b3;
     font-weight: 600;
 }
 #nodeWGStatus[data-tone="success"] {
-    padding: 9px 12px;
-    border-radius: 12px;
+    padding: 7px 10px;
+    border-radius: 10px;
     background: #e8fdf0;
     border: 1px solid #bbf7d0;
     color: #16803d;
     font-weight: 600;
 }
 #nodeWGStatus[data-tone="error"] {
-    padding: 9px 12px;
-    border-radius: 12px;
+    padding: 7px 10px;
+    border-radius: 10px;
     background: #fff1f0;
     border: 1px solid #ffccc7;
     color: #cf1322;
     font-weight: 600;
 }
 #nodeWGStatus[data-tone="warning"] {
-    padding: 9px 12px;
-    border-radius: 12px;
+    padding: 7px 10px;
+    border-radius: 10px;
     background: #fff7e6;
     border: 1px solid #ffe7ba;
     color: #ad6800;
@@ -181,8 +204,8 @@
 }
 .node-wg-outbound label {
     display: block;
-    margin: 0 0 5px;
-    font-size: 11.5px;
+    margin: 0 0 4px;
+    font-size: 11px;
     font-weight: 600;
     color: var(--editor-muted);
 }
@@ -192,18 +215,18 @@
     width: 100%;
     min-width: 0;
     max-width: 100%;
-    height: 38px;
+    height: 34px;
     box-sizing: border-box;
-    padding: 0 34px 0 12px;
+    padding: 0 30px 0 10px;
     border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 12px;
+    border-radius: 10px;
     background-color: #ffffff;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236e6e73' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%236e6e73' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 11px center;
-    background-size: 14px 14px;
+    background-position: right 10px center;
+    background-size: 13px 13px;
     color: var(--editor-ink);
-    font: 600 13px/1.4 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+    font: 600 12.5px/1.35 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
     cursor: pointer;
     transition: border-color .2s, box-shadow .2s, background-color .2s;
 }
@@ -213,19 +236,69 @@
 .node-wg-outbound select:focus {
     outline: none;
     border-color: #007aff;
-    box-shadow: 0 0 0 3.5px rgba(0, 122, 255, 0.14);
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.14);
 }
-.node-wg-outbound p, .node-wg-setup p { font-size: 12px; line-height: 1.6; color: var(--editor-muted); }
+.node-wg-outbound p, .node-wg-setup p { font-size: 11.5px; line-height: 1.55; color: var(--editor-muted); }
+/* 极简轻量按钮：停用/重试内联在标题栏，刷新弱化为轻幽灵按钮 */
+.node-wg-inline-btn.node-editor-button {
+    min-height: 24px;
+    height: 24px;
+    padding: 0 9px;
+    font-size: 11.5px;
+    font-weight: 600;
+    border-radius: 999px;
+    background: transparent;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    color: var(--editor-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.node-wg-inline-btn.node-editor-button:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.045);
+    color: var(--editor-ink);
+}
+.node-wg-inline-btn.node-editor-button-danger {
+    border-color: rgba(255, 59, 48, 0.24);
+    color: #d93025;
+}
+.node-wg-inline-btn.node-editor-button-danger:hover:not(:disabled) {
+    background: #fff1f0;
+    border-color: rgba(255, 59, 48, 0.4);
+    color: #cf1322;
+}
 #nodeWGRefresh.node-editor-button {
-    min-height: 30px;
-    padding: 4px 12px;
-    font-size: 12px;
+    min-height: 26px;
+    height: 26px;
+    padding: 0 9px;
+    font-size: 11.5px;
+    font-weight: 600;
+    border-radius: 999px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--editor-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+#nodeWGRefresh.node-editor-button:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--editor-ink);
+}
+#nodeWGRefresh svg {
+    transition: transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+#nodeWGRefresh:hover:not(:disabled) svg {
+    transform: rotate(150deg);
 }
 @media (max-width:768px) {
-    .node-wg-outbound, .node-wg-setup { padding: 12px 14px; }
+    .node-wg-outbound, .node-wg-setup { padding: 10px 12px; }
+    .node-wg-setup.is-compact { padding: 6px 4px 2px; }
     .node-wg-fields { grid-template-columns: minmax(0, 1fr); }
     .node-wg-checks { grid-template-columns: minmax(0, 1fr); }
-    .node-wg-actions > button { flex: 1 1 auto; }
+    .node-wg-actions:not(.node-wg-head-actions) > button { flex: 1 1 auto; }
 }
 </style>
 <script>
@@ -292,7 +365,7 @@ function nodeWGPhaseText(p) {
         direct_a: '正在恢复入口直连…',
         restore_a: '正在恢复入口直连…'
     };
-    if (p.status === 'active') return p.retry_count ? `WG 探活暂未确认，等待重试（连续失败 ${p.retry_count} 次）` : 'WG 专线运行中';
+    if (p.status === 'active') return p.retry_count ? `WG 探活暂未确认，等待重试（连续失败 ${p.retry_count} 次）` : '';
     if (p.status === 'recovering') return '面板重启后正在核验双端连接…';
     if (p.status === 'cleanup_pending') {
         const base = map[p.phase] || '正在清理隧道并恢复直连…';
@@ -359,11 +432,11 @@ function renderNodeWGCard() {
     let setup = document.getElementById('nodeWGSetup');
     if (!setup) {
         setup = document.createElement('div'); setup.id = 'nodeWGSetup'; setup.className = 'node-wg-setup';
-        setup.innerHTML = `<div class="node-wg-setup-head"><strong>WG 中转状态</strong><span id="nodeWGSetupBadge" class="node-wg-badge"></span></div>
+        setup.innerHTML = `<div class="node-wg-setup-head"><strong>WG 状态</strong><span id="nodeWGSetupBadge" class="node-wg-badge"></span></div>
             <p id="nodeWGSetupStatus" role="status" aria-live="polite"></p>
             <div id="nodeWGChecks" class="node-wg-checks" aria-label="WG 就绪检查"></div>
             <div class="node-wg-actions">
-                <button type="button" id="nodeWGRefresh" class="node-editor-button">刷新</button>
+                <button type="button" id="nodeWGRefresh" class="node-editor-button" title="刷新 WG 状态"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"></path><polyline points="21 3 21 9 15 9"></polyline></svg>刷新</button>
             </div>`;
         list.insertAdjacentElement('afterend', setup);
         setup.querySelector('#nodeWGRefresh').onclick = () => loadNodeWGEditor(nodeWGEditor.uuid);
@@ -401,21 +474,23 @@ function renderNodeWGCard() {
     if ((!reality || landing) && !p) return;
 
     const card = document.createElement('div'); card.id = 'nodeWGCard'; card.className = 'node-wg-outbound';
-    card.innerHTML = `<div class="node-wg-setup-head"><strong>${reality && !landing ? '出站设置' : 'WG 配对清理'}</strong><span id="nodeWGPairBadge" class="node-wg-badge"></span></div>
+    card.innerHTML = `<div class="node-wg-setup-head">
+            <div class="node-wg-head-left"><strong>${reality && !landing ? '出站' : 'WG 配对清理'}</strong><span id="nodeWGPairBadge" class="node-wg-badge"></span></div>
+            <div class="node-wg-actions node-wg-head-actions" id="nodeWGCleanupRow"><button type="button" id="nodeWGRetry" class="node-editor-button node-wg-inline-btn">重试原隧道</button><button type="button" id="nodeWGCleanup" class="node-editor-button node-editor-button-danger node-wg-inline-btn" title="停用 WG 并恢复直连">停用 WG</button></div>
+        </div>
         <div id="nodeWGChoices" class="node-wg-fields">
             <div><label for="nodeWGMode">出站方式</label><select id="nodeWGMode"><option value="direct">直连</option><option value="wg">经 WG → SS 出站</option></select></div>
-            <div id="nodeWGPeerField"><label for="nodeWGPeer">SS 落地节点</label><select id="nodeWGPeer"></select></div>
+            <div id="nodeWGPeerField"><label for="nodeWGPeer">落地节点</label><select id="nodeWGPeer"></select></div>
         </div>
         <div id="nodeWGTopology" class="node-wg-route"></div>
         <details id="nodeWGPeerIssues" class="node-wg-peer-issues"><summary id="nodeWGPeerIssuesSummary"></summary><ul></ul></details>
-        <p id="nodeWGStatus" role="status" aria-live="polite"></p>
-        <div class="node-wg-actions" id="nodeWGCleanupRow"><button type="button" id="nodeWGRetry" class="node-editor-button">重试原隧道</button><button type="button" id="nodeWGCleanup" class="node-editor-button node-editor-button-danger">停用 WG 并恢复直连</button></div>`;
+        <p id="nodeWGStatus" role="status" aria-live="polite"></p>`;
     if (reality && !landing) reality.appendChild(card); else list.insertAdjacentElement('afterend', card);
 
     card.querySelector('#nodeWGChoices').hidden = !reality || landing;
     const topology = card.querySelector('#nodeWGTopology');
-    if (p && p.topology_version !== 2) topology.textContent = '旧版配对，请先停用清理';
-    else topology.innerHTML = '<span><b>A</b> REALITY</span><i aria-hidden="true">→</i><span><b>WG</b> 隧道</span><i aria-hidden="true">→</i><span><b>B</b> SS</span>';
+    const isLegacyTopology = !!(p && p.topology_version !== 2);
+    topology.textContent = isLegacyTopology ? '旧版配对，请先停用清理' : '';
 
     const mode = card.querySelector('#nodeWGMode'), select = card.querySelector('#nodeWGPeer');
     const issues = card.querySelector('#nodeWGPeerIssues');
@@ -437,7 +512,7 @@ function renderNodeWGCard() {
         card.querySelector('#nodeWGPeerField').hidden = mode.value !== 'wg';
         card.querySelector('#nodeWGChoices').dataset.mode = mode.value;
         issues.hidden = !nodeWGEditor.loaded || mode.value !== 'wg' || (nodeWGEditor.peers.length > 0 && unavailable.length === 0);
-        topology.hidden = !p && mode.value !== 'wg';
+        topology.hidden = !isLegacyTopology;
     };
     mode.onchange = () => { nodeWGEditor.mode = mode.value; nodeWGEditor.error = ''; nodeWGEditor.errorTone = ''; syncPeerVisibility(); renderNodeWGStatusOnly(); };
 
@@ -490,7 +565,8 @@ function renderNodeWGStatusOnly() {
     if (p) {
         const txt = nodeWGPhaseText(p);
         statusEl.textContent = txt;
-        if (blocked || p.status === 'failed') statusEl.dataset.tone = 'error';
+        if (!txt) delete statusEl.dataset.tone;
+        else if (blocked || p.status === 'failed') statusEl.dataset.tone = 'error';
         else if (p.status === 'cleanup_pending' && (p.retry_count || 0) >= 2) statusEl.dataset.tone = 'warning';
         else if (p.status === 'active') statusEl.dataset.tone = p.retry_count ? 'warning' : 'success';
         else if (p.status !== 'disabled') statusEl.dataset.tone = 'progress';

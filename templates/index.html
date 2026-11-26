@@ -8,7 +8,7 @@
         <link
             rel="icon"
             type="image/svg+xml"
-            href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'><path d='M4.5 17C6.8 6.5 17.2 6.5 19.5 17' stroke='%23007aff' stroke-width='2.4' stroke-linecap='round'/><path d='M8.5 17C10 11.2 14 11.2 15.5 17' stroke='%2338bdf8' stroke-width='2' stroke-linecap='round'/><circle cx='4.5' cy='17' r='2.4' fill='%23007aff'/><circle cx='19.5' cy='17' r='2.4' fill='%23007aff'/></svg>"
+            href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none'><defs><linearGradient id='g' x1='16' y1='1.5' x2='16' y2='30.5' gradientUnits='userSpaceOnUse'><stop offset='0%25' stop-color='%232296ff'/><stop offset='100%25' stop-color='%23007aff'/></linearGradient></defs><rect x='1.5' y='1.5' width='29' height='29' rx='8.5' fill='url(%23g)'/><path d='M6.6 11.4C7.2 18.6 9.2 22.8 11.4 22.8C13.8 22.8 14.1 9.6 16 9.6C17.9 9.6 18.2 22.8 20.6 22.8C22.8 22.8 24.8 18.6 25.4 11.4' stroke='%23ffffff' stroke-width='2.65' stroke-linecap='round' stroke-linejoin='round'/></svg>"
         />
 
         <link rel="preconnect" href="https://flagcdn.com" crossorigin />
@@ -71,9 +71,9 @@
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
-                width: 30px;
-                height: 30px;
-                border-radius: 10px;
+                width: 28px;
+                height: 28px;
+                border-radius: 9px;
                 flex-shrink: 0;
                 transition: transform 0.25s var(--ease-spring);
             }
@@ -124,14 +124,28 @@
             }
 
             .nav-brand:hover {
-                opacity: 0.88;
-                transform: scale(0.99);
+                opacity: 0.92;
             }
 
             .nav-brand svg {
-                width: 26px;
-                height: 26px;
-                filter: drop-shadow(0 2px 6px rgba(0, 113, 227, 0.16));
+                width: 28px;
+                height: 28px;
+                filter: drop-shadow(0 3px 8px rgba(0, 122, 255, 0.24));
+                transition: transform 0.34s var(--ease-spell);
+            }
+
+            .nav-brand:hover svg {
+                transform: scale(1.06);
+            }
+
+            .nav-brand .wa-logo-ribbon {
+                transform-box: fill-box;
+                transform-origin: center;
+                transition: transform 0.36s var(--ease-spell);
+            }
+
+            .nav-brand:hover .wa-logo-ribbon {
+                transform: scale(1.04) translateY(-0.4px);
             }
 
             /* 当前安装版本，仅展示，不执行更新检查。 */
@@ -373,7 +387,7 @@
            ========================================================= */
             .main-content {
                 flex: 1;
-                padding: 28px 36px 40px;
+                padding: 20px 32px 32px;
                 width: 100%;
                 max-width: 1480px;
                 margin: 0 auto;
@@ -383,18 +397,18 @@
             .top-section-grid {
                 display: grid;
                 grid-template-columns: 4fr 6fr;
-                gap: 24px;
-                margin-bottom: 24px;
+                gap: 18px;
+                margin-bottom: 18px;
             }
 
             .sub-card {
                 background: var(--card-bg);
-                border-radius: var(--radius-2xl);
-                padding: 26px 28px;
+                border-radius: 26px;
+                padding: 18px 20px;
                 box-shadow: var(--shadow-card);
                 border: 1px solid rgba(0, 0, 0, 0.04);
                 height: 100%;
-                min-height: 230px;
+                min-height: auto;
                 box-sizing: border-box;
                 display: flex;
                 flex-direction: column;
@@ -410,19 +424,29 @@
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                margin-bottom: 20px;
-                padding-bottom: 16px;
+                gap: 10px;
+                margin-bottom: 14px;
+                padding-bottom: 12px;
                 border-bottom: 1px solid rgba(0, 0, 0, 0.05);
             }
 
+            .card-header-left {
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 8px 10px;
+                min-width: 0;
+            }
+
             .card-title {
-                font-size: 16px;
+                font-size: 15.5px;
                 font-weight: 700;
                 color: var(--text);
                 display: flex;
                 align-items: center;
-                gap: 10px;
+                gap: 9px;
                 letter-spacing: -0.01em;
+                white-space: nowrap;
             }
 
             /* =========================================================
@@ -431,8 +455,8 @@
             .stats-grid {
                 display: grid;
                 grid-template-columns: repeat(4, 1fr);
-                gap: 12px;
-                margin-bottom: 14px;
+                gap: 10px;
+                margin-bottom: 0;
                 text-align: center;
             }
 
@@ -441,11 +465,11 @@
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                height: 104px;
+                height: 92px;
                 box-sizing: border-box;
                 background: #f7f8fa;
-                border-radius: 20px;
-                padding: 14px 8px;
+                border-radius: 18px;
+                padding: 10px 8px;
                 border: 1px solid rgba(0, 0, 0, 0.04);
                 transition: all 0.28s var(--ease-spring);
             }
@@ -457,7 +481,7 @@
             }
 
             .stat-num {
-                font-size: 30px;
+                font-size: 28px;
                 font-weight: 700;
                 line-height: 1.15;
                 letter-spacing: -0.02em;
@@ -469,7 +493,7 @@
                 font-size: 12px;
                 font-weight: 600;
                 color: var(--text-sec);
-                margin-top: 6px;
+                margin-top: 5px;
             }
 
             .text-blue {
@@ -492,9 +516,9 @@
            6. 右侧面板：快捷操作按钮 (Action Buttons)
            ========================================================= */
             .btn-custom-common {
-                height: 36px;
+                height: 34px;
                 font-size: 13px;
-                padding: 0 18px;
+                padding: 0 16px;
                 color: white;
                 border-radius: 999px;
                 border: none;
@@ -508,6 +532,7 @@
                 text-decoration: none;
                 letter-spacing: 0.01em;
                 gap: 6px;
+                flex-shrink: 0;
             }
 
             .btn-custom-common:active {
@@ -552,7 +577,7 @@
             .rule-actions {
                 display: grid;
                 grid-template-columns: repeat(6, minmax(0, 1fr));
-                gap: 12px;
+                gap: 10px;
                 flex: 1;
                 align-items: start;
                 align-content: start;
@@ -563,10 +588,10 @@
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                height: 104px;
+                height: 92px;
                 box-sizing: border-box;
                 border: 1px solid rgba(0, 0, 0, 0.04);
-                border-radius: 20px;
+                border-radius: 18px;
                 background: #f7f8fa;
                 cursor: pointer;
                 transition: all 0.28s var(--ease-spring);
@@ -574,14 +599,14 @@
                 color: #3a3a3c;
                 position: relative;
                 overflow: hidden;
-                padding: 10px 6px;
+                padding: 8px 6px;
             }
 
             .btn-edit-rule:hover {
                 border-color: rgba(0, 122, 255, 0.28);
                 background: #ffffff;
                 color: var(--primary);
-                transform: translateY(-3px);
+                transform: translateY(-2px);
                 box-shadow: 0 10px 24px rgba(0, 122, 255, 0.08);
             }
 
@@ -590,19 +615,19 @@
             }
 
             .rule-icon-box {
-                width: 40px;
-                height: 40px;
-                border-radius: 13px;
+                width: 38px;
+                height: 38px;
+                border-radius: 12px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                margin-bottom: 8px;
+                margin-bottom: 7px;
                 transition: transform 0.28s var(--ease-spring);
             }
 
             .rule-icon-box svg {
-                width: 20px;
-                height: 20px;
+                width: 19px;
+                height: 19px;
             }
 
             .btn-edit-rule:hover .rule-icon-box {
@@ -620,37 +645,42 @@
             /* =========================================================
            7. 内部双栏面板布局 (Node Columns - 节点列表管理区)
            ========================================================= */
+            #node-manager-card {
+                padding: 18px 20px;
+                min-height: auto;
+            }
+
             .node-columns-grid {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
-                gap: 24px;
+                gap: 16px;
                 flex: 1;
             }
 
             .node-column-panel {
                 background: #f7f8fa;
                 border-radius: 22px;
-                padding: 20px;
+                padding: 14px 16px;
                 display: flex;
                 flex-direction: column;
-                min-height: 450px;
+                min-height: 120px;
                 border: 1px solid rgba(0, 0, 0, 0.04);
                 transition: background 0.3s ease, border-color 0.3s ease;
             }
 
             .node-column-panel.theme-green {
-                background: linear-gradient(180deg, rgba(52, 199, 89, 0.035) 0%, #f7f8fa 130px);
+                background: linear-gradient(180deg, rgba(52, 199, 89, 0.035) 0%, #f7f8fa 110px);
                 border: 1px solid rgba(52, 199, 89, 0.2);
             }
 
             .node-column-panel.theme-yellow {
-                background: linear-gradient(180deg, rgba(245, 166, 35, 0.04) 0%, #f7f8fa 130px);
+                background: linear-gradient(180deg, rgba(245, 166, 35, 0.04) 0%, #f7f8fa 110px);
                 border: 1px solid rgba(245, 166, 35, 0.22);
             }
 
             .column-header {
-                margin-bottom: 14px;
-                padding-bottom: 14px;
+                margin-bottom: 10px;
+                padding-bottom: 10px;
             }
 
             .theme-green .column-header {
@@ -665,10 +695,10 @@
                 flex: 1;
                 display: flex;
                 flex-direction: column;
-                gap: 10px;
+                gap: 8px;
                 overflow-y: auto;
-                padding: 4px 2px 6px;
-                max-height: 520px;
+                padding: 2px 0;
+                max-height: 460px;
                 scrollbar-width: none;
                 -ms-overflow-style: none;
             }
@@ -834,7 +864,7 @@
             }
 
             /* =========================================================
-           10. 节点列表项样式 (Node Item)
+           10. 节点列表项样式 (Node Item - 紧凑单行大圆角)
            ========================================================= */
             .node-item {
                 position: relative;
@@ -842,36 +872,55 @@
                 display: flex;
                 flex-direction: column;
                 align-items: stretch;
-                gap: 10px;
                 background: #ffffff;
                 border: 1px solid rgba(0, 0, 0, 0.05);
-                border-radius: 18px;
-                padding: 14px 18px;
+                border-radius: 16px;
+                padding: 9px 12px 9px 14px;
                 box-shadow: var(--shadow-item);
-                transition: all 0.25s var(--ease-spring);
+                transition: all 0.24s var(--ease-spring);
                 flex-shrink: 0;
             }
 
             .node-item:hover {
                 box-shadow: var(--shadow-item-hover);
                 border-color: rgba(0, 122, 255, 0.25);
-                transform: translateY(-2px);
+                transform: translateY(-1px);
+            }
+
+            .node-row-main {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 10px;
+                width: 100%;
+                min-width: 0;
+            }
+
+            .node-row-left {
+                display: flex;
+                align-items: center;
+                flex: 1;
+                min-width: 0;
             }
 
             .node-info {
                 display: flex;
-                flex-direction: column;
-                justify-content: center;
-                gap: 6px;
+                flex-direction: row;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 5px 8px;
+                flex: 1;
+                min-width: 0;
             }
 
             .node-name-wrapper {
-                display: flex;
+                display: inline-flex;
                 align-items: center;
+                flex-shrink: 0;
             }
 
             .node-name {
-                font-size: 14.5px;
+                font-size: 14px;
                 font-weight: 600;
                 color: var(--text);
                 letter-spacing: -0.01em;
@@ -879,16 +928,17 @@
 
             /* 标签栏样式 */
             .node-tags {
-                display: flex;
+                display: inline-flex;
+                align-items: center;
                 flex-wrap: wrap;
-                gap: 6px;
-                margin-top: 1px;
+                gap: 5px;
+                margin-top: 0;
             }
 
             .proto-tag {
                 font-size: 10.5px;
                 font-weight: 700;
-                padding: 2px 9px;
+                padding: 2px 8px;
                 border-radius: 999px;
                 text-transform: uppercase;
                 line-height: 1.4;
@@ -896,12 +946,13 @@
             }
 
             .node-status-dot {
-                width: 8px;
-                height: 8px;
+                width: 7.5px;
+                height: 7.5px;
                 border-radius: 50%;
                 background: #34c759;
                 box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.16);
                 transition: all 0.25s ease;
+                flex-shrink: 0;
             }
 
             .node-item.is-blocked {
@@ -919,9 +970,10 @@
             .drag-handle {
                 cursor: grab;
                 color: #c7c7cc;
-                padding: 4px 10px 4px 0;
+                padding: 4px 8px 4px 0;
                 display: flex;
                 align-items: center;
+                flex-shrink: 0;
                 transition: color 0.2s ease, transform 0.2s ease;
             }
 
@@ -938,30 +990,30 @@
                 opacity: 0.45;
                 background: #f0f7ff;
                 border: 1px dashed #007aff;
-                border-radius: 18px;
+                border-radius: 16px;
             }
 
-            /* 协议统计标签栏样式 */
+            /* 协议统计标签栏样式（内嵌在节点总览标题行，消除右侧卡片底部留白） */
             .proto-stats-bar {
-                display: flex;
+                display: inline-flex;
                 flex-wrap: wrap;
-                justify-content: center;
-                gap: 8px;
-                margin-top: auto;
-                padding-top: 12px;
-                border-top: 1px dashed rgba(0, 0, 0, 0.06);
+                align-items: center;
+                gap: 6px;
+                margin: 0;
+                padding: 0;
+                border-top: none;
             }
 
             .proto-badge {
                 background: #f4f5f8;
                 border-radius: 999px;
-                padding: 4px 6px 4px 12px;
-                font-size: 12px;
+                padding: 3px 4px 3px 9px;
+                font-size: 11px;
                 color: #48484a;
                 font-weight: 600;
-                display: flex;
+                display: inline-flex;
                 align-items: center;
-                border: 1px solid rgba(0, 0, 0, 0.025);
+                border: 1px solid rgba(0, 0, 0, 0.03);
                 transition: all 0.22s var(--ease-spring);
                 cursor: default;
             }
@@ -975,14 +1027,14 @@
                 background-color: #ffffff;
                 color: var(--text);
                 font-weight: 700;
-                font-size: 11px;
-                padding: 1px 7px;
+                font-size: 10.5px;
+                padding: 0 6px;
                 border-radius: 999px;
-                margin-left: 6px;
-                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-                min-width: 20px;
+                margin-left: 5px;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+                min-width: 17px;
                 text-align: center;
-                height: 18px;
+                height: 16px;
                 line-height: 16px;
             }
 
@@ -992,16 +1044,17 @@
             .node-actions-group {
                 display: flex;
                 align-items: center;
-                gap: 6px;
+                flex-shrink: 0;
+                gap: 5px;
             }
 
             .node-action-btn {
-                background: #f5f6f8;
+                background: #f4f5f8;
                 border: none;
                 cursor: pointer;
-                width: 32px;
-                height: 32px;
-                border-radius: 10px;
+                width: 30px;
+                height: 30px;
+                border-radius: 50%;
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -1022,13 +1075,19 @@
             }
 
             @media (max-width: 768px) {
+                .node-info {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 5px;
+                }
+
                 .node-actions-group {
                     gap: 4px;
                 }
 
                 .node-action-btn {
-                    width: 30px;
-                    height: 30px;
+                    width: 28px;
+                    height: 28px;
                 }
             }
         </style>
@@ -1091,21 +1150,22 @@
             <div class="top-navbar-inner">
                 <div style="display: flex; align-items: center">
                     <a href="/" class="nav-brand">
-                        <svg viewBox="0 0 24 24" fill="none">
+                        <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                            <defs>
+                                <linearGradient id="waNavLogoGrad" x1="16" y1="1.5" x2="16" y2="30.5" gradientUnits="userSpaceOnUse">
+                                    <stop offset="0%" stop-color="#2296ff"></stop>
+                                    <stop offset="100%" stop-color="#007aff"></stop>
+                                </linearGradient>
+                            </defs>
+                            <rect x="1.5" y="1.5" width="29" height="29" rx="8.5" fill="url(#waNavLogoGrad)"></rect>
                             <path
-                                d="M4.5 17C6.8 6.5 17.2 6.5 19.5 17"
-                                stroke="#007aff"
-                                stroke-width="2.3"
+                                class="wa-logo-ribbon"
+                                d="M6.6 11.4C7.2 18.6 9.2 22.8 11.4 22.8C13.8 22.8 14.1 9.6 16 9.6C17.9 9.6 18.2 22.8 20.6 22.8C22.8 22.8 24.8 18.6 25.4 11.4"
+                                stroke="#ffffff"
+                                stroke-width="2.65"
                                 stroke-linecap="round"
+                                stroke-linejoin="round"
                             ></path>
-                            <path
-                                d="M8.5 17C10 11.2 14 11.2 15.5 17"
-                                stroke="#38bdf8"
-                                stroke-width="1.9"
-                                stroke-linecap="round"
-                            ></path>
-                            <circle cx="4.5" cy="17" r="2.4" fill="#007aff"></circle>
-                            <circle cx="19.5" cy="17" r="2.4" fill="#007aff"></circle>
                         </svg>
                         WireArc
                     </a>
@@ -1223,16 +1283,28 @@
             <div class="top-section-grid">
                 <div class="sub-card wa-overview-card">
                     <div class="card-header">
-                        <span class="card-title">
-                            <span class="ui-icon-badge blue wa-icon-bars">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-                                    <rect class="wa-bar-1" x="3" y="12" width="4" height="8" rx="1.5"></rect>
-                                    <rect class="wa-bar-2" x="10" y="8" width="4" height="12" rx="1.5"></rect>
-                                    <rect class="wa-bar-3" x="17" y="4" width="4" height="16" rx="1.5"></rect>
-                                </svg>
+                        <div class="card-header-left">
+                            <span class="card-title">
+                                <span class="ui-icon-badge blue wa-icon-bars">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect class="wa-bar-1" x="3" y="12" width="4" height="8" rx="1.5"></rect>
+                                        <rect class="wa-bar-2" x="10" y="8" width="4" height="12" rx="1.5"></rect>
+                                        <rect class="wa-bar-3" x="17" y="4" width="4" height="16" rx="1.5"></rect>
+                                    </svg>
+                                </span>
+                                节点总览
                             </span>
-                            节点总览
-                        </span>
+                            {{if .ProtoStats}}
+                            <div class="proto-stats-bar">
+                                {{range .ProtoStats}}
+                                <div class="proto-badge">
+                                    {{.Name}}
+                                    <span class="proto-count">{{.Count}}</span>
+                                </div>
+                                {{end}}
+                            </div>
+                            {{end}}
+                        </div>
                         <button
                             class="btn-custom-common btn-color-blue wa-btn-plus"
                             onclick="openAddNodeModal()"
@@ -1270,25 +1342,6 @@
                             </div>
                             <div class="stat-label">屏蔽节点</div>
                         </div>
-                    </div>
-
-                    <div class="proto-stats-bar">
-                        {{range .ProtoStats}}
-                        <div class="proto-badge">
-                            {{.Name}}
-                            <span class="proto-count">{{.Count}}</span>
-                        </div>
-                        {{else}}
-                        <div
-                            style="
-                                font-size: 12px;
-                                color: #a1a1a6;
-                                padding-left: 5px;
-                            "
-                        >
-                            暂无协议数据
-                        </div>
-                        {{end}}
                     </div>
                 </div>
                 <div class="sub-card wa-tools-card" id="quickActionsCard">
@@ -1801,7 +1854,7 @@
                 container.innerHTML = "";
 
                 if (!nodes || nodes.length === 0) {
-                    container.innerHTML = `<div style="text-align: center; color: #86868b; font-size: 13px; margin-top: 30px;" class="empty-tip">暂无节点数据</div>`;
+                    container.innerHTML = `<div style="text-align: center; color: #86868b; font-size: 13px; margin: 18px 0;" class="empty-tip">暂无节点数据</div>`;
                     return;
                 }
 
@@ -1887,8 +1940,8 @@
 
                     // 4. 组装 DOM
                     item.innerHTML = `
-                    <div style="display:flex; align-items:center; justify-content: space-between; width: 100%;">
-                        <div style="display:flex; align-items:center;">
+                    <div class="node-row-main">
+                        <div class="node-row-left">
                             ${dragHandleHTML}
                             <div class="node-info">
                                 <div class="node-name-wrapper">
@@ -1904,15 +1957,15 @@
                             <div class="node-status-dot" style="background: ${finalDotColor}; box-shadow: 0 0 0 3px ${finalDotColor}22; margin-right: 4px;"></div>
 
                             <button type="button" onclick="openScriptModal('${safeUUID}')" class="node-action-btn wa-act-download" style="color: #007aff;" title="生成部署脚本">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="overflow:visible"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><g class="wa-dl-arrow"><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></g></svg>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="overflow:visible"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><g class="wa-dl-arrow"><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></g></svg>
                             </button>
 
                             <button type="button" onclick="openEditModal('${safeUUID}')" class="node-action-btn wa-act-edit" style="color: #007aff;" title="编辑节点">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="overflow:visible"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path class="wa-edit-pen" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="overflow:visible"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path class="wa-edit-pen" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                             </button>
 
                             <button type="button" onclick="openDeleteModal('${safeUUID}')" class="node-action-btn wa-act-trash" style="color: #ff3b30;" title="删除节点">
-                                <svg style="pointer-events: none; width: 16px; height: 16px; overflow: visible;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><g class="wa-trash-lid"><polyline points="3 6 5 6 21 6"></polyline><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></g><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                <svg style="pointer-events: none; width: 15px; height: 15px; overflow: visible;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><g class="wa-trash-lid"><polyline points="3 6 5 6 21 6"></polyline><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></g><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                             </button>
                         </div>
                     </div>
@@ -2025,14 +2078,14 @@
             [class$="-modal-card"] select:not(.no-custom-select) {
                 appearance: none;
                 -webkit-appearance: none;
-                border-radius: 12px !important;
+                border-radius: 14px !important;
                 border: 1px solid rgba(0, 0, 0, 0.09);
                 background-color: #f6f7f9;
                 background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236e6e73' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
                 background-repeat: no-repeat;
-                background-position: right 11px center;
+                background-position: right 13px center;
                 background-size: 14px 14px;
-                padding-right: 34px;
+                padding-right: 36px;
                 cursor: pointer;
                 transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
             }
@@ -2054,7 +2107,7 @@
             }
             [class$="-modal-card"] input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="range"]):not(.proto-port-input),
             [class$="-modal-card"] textarea {
-                border-radius: 12px;
+                border-radius: 14px;
                 transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
             }
             [class$="-modal-card"] .traffic-input-group input {
@@ -2230,118 +2283,6 @@
                 transform: translateY(-1.4px) rotate(14deg);
             }
 
-            /* 2) Granola Spell 328：侧边栏状态联动图标 + 真实平滑折叠侧栏 */
-            .wa-sidebar-toggle {
-                width: 32px;
-                height: 32px;
-                border-radius: 50%;
-                border: none;
-                background: transparent;
-                color: #6e6e73;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                cursor: pointer;
-                flex-shrink: 0;
-                padding: 0;
-                transition: background-color 0.2s ease, color 0.2s ease, transform 0.22s var(--ease-spell);
-            }
-            .wa-sidebar-toggle:hover {
-                background: rgba(0, 0, 0, 0.055);
-                color: #1d1d1f;
-            }
-            .wa-sidebar-toggle:active {
-                transform: scale(0.92);
-            }
-            .wa-sidebar-toggle:focus-visible {
-                outline: 2px solid rgba(0, 122, 255, 0.45);
-                outline-offset: 2px;
-            }
-            .wa-sidebar-toggle svg {
-                width: 18px;
-                height: 18px;
-                overflow: visible;
-            }
-            /* 左侧边栏图标几何（弹窗导航栏） */
-            .wa-sidebar-toggle .wa-sb-pane {
-                transform-box: fill-box;
-                transform-origin: left center;
-                opacity: 0.24;
-                transition: transform 0.34s var(--ease-granola), opacity 0.26s ease;
-            }
-            .wa-sidebar-toggle .wa-sb-divider {
-                transition: transform 0.34s var(--ease-granola);
-            }
-            .wa-sidebar-toggle .wa-sb-dot-wrap {
-                transform-box: fill-box;
-                transform-origin: center;
-                transform: scale(0);
-                opacity: 0;
-                transition: transform 0.36s var(--ease-spell), opacity 0.2s ease;
-            }
-            /* 悬停预告微动（未收起时微微向左示意收起；已收起时微微向右示意展开） */
-            .wa-sidebar-toggle:not(.is-collapsed):hover .wa-sb-divider {
-                transform: translateX(-0.9px);
-            }
-            .wa-sidebar-toggle:not(.is-collapsed):hover .wa-sb-pane {
-                transform: scaleX(0.84);
-            }
-            /* 收起状态：内侧栏压缩为极细竖线 + 右上角状态点弹出（Granola 标志性细节） */
-            .wa-sidebar-toggle.is-collapsed .wa-sb-pane {
-                transform: scaleX(0.08);
-                opacity: 0;
-            }
-            .wa-sidebar-toggle.is-collapsed .wa-sb-divider {
-                transform: translateX(-3.1px);
-            }
-            .wa-sidebar-toggle.is-collapsed:hover .wa-sb-divider {
-                transform: translateX(-2px);
-            }
-            .wa-sidebar-toggle.is-collapsed .wa-sb-dot-wrap {
-                transform: scale(1);
-                opacity: 1;
-            }
-
-            /* 右侧边栏变体（首页流量统计节点排行栏） */
-            .wa-sidebar-toggle.wa-sb-right .wa-sb-pane {
-                transform-origin: right center;
-            }
-            .wa-sidebar-toggle.wa-sb-right:not(.is-collapsed):hover .wa-sb-divider {
-                transform: translateX(0.9px);
-            }
-            .wa-sidebar-toggle.wa-sb-right.is-collapsed .wa-sb-divider {
-                transform: translateX(3.1px);
-            }
-            .wa-sidebar-toggle.wa-sb-right.is-collapsed:hover .wa-sb-divider {
-                transform: translateX(2px);
-            }
-
-            /* 弹窗侧边栏真实平滑折叠（sys / cft / gs / air 四大分栏弹窗共用） */
-            .sys-left-col,
-            .cft-left-col,
-            .gs-left-col,
-            .air-sidebar {
-                transition: width 0.34s var(--ease-granola), padding 0.34s var(--ease-granola), opacity 0.24s ease, border-color 0.28s ease !important;
-            }
-            .sys-modal-card.wa-sidebar-collapsed .sys-left-col,
-            .cft-modal-card.wa-sidebar-collapsed .cft-left-col,
-            .gs-modal-card.wa-sidebar-collapsed .gs-left-col,
-            .air-modal-card.wa-sidebar-collapsed .air-sidebar {
-                width: 0 !important;
-                min-width: 0 !important;
-                padding-left: 0 !important;
-                padding-right: 0 !important;
-                border-right-color: transparent !important;
-                opacity: 0 !important;
-                overflow: hidden !important;
-                pointer-events: none !important;
-            }
-            @media (max-width: 768px) {
-                .wa-sidebar-toggle {
-                    display: none !important;
-                }
-            }
-
             /* 无障碍：尊重系统“减弱动态效果”设置 */
             @media (prefers-reduced-motion: reduce) {
                 .wa-tools-box *,
@@ -2353,15 +2294,7 @@
                 .wa-btn-link *,
                 .wa-act-download *,
                 .wa-act-edit *,
-                .wa-act-trash *,
-                .wa-sidebar-toggle,
-                .wa-sidebar-toggle *,
-                .sys-left-col,
-                .cft-left-col,
-                .gs-left-col,
-                .air-sidebar,
-                .ts-layout,
-                .ts-right {
+                .wa-act-trash * {
                     transition: none !important;
                     animation: none !important;
                 }
@@ -2369,36 +2302,6 @@
         </style>
         <script id="wirearc-micro-interactions">
             (function () {
-                // Granola 风格分栏弹窗侧边栏折叠控制
-                window.toggleModalSidebar = function (cardId, btn) {
-                    const card = document.getElementById(cardId);
-                    if (!card) return;
-                    const willCollapse = !card.classList.contains("wa-sidebar-collapsed");
-                    // 若当前尚未选中任何分类导致右侧为空，先选中第一项再折叠，避免出现空白内容区
-                    if (willCollapse && cardId !== "airModalCard" && !card.classList.contains("has-content")) {
-                        const firstNav = card.querySelector(".sys-nav-card, .cft-nav-card, .proto-nav-card[data-proto-id]");
-                        if (firstNav) firstNav.click();
-                    }
-                    const collapsed = card.classList.toggle("wa-sidebar-collapsed");
-                    if (btn) {
-                        btn.classList.toggle("is-collapsed", collapsed);
-                        btn.setAttribute("aria-pressed", collapsed ? "true" : "false");
-                        btn.title = collapsed ? "展开侧边栏" : "收起侧边栏";
-                    }
-                };
-
-                // Granola 风格首页流量统计右侧排行栏折叠控制
-                window.toggleTrafficSidebar = function (btn) {
-                    const card = document.getElementById("traffic-stats-card");
-                    if (!card) return;
-                    const collapsed = card.classList.toggle("ts-sidebar-collapsed");
-                    if (btn) {
-                        btn.classList.toggle("is-collapsed", collapsed);
-                        btn.setAttribute("aria-pressed", collapsed ? "true" : "false");
-                        btn.title = collapsed ? "展开节点排行栏" : "收起节点排行栏";
-                    }
-                };
-
                 // 同步弹窗打开状态与首页触发图标（如 ChatGPT Tools / Mail 打开保持展开姿态）
                 const quickModalIds = [
                     "customRulesModal",

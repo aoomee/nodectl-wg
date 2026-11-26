@@ -123,7 +123,7 @@
     .cn-node-card {
         background: #ffffff;
         border: 1px solid rgba(0, 0, 0, 0.065);
-        border-radius: 14px;
+        border-radius: 16px;
         overflow: hidden;
         transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.015);
@@ -240,14 +240,16 @@
     .cn-item-del {
         color: #ff3b30;
         cursor: pointer;
-        padding: 6px;
-        opacity: 0.65;
+        width: 30px;
+        height: 30px;
+        padding: 0;
+        opacity: 0.7;
         transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
         display: flex;
         align-items: center;
-        flex: 0 0 32px;
+        flex: 0 0 30px;
         justify-content: center;
-        border-radius: 8px;
+        border-radius: 50%;
     }
 
     .cn-node-card:hover .cn-item-del {
@@ -314,9 +316,9 @@
         display: flex;
         gap: 10px;
         align-items: center;
-        background: #f2f8ff;
-        padding: 10px 12px;
-        border-radius: 14px;
+        background: #f0f7ff;
+        padding: 8px 10px;
+        border-radius: 16px;
         border: 1px dashed rgba(0, 122, 255, 0.35);
         flex-shrink: 0;
     }
@@ -327,7 +329,7 @@
         font-size: 12.5px;
         padding: 9px 12px;
         border: 1px solid rgba(0, 122, 255, 0.2);
-        border-radius: 10px;
+        border-radius: 12px !important;
         background: #ffffff;
         outline: none;
         font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, monospace;

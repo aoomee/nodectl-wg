@@ -434,7 +434,7 @@ func Start(tmplFS embed.FS) {
 		listenAddr := fmt.Sprintf(":%d", webPort)
 		activeServer := &http.Server{
 			Addr:     listenAddr,
-			Handler:  mux,
+			Handler:  middleware.Gzip(mux),
 			ErrorLog: log.New(&serverLogWriter{}, "", 0),
 		}
 

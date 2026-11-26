@@ -28,6 +28,8 @@ import (
 var ErrWGConflict = errors.New("pair revision or node reservation conflict")
 var ErrWGUnavailable = errors.New("WireGuard dependencies unavailable")
 
+var errWGTransient = fmt.Errorf("%w: temporary loss of WG health confirmation", ErrWGUnavailable)
+
 // This lock covers local snapshots/commits and parent node mutations only.
 // Never hold it while waiting for an Agent. Callers must not nest locks.
 var wgNodeMu sync.Mutex
@@ -48,11 +50,12 @@ func WGNodeMutationAllowed(id string) error {
 }
 
 type WGPairPush struct {
-	UUID      string `json:"uuid"`
-	PeerUUID  string `json:"peer_uuid"`
-	EntryPort int    `json:"entry_port"`
-	Revision  uint64 `json:"revision"`
-	Enabled   bool   `json:"enabled"`
+	RetryBlocked bool   `json:"retry_blocked,omitempty"`
+	UUID         string `json:"uuid"`
+	PeerUUID     string `json:"peer_uuid"`
+	EntryPort    int    `json:"entry_port"`
+	Revision     uint64 `json:"revision"`
+	Enabled      bool   `json:"enabled"`
 }
 type WGPairDTO struct {
 	TopologyVersion int    `json:"topology_version"`
@@ -311,11 +314,15 @@ func (c *wgPairCoordinator) valid(p database.WGPair) bool {
 	return c.validState(p, true)
 }
 func (c *wgPairCoordinator) validState(p database.WGPair, online bool) bool {
+	return c.validStateWithDB(c.database(), p, online)
+}
+
+func (c *wgPairCoordinator) validStateWithDB(db *gorm.DB, p database.WGPair, online bool) bool {
 	var owners int64
-	if c.database().Model(&database.WGPairNode{}).Where("pair_id = ? AND node_uuid IN ?", p.ID, []string{p.EntryUUID, p.PeerUUID}).Count(&owners).Error != nil || owners != 2 {
+	if db.Model(&database.WGPairNode{}).Where("pair_id = ? AND node_uuid IN ?", p.ID, []string{p.EntryUUID, p.PeerUUID}).Count(&owners).Error != nil || owners != 2 {
 		return false
 	}
-	a, b, ah, bh, link, port, e := c.dependencyState(c.database(), p.EntryUUID, p.PeerUUID, online)
+	a, b, ah, bh, link, port, e := c.dependencyState(db, p.EntryUUID, p.PeerUUID, online)
 	source, entryPort, sourceErr := wgReality(a)
 	return p.TopologyVersion == 2 && sourceErr == nil && entryPort == p.EntryPort && wgHash(source) == p.LinkHash && e == nil && a.InstallID == p.EntryInstallID && b.InstallID == p.PeerInstallID && a.IPV4 == p.EntryIP && b.IPV4 == p.PeerIP && ah == p.EntryIdentityHash && bh == p.PeerIdentityHash && wgHash(link) == p.TargetLinkHash && port == p.TargetPort
 }
@@ -336,6 +343,9 @@ func (c *wgPairCoordinator) save(ctx context.Context, r WGPairPush) (WGPairDTO, 
 		if e != nil && !errors.Is(e, gorm.ErrRecordNotFound) {
 			return e
 		}
+		if r.RetryBlocked && (!exists || !r.Enabled || p.TopologyVersion != 2 || r.PeerUUID != p.PeerUUID || r.EntryPort != p.EntryPort) {
+			return ErrWGConflict
+		}
 		if exists {
 			if r.Revision == p.DesiredRevision && r.Enabled == p.Enabled && (r.Enabled || p.TopologyVersion != 2 || p.RestoreDirect) && (!r.Enabled || p.TopologyVersion == 2 && r.PeerUUID == p.PeerUUID && (r.EntryPort == 0 || r.EntryPort == p.EntryPort)) {
 				return nil
@@ -343,7 +353,14 @@ func (c *wgPairCoordinator) save(ctx context.Context, r WGPairPush) (WGPairDTO, 
 			if r.Revision != p.DesiredRevision+1 {
 				return ErrWGConflict
 			}
-			if r.Enabled && (p.Status != "disabled" || !p.RestoreDirect) {
+			if r.RetryBlocked {
+				if p.Status != "disabled" || p.Phase != "blocked" || p.Enabled || p.RestoreDirect {
+					return ErrWGConflict
+				}
+				if !c.validStateWithDB(tx, p, false) {
+					return ErrWGConflict
+				}
+			} else if r.Enabled && (p.Status != "disabled" || !p.RestoreDirect) {
 				return errors.New("disable pair and finish cleanup before editing")
 			}
 			if !r.Enabled {
@@ -422,11 +439,11 @@ func (c *wgPairCoordinator) save(ctx context.Context, r WGPairPush) (WGPairDTO, 
 		p.RealityDigest = ""
 		p.SSDigest = ""
 		p.PeerPublicKey = ""
-		if e = tx.Create(&database.WGPairNode{NodeUUID: a.UUID, PairID: p.ID}).Error; e != nil {
-			return ErrWGConflict
-		}
-		if e = tx.Create(&database.WGPairNode{NodeUUID: b.UUID, PairID: p.ID}).Error; e != nil {
-			return ErrWGConflict
+		if !r.RetryBlocked {
+			owners := []database.WGPairNode{{NodeUUID: a.UUID, PairID: p.ID}, {NodeUUID: b.UUID, PairID: p.ID}}
+			if err := tx.Create(&owners).Error; err != nil {
+				return ErrWGConflict
+			}
 		}
 		changed = true
 		return tx.Save(&p).Error
@@ -548,12 +565,18 @@ func (c *wgPairCoordinator) request(ctx context.Context, p database.WGPair, entr
 	if entry {
 		id = p.EntryInstallID
 	}
-	ready := c.ready
-	if p.TopologyVersion != 2 && c.legacyReady != nil {
-		ready = c.legacyReady
-	}
-	if ready == nil || !ready(id) {
-		return nil, ErrWGUnavailable
+	if p.TopologyVersion == 2 {
+		if err := c.sessionHealth(id); err != nil {
+			return nil, err
+		}
+	} else {
+		ready := c.legacyReady
+		if ready == nil {
+			ready = c.ready
+		}
+		if ready == nil || !ready(id) {
+			return nil, ErrWGUnavailable
+		}
 	}
 	timeout := c.timeout
 	if timeout <= 0 {
@@ -563,7 +586,7 @@ func (c *wgPairCoordinator) request(ctx context.Context, p database.WGPair, entr
 	defer cancel()
 	raw, err := c.send(cmdCtx, id, action, payload)
 	if err != nil {
-		return nil, ErrWGUnavailable
+		return nil, err
 	}
 	if err := cmdCtx.Err(); err != nil {
 		return nil, err
@@ -573,7 +596,10 @@ func (c *wgPairCoordinator) request(ctx context.Context, p database.WGPair, entr
 func (c *wgPairCoordinator) canonicalSS(ctx context.Context, p database.WGPair) (wgCanonicalSS, error) {
 	var secret wgCanonicalSS
 	raw, err := c.request(ctx, p, false, "wg-v2-ss", wgrelay.Payload{PairID: p.ID, Revision: p.DesiredRevision})
-	if err != nil || json.Unmarshal(raw, &secret) != nil || secret.Method == "" || secret.Password == "" || secret.Port != p.TargetPort || secret.Digest == "" {
+	if err != nil {
+		return wgCanonicalSS{}, err
+	}
+	if json.Unmarshal(raw, &secret) != nil || secret.Method == "" || secret.Password == "" || secret.Port != p.TargetPort || secret.Digest == "" {
 		return wgCanonicalSS{}, ErrWGUnavailable
 	}
 	return secret, nil
@@ -657,10 +683,13 @@ func (c *wgPairCoordinator) command(ctx context.Context, p database.WGPair, entr
 }
 
 const (
-	wgStepTimeout    = 20 * time.Second
-	wgRecoveryWindow = 30 * time.Second
-	wgHealthInterval = 10 * time.Second
-	wgWorkerCount    = 8
+	wgStepTimeout           = 20 * time.Second
+	wgRecoveryWindow        = 30 * time.Second
+	wgHealthInterval        = 15 * time.Second
+	wgHealthRetryDelay      = 3 * time.Second
+	wgSubscriptionFreshness = 60 * time.Second
+	wgActiveFailureLimit    = 3
+	wgWorkerCount           = 8
 )
 
 // failWG changes only a work snapshot; persistence requires the revision fence.
@@ -726,10 +755,54 @@ func (c *wgPairCoordinator) advanceCleanup(ctx context.Context, p *database.WGPa
 	p.RealityLink = ""
 	if p.TopologyVersion == 2 && !p.RestoreDirect {
 		p.Phase = "blocked"
-		p.Error = "REALITY remains blocked; explicitly disable to restore direct routing"
+		p.Error = "REALITY 已阻断，可重试原隧道或手动恢复直连"
 	} else {
 		p.Error = ""
 	}
+}
+
+// Distinguish a missing connection from a present but unauthorized agent.
+func (c *wgPairCoordinator) sessionHealth(id string) error {
+	if c.agentStatus != nil {
+		switch c.agentStatus(id) {
+		case "ready":
+			return nil
+		case "offline":
+			return errWGTransient
+		default:
+			return ErrWGUnavailable
+		}
+	}
+	if c.ready != nil && c.ready(id) {
+		return nil
+	}
+	return errWGTransient
+}
+
+func (c *wgPairCoordinator) activeDependencies(p database.WGPair) error {
+	if !c.validState(p, false) {
+		return ErrWGUnavailable
+	}
+	var offline error
+	for _, id := range []string{p.EntryInstallID, p.PeerInstallID} {
+		if err := c.sessionHealth(id); err != nil {
+			if err != errWGTransient {
+				return err
+			}
+			offline = err
+		}
+	}
+	return offline
+}
+
+func (c *wgPairCoordinator) healthFailure(p *database.WGPair, err error) {
+	if p.Status == "active" && (errors.Is(err, errWGTransient) || errors.Is(err, context.DeadlineExceeded)) && p.RetryCount+1 < wgActiveFailureLimit {
+		p.RetryCount++
+		p.NextRetryAt = c.now().Add(wgHealthRetryDelay)
+		p.Error = "WG 探活暂未确认，稍后重试"
+		return
+	}
+	failWG(p)
 }
 
 // checkActive verifies the landing first and renews A only after its dependencies
@@ -739,11 +812,17 @@ func (c *wgPairCoordinator) checkActive(ctx context.Context, p database.WGPair) 
 		return ErrWGUnavailable
 	}
 	secret, err := c.canonicalSS(ctx, p)
-	if err != nil || p.SSDigest == "" || secret.Digest != p.SSDigest {
+	if err != nil {
+		return err
+	}
+	if p.SSDigest == "" || secret.Digest != p.SSDigest {
 		return ErrWGUnavailable
 	}
 	landing, err := c.command(ctx, p, false, "wg-verify")
-	if err != nil || p.PeerPublicKey == "" || landing.PublicKey != p.PeerPublicKey {
+	if err != nil {
+		return err
+	}
+	if p.PeerPublicKey == "" || landing.PublicKey != p.PeerPublicKey {
 		return ErrWGUnavailable
 	}
 	_, err = c.command(ctx, p, true, "wg-v2-status")
@@ -757,9 +836,10 @@ func (c *wgPairCoordinator) advance(ctx context.Context, p *database.WGPair) {
 	}
 	if p.Status == "active" || p.Status == "recovering" {
 		if err := c.checkActive(ctx, *p); err != nil {
-			failWG(p)
+			c.healthFailure(p, err)
 			return
 		}
+		p.RetryCount = 0
 		p.Status, p.Phase, p.Error = "active", "active", ""
 		p.HealthCheckedAt = c.now()
 		p.RecoveryDeadline = time.Time{}
@@ -858,7 +938,15 @@ func (c *wgPairCoordinator) step(parent context.Context, id string) error {
 	generation := c.generation
 	next := before
 	skipRemote := false
-	if next.Status != "cleanup_pending" {
+	if next.Status == "active" {
+		if !next.Enabled || next.RestoreDirect {
+			failWG(&next)
+			skipRemote = true
+		} else if err := c.activeDependencies(next); err != nil {
+			c.healthFailure(&next, err)
+			skipRemote = true
+		}
+	} else if next.Status != "cleanup_pending" {
 		if next.TopologyVersion != 2 || !next.Enabled || next.RestoreDirect || !c.validState(next, false) {
 			failWG(&next)
 			skipRemote = true
@@ -896,10 +984,18 @@ func (c *wgPairCoordinator) step(parent context.Context, id string) error {
 		return ErrWGConflict
 	}
 	// Revocation or protocol drift during the remote command invalidates success.
-	if next.Status == "active" || next.Status == "pending" {
-		if ctx.Err() != nil || !c.valid(next) {
-			failWG(&next)
+	if before.Status == "active" && next.Status == "active" {
+		err := c.activeDependencies(next)
+		if err == nil {
+			err = ctx.Err()
 		}
+		if err != nil {
+			// Charge at most one failure and never publish the discarded success.
+			next = before
+			c.healthFailure(&next, err)
+		}
+	} else if (next.Status == "active" || next.Status == "pending") && (ctx.Err() != nil || !c.valid(next)) {
+		failWG(&next)
 	}
 	if before.Status == "recovering" && next.Status == "active" && !c.now().Before(before.RecoveryDeadline) {
 		failWG(&next)
@@ -922,12 +1018,12 @@ func (c *wgPairCoordinator) step(parent context.Context, id string) error {
 		delete(c.confirmed, id)
 		return err
 	}
-	if next.Status == "active" {
+	if next.Status == "active" && next.RetryCount == 0 {
 		if c.confirmed == nil {
 			c.confirmed = make(map[string]uint64)
 		}
 		c.confirmed[id] = next.DesiredRevision
-	} else {
+	} else if next.Status != "active" {
 		delete(c.confirmed, id)
 	}
 	return nil
@@ -1049,7 +1145,7 @@ func (c *wgPairCoordinator) subscriptionLinks(routingType int) []string {
 	sort.Slice(pairs, func(i, j int) bool { return pairs[i].ID < pairs[j].ID })
 	var links []string
 	for _, p := range pairs {
-		if c.confirmed[p.ID] != p.DesiredRevision || p.AppliedRevision != p.DesiredRevision || c.now().Sub(p.HealthCheckedAt) > 30*time.Second || !c.valid(p) {
+		if c.confirmed[p.ID] != p.DesiredRevision || p.AppliedRevision != p.DesiredRevision || c.now().Sub(p.HealthCheckedAt) > wgSubscriptionFreshness || !c.valid(p) {
 			continue
 		}
 		// Publish the original A REALITY link, never B credentials or a new listener.

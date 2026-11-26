@@ -244,7 +244,10 @@ func Auth(next http.HandlerFunc) http.HandlerFunc {
 		cookie, err := r.Cookie("nodectl_token")
 		if err != nil {
 			// 没有带 Cookie，说明未登录，重定向到登录页。
-			if reqPath == "/" || reqPath == "/index.html" || strings.HasPrefix(reqPath, "/api/") {
+			home := reqPath == "/" || reqPath == "/index.html"
+			if home && (r.Method == http.MethodGet || r.Method == http.MethodHead) {
+				logger.Log.Debug("未登录访问首页，跳转登录页", "path", reqPath, "method", r.Method, "ip", clientIP)
+			} else if home || strings.HasPrefix(reqPath, "/api/") {
 				logger.Log.Warn("未授权访问拦截",
 					"reason", "请求缺少 nodectl_token Cookie",
 					"ip", clientIP,

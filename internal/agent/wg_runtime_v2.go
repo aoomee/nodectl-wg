@@ -39,7 +39,11 @@ func decodeWGV2(raw json.RawMessage) (wgV2Request, error) {
 	}
 	return p, nil
 }
+
+const wgRouteLeaseDuration = 90 * time.Second
+
 func (rt *Runtime) stopWGRouteLease() {
+	rt.wgLeaseDeadline = time.Time{}
 	rt.wgLeaseGeneration++
 	if rt.wgRouteLease != nil {
 		rt.wgRouteLease.Stop()
@@ -49,7 +53,8 @@ func (rt *Runtime) stopWGRouteLease() {
 func (rt *Runtime) renewWGRouteLease() {
 	rt.stopWGRouteLease()
 	generation := rt.wgLeaseGeneration
-	rt.wgRouteLease = time.AfterFunc(90*time.Second, func() {
+	rt.wgLeaseDeadline = time.Now().Add(wgRouteLeaseDuration)
+	rt.wgRouteLease = time.AfterFunc(wgRouteLeaseDuration, func() {
 		rt.commandMu.Lock()
 		defer rt.commandMu.Unlock()
 		if generation != rt.wgLeaseGeneration {
@@ -138,15 +143,26 @@ func (rt *Runtime) executeWGV2(ctx context.Context, cmd ServerCommand) (json.Raw
 		if route == nil || route.PairID != p.PairID || route.Revision != p.Revision {
 			return nil, errors.New("missing matching REALITY guard")
 		}
-		if cmd.Action == "wg-v2-status" && (route.Mode != "active" || !cm.WGRouteAuthorized(p.PairID, p.Revision) || !rt.singboxMgr.Status().Running) {
-			return nil, errors.New("WG REALITY route inactive")
+		if cmd.Action == "wg-v2-status" {
+			if route.Mode != "active" {
+				return nil, errors.New("WG REALITY route inactive")
+			}
+			if !time.Now().Before(rt.wgLeaseDeadline) || !cm.WGRouteAuthorized(p.PairID, p.Revision) || !rt.singboxMgr.Status().Running || route.SourceDigest != cm.RealityConfigDigest() {
+				rt.stopWGRouteLease()
+				_ = rt.singboxMgr.FenceWGRoute(ctx)
+				return nil, errors.New("WG route lease or dependency invalid")
+			}
 		}
 		if p.ExpectedRealityDigest != "" && cm.RealityConfigDigest() != p.ExpectedRealityDigest {
 			return nil, errors.New("REALITY configuration changed")
 		}
 		if _, err = rt.wgManager.Execute(ctx, "wg-verify", raw); err != nil {
-			rt.stopWGRouteLease()
-			_ = rt.singboxMgr.FenceWGRoute(ctx)
+			// Periodic status probes may fail transiently; keep the current lease
+			// (which expires on its own) and let the panel decide after retries.
+			if cmd.Action == "wg-v2-route" || !errors.Is(err, wgrelay.ErrProbeTimeout) {
+				rt.stopWGRouteLease()
+				_ = rt.singboxMgr.FenceWGRoute(ctx)
+			}
 			return nil, err
 		}
 		device, server, port, e := rt.wgManager.RouteTarget(p.PairID, p.Revision)
@@ -161,7 +177,7 @@ func (rt *Runtime) executeWGV2(ctx context.Context, cmd ServerCommand) (json.Raw
 			if err = rt.singboxMgr.ApplyWGRoute(ctx, next); err != nil {
 				return nil, err
 			}
-		} else if route.Interface != device || route.Server != server || route.Port != port || route.SourceDigest != cm.RealityConfigDigest() {
+		} else if !time.Now().Before(rt.wgLeaseDeadline) || route.Interface != device || route.Server != server || route.Port != port || route.SourceDigest != cm.RealityConfigDigest() {
 			rt.stopWGRouteLease()
 			_ = rt.singboxMgr.FenceWGRoute(ctx)
 			return nil, errors.New("active route dependency changed")

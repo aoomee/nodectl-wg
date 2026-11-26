@@ -202,8 +202,15 @@ func TestWGHealthProofRemainsAvailableWhileCheckIsPending(t *testing.T) {
 	}
 	wgSteps(t, c, p.ID, 1)
 	// The old proof still expires even if the next remote operation has not finished.
-	now := wgStored(t, c, p.ID).HealthCheckedAt.Add(31 * time.Second)
+	confirmed := wgStored(t, c, p.ID).HealthCheckedAt
+	now := confirmed.Add(31 * time.Second)
 	c.now = func() time.Time { return now }
+	f.fail, f.failErr = "aaaaaaaaaaaa:wg-v2-status", errWGTransient
+	wgSteps(t, c, p.ID, 1)
+	if len(c.subscriptionLinks(0)) != 1 || !wgStored(t, c, p.ID).HealthCheckedAt.Equal(confirmed) {
+		t.Fatal("temporary probe failure lost or renewed the last confirmation")
+	}
+	now = confirmed.Add(wgSubscriptionFreshness + time.Nanosecond)
 	if len(c.subscriptionLinks(0)) != 0 {
 		t.Fatal("stale health proof published")
 	}

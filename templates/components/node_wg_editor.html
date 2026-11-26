@@ -292,7 +292,7 @@ function nodeWGPhaseText(p) {
         direct_a: '正在恢复入口直连…',
         restore_a: '正在恢复入口直连…'
     };
-    if (p.status === 'active') return 'WG 专线运行中';
+    if (p.status === 'active') return p.retry_count ? `WG 探活暂未确认，等待重试（连续失败 ${p.retry_count} 次）` : 'WG 专线运行中';
     if (p.status === 'recovering') return '面板重启后正在核验双端连接…';
     if (p.status === 'cleanup_pending') {
         const base = map[p.phase] || '正在清理隧道并恢复直连…';
@@ -300,7 +300,7 @@ function nodeWGPhaseText(p) {
         return base;
     }
     if (p.status === 'pending' || p.status === 'applying') return map[p.phase] || '正在部署 WG 隧道…';
-    if (p.status === 'disabled' && p.topology_version === 2 && !p.restore_direct) return 'REALITY 已阻断，需点击下方按钮恢复直连';
+    if (p.status === 'disabled' && p.topology_version === 2 && !p.restore_direct) return 'REALITY 已阻断，可重试原隧道或恢复直连';
     if (p.status === 'failed') return p.error ? ('部署失败：' + p.error) : '部署失败，请停用清理后重试';
     return '';
 }
@@ -344,11 +344,11 @@ async function loadNodeWGEditor(uuid) {
 function scheduleNodeWGPoll() {
     clearTimeout(nodeWGEditor.timer);
     const p = nodeWGEditor.pair;
-    if (!p || ['active','disabled','failed'].includes(p.status)) return;
+    if (!p || ['disabled','failed'].includes(p.status)) return;
     const uuid = nodeWGEditor.uuid, generation = nodeWGEditor.generation;
     nodeWGEditor.timer = setTimeout(() => {
         if (generation === nodeWGEditor.generation) loadNodeWGEditor(uuid);
-    }, 1500);
+    }, p.status === 'active' && !p.retry_count ? 10000 : 1500);
 }
 function renderNodeWGCard() {
     if (!nodeWGEditor.uuid) return;
@@ -409,7 +409,7 @@ function renderNodeWGCard() {
         <div id="nodeWGTopology" class="node-wg-route"></div>
         <details id="nodeWGPeerIssues" class="node-wg-peer-issues"><summary id="nodeWGPeerIssuesSummary"></summary><ul></ul></details>
         <p id="nodeWGStatus" role="status" aria-live="polite"></p>
-        <div class="node-wg-actions" id="nodeWGCleanupRow"><button type="button" id="nodeWGCleanup" class="node-editor-button node-editor-button-danger">停用 WG 并恢复直连</button></div>`;
+        <div class="node-wg-actions" id="nodeWGCleanupRow"><button type="button" id="nodeWGRetry" class="node-editor-button">重试原隧道</button><button type="button" id="nodeWGCleanup" class="node-editor-button node-editor-button-danger">停用 WG 并恢复直连</button></div>`;
     if (reality && !landing) reality.appendChild(card); else list.insertAdjacentElement('afterend', card);
 
     card.querySelector('#nodeWGChoices').hidden = !reality || landing;
@@ -470,6 +470,10 @@ function renderNodeWGCard() {
     cleanup.disabled = nodeWGEditor.busy;
     card.querySelector('#nodeWGCleanupRow').hidden = cleanup.hidden;
     cleanup.onclick = () => pushNodeWGConfig(true);
+    const retry = card.querySelector('#nodeWGRetry');
+    retry.hidden = !(blocked && p.status === 'disabled' && p.phase === 'blocked');
+    retry.disabled = nodeWGEditor.busy;
+    retry.onclick = () => pushNodeWGConfig(false, true);
     if (focusedControl) card.querySelector('#'+focusedControl)?.focus({preventScroll:true});
 }
 function renderNodeWGStatusOnly() {
@@ -488,7 +492,7 @@ function renderNodeWGStatusOnly() {
         statusEl.textContent = txt;
         if (blocked || p.status === 'failed') statusEl.dataset.tone = 'error';
         else if (p.status === 'cleanup_pending' && (p.retry_count || 0) >= 2) statusEl.dataset.tone = 'warning';
-        else if (p.status === 'active') statusEl.dataset.tone = 'success';
+        else if (p.status === 'active') statusEl.dataset.tone = p.retry_count ? 'warning' : 'success';
         else if (p.status !== 'disabled') statusEl.dataset.tone = 'progress';
         else delete statusEl.dataset.tone;
         return;
@@ -530,11 +534,12 @@ async function handleNodeWGPush() {
     await pushNodeWGConfig(false);
     return true;
 }
-async function pushNodeWGConfig(disable = false) {
+async function pushNodeWGConfig(disable = false, retryBlocked = false) {
     if (nodeWGEditor.busy) return;
     if (disable && !confirm('确定停用 WG 专线并恢复入口直连？')) return;
     const uuid = nodeWGEditor.uuid, generation = nodeWGEditor.generation;
     const draftMode = nodeWGEditor.mode, draftPeer = nodeWGEditor.peer;
+    const retryRevision = retryBlocked ? nodeWGEditor.pair?.revision : null;
     const button = document.getElementById('btnPushConfig');
     const textEl = document.getElementById('btnPushConfigText');
     nodeWGEditor.busy = true;
@@ -555,14 +560,18 @@ async function pushNodeWGConfig(disable = false) {
         let peer_uuid = p?.peer_uuid, entry_port = p?.entry_port;
         if (!disable) {
             if (nodeWGEditor.mode !== draftMode || nodeWGEditor.peer !== draftPeer || nodeWGOrdinaryChanged()) throw new Error('配置已变化，请重新推送');
-            if (nodeWGBlocksOrdinary()) throw new Error('已有配对未清理，请先停用清理');
+            if (retryBlocked) {
+                if (p?.status !== 'disabled' || p.phase !== 'blocked' || p.enabled || p.restore_direct || p.revision !== retryRevision || draftMode !== 'wg' || p.peer_uuid !== draftPeer) throw new Error('原配对状态已变化，请刷新重试');
+            } else if (nodeWGBlocksOrdinary()) throw new Error('已有配对未清理，请先停用清理');
             if (!nodeWGEditor.ready || !nodeWGEditor.peers.some(peer => peer.uuid === draftPeer && peer.ready)) throw new Error('入口或落地节点未就绪，请确认两端协议与 Agent 在线');
             peer_uuid = draftPeer;
             entry_port = nodeWGRealityPort();
         } else if (!p) {
             throw new Error('没有需要清理的配对');
         }
-        const data = await nodeWGRequest('/api/node/wg/push',{uuid,peer_uuid,entry_port,revision:(p?.revision || 0)+1,enabled:!disable});
+        const request = {uuid,peer_uuid,entry_port,revision:(p?.revision || 0)+1,enabled:!disable};
+        if (retryBlocked) request.retry_blocked = true;
+        const data = await nodeWGRequest('/api/node/wg/push', request);
         if (generation !== nodeWGEditor.generation) return;
         ++nodeWGEditor.request;
         nodeWGEditor.pair = data.pair;
@@ -579,7 +588,7 @@ async function pushNodeWGConfig(disable = false) {
             nodeWGEditor.busy = false;
             if (button) button.disabled = false;
             if (textEl) textEl.textContent = '推送配置';
-            const cleanup = document.getElementById('nodeWGCleanup'); if (cleanup) cleanup.disabled = false;
+            for (const id of ['nodeWGCleanup', 'nodeWGRetry']) { const el = document.getElementById(id); if (el) el.disabled = false; }
         }
     }
 }

@@ -15,7 +15,11 @@ import (
 	"regexp"
 )
 
+// ProbeTimeoutCode is the only remote failure eligible for active health retries.
+const ProbeTimeoutCode = "wg_probe_timeout"
+
 var (
+	ErrProbeTimeout     = errors.New("WireGuard probe timed out")
 	ErrUnsupported      = errors.New("wgrelay requires Linux with systemd, root, and existing ip/wg tools")
 	ErrStaleRevision    = errors.New("stale relay revision")
 	ErrRevisionConflict = errors.New("relay revision conflicts with existing configuration")

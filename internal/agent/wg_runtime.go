@@ -36,6 +36,13 @@ func (rt *Runtime) executeWGCommand(cmd ServerCommand, reply func(CommandResult)
 		fail("WG 中转要求有效的节点配置；若启用了独立凭据则需可信 HTTPS/WSS 连接")
 		return
 	}
+	probeFailure := func(err error) bool {
+		if !errors.Is(err, wgrelay.ErrProbeTimeout) {
+			return false
+		}
+		reply(CommandResult{Type: "result", Status: "error", ErrorCode: wgrelay.ProbeTimeoutCode, Message: "WG 探活超时"})
+		return true
+	}
 	ctx := rt.commandCtx
 	if ctx == nil {
 		ctx = context.Background()
@@ -47,6 +54,9 @@ func (rt *Runtime) executeWGCommand(cmd ServerCommand, reply func(CommandResult)
 		data, err := rt.executeWGV2(ctx, cmd)
 		if err != nil {
 			log.Printf("[Agent] WG v2 命令失败 (action=%s): %v", cmd.Action, err)
+			if cmd.Action == "wg-v2-status" && probeFailure(err) {
+				return
+			}
 			if errors.Is(err, wgrelay.ErrUnsupported) {
 				fail("WG 初始化失败：需 Linux/systemd、root 权限及 ip/wg 工具")
 				return
@@ -72,6 +82,9 @@ func (rt *Runtime) executeWGCommand(cmd ServerCommand, reply func(CommandResult)
 	data, err := rt.wgManager.Execute(ctx, cmd.Action, cmd.Payload)
 	if err != nil {
 		log.Printf("[Agent] WG 命令失败 (action=%s): %v", cmd.Action, err)
+		if cmd.Action == "wg-verify" && probeFailure(err) {
+			return
+		}
 		fail("WG 操作失败；请检查权限、端口/路由冲突及双端连接，等待面板完成清理后重试")
 		return
 	}

@@ -15,6 +15,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"nhooyr.io/websocket"
+	"nodectl/internal/agent/wgrelay"
 	"nodectl/internal/database"
 	"nodectl/internal/logger"
 	"nodectl/internal/requestmeta"
@@ -222,7 +223,7 @@ func (h *TrafficHub) failAgentCommands(conn *websocket.Conn) {
 		if owner.conn == conn {
 			if ch := h.cmdResults[id]; ch != nil {
 				select {
-				case ch <- AgentCommandResult{Type: "result", CommandID: id, Status: "error", Message: "agent disconnected"}:
+				case ch <- AgentCommandResult{Type: "result", CommandID: id, Status: "error", disconnected: true, Message: "agent disconnected"}:
 				default:
 				}
 			}
@@ -297,7 +298,12 @@ func SendWGCommand(ctx context.Context, installID, action string, payload interf
 	h.agentMu.RLock()
 	conn := h.agentConns[installID]
 	session := h.agentSessions[conn]
-	if conn == nil || !session.wg || (strings.HasPrefix(action, "wg-v2-") && !session.wgV2) || !validAgentSession(installID, session) {
+	if conn == nil {
+		h.agentMu.RUnlock()
+		agentIdentityMu.Unlock()
+		return nil, errWGTransient
+	}
+	if !session.wg || (strings.HasPrefix(action, "wg-v2-") && !session.wgV2) || !validAgentSession(installID, session) {
 		h.agentMu.RUnlock()
 		agentIdentityMu.Unlock()
 		return nil, errors.New("WireGuard agent unavailable")
@@ -328,7 +334,7 @@ func SendWGCommand(ctx context.Context, installID, action string, payload interf
 	err = conn.Write(writeCtx, websocket.MessageText, data)
 	writeCancel()
 	if err != nil {
-		return nil, err
+		return nil, errWGTransient
 	}
 	for {
 		select {
@@ -339,6 +345,9 @@ func SendWGCommand(ctx context.Context, installID, action string, payload interf
 				continue
 			}
 			if result.Status != "ok" {
+				if result.retryableWGFailure(action) {
+					return nil, errWGTransient
+				}
 				if logger.Log != nil {
 					logger.Log.Warn("WG Agent 命令返回失败", "install_id", installID, "action", action, "message", result.Message)
 				}
@@ -347,6 +356,11 @@ func SendWGCommand(ctx context.Context, installID, action string, payload interf
 			return result.Data, nil
 		}
 	}
+}
+
+// Older agents omit error_code. An unclassified remote rejection must fail closed.
+func (r AgentCommandResult) retryableWGFailure(action string) bool {
+	return r.disconnected || r.ErrorCode == wgrelay.ProbeTimeoutCode && (action == "wg-verify" || action == "wg-v2-status")
 }
 
 // A result belongs to the current connection and command owner, not merely to

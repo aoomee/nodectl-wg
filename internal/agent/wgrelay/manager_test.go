@@ -4,14 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net"
 	"os"
 	"strings"
 	"testing"
 )
 
 type fakeRunner struct {
-	calls []string
-	links string
+	calls      []string
+	links      string
+	handshakes string
 }
 
 func (f *fakeRunner) Run(_ context.Context, name string, args ...string) ([]byte, error) {
@@ -22,6 +24,9 @@ func (f *fakeRunner) Run(_ context.Context, name string, args ...string) ([]byte
 	}
 	if strings.HasPrefix(s, "ip -j") {
 		return []byte("[]"), nil
+	}
+	if strings.HasSuffix(s, " latest-handshakes") {
+		return []byte(f.handshakes), nil
 	}
 	if s == "wg show all listen-port" {
 		return nil, nil
@@ -124,6 +129,40 @@ func TestAdoptsOwnedUnaliasedInterfaceAndReadsStandardAlias(t *testing.T) {
 	f.links = `[{"ifname":"` + rec.Interface + `","linkinfo":{"info_kind":"wireguard"}}]`
 	if _, err := m.Execute(context.Background(), "wg-remove", payload(Payload{PairID: p.PairID, Revision: 2})); err != nil {
 		t.Fatalf("expected self-healing remove to succeed, got: %v", err)
+	}
+}
+
+func TestSteadyStateVerifyFailurePreservesKernelInterface(t *testing.T) {
+	p := testPayload()
+	p.Topology = "reality_ss_v2"
+	f := &fakeRunner{}
+	m := newManager(t.TempDir(), f)
+	m.dial = func(context.Context, string, string, string) (net.Conn, error) {
+		return nil, context.DeadlineExceeded
+	}
+	if _, err := m.Execute(context.Background(), "wg-prepare", payload(p)); err != nil {
+		t.Fatal(err)
+	}
+	rec := m.records[p.PairID]
+	rec.Phase = "verified"
+	rec.Config.PeerPublicKey = "expected"
+	f.handshakes = "expected\t0\n"
+	f.links = `[{"ifname":"` + rec.Interface + `","alias":"` + rec.alias() + `","linkinfo":{"info_kind":"wireguard"}}]`
+	callsBefore := len(f.calls)
+	if _, err := m.Execute(context.Background(), "wg-verify", payload(Payload{PairID: p.PairID, Revision: 1})); !errors.Is(err, ErrProbeTimeout) {
+		t.Fatalf("expected probe timeout, got %v", err)
+	}
+	if rec.Phase != "verified" {
+		t.Fatalf("expected phase to remain verified after transient probe failure, got %q", rec.Phase)
+	}
+	for _, c := range f.calls[callsBefore:] {
+		if strings.Contains(c, "link delete") {
+			t.Fatalf("transient steady-state verify failure deleted live interface: %s", c)
+		}
+	}
+	f.handshakes = "foreign\t0\n"
+	if _, err := m.Execute(context.Background(), "wg-verify", payload(Payload{PairID: p.PairID, Revision: 1})); err == nil || errors.Is(err, ErrProbeTimeout) || rec.Phase != "failed" {
+		t.Fatalf("peer replacement was not a hard failure: phase=%s err=%v", rec.Phase, err)
 	}
 }
 func TestPrepareIdempotentAndStaleRejected(t *testing.T) {

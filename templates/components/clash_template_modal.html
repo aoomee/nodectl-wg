@@ -285,12 +285,27 @@
     }
 
     /* 精致的下拉菜单 */
+    select.custom-input {
+        appearance: none;
+        -webkit-appearance: none;
+        padding-right: 34px;
+        cursor: pointer;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236e6e73' stroke-width='2.3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        background-size: 14px 14px;
+    }
+
     .preset-select {
-        padding: 5px 14px;
+        padding: 5px 28px 5px 14px;
         font-size: 12px;
         font-weight: 600;
         color: #1d1d1f;
         background-color: #f2f3f7;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%236e6e73' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        background-size: 13px 13px;
         border: 1px solid rgba(0, 0, 0, 0.08);
         border-radius: 999px !important;
         outline: none;
@@ -299,8 +314,7 @@
         font-family: inherit;
         appearance: none;
         -webkit-appearance: none;
-        text-align: center;
-        text-align-last: center;
+        text-align: left;
     }
 
     .preset-select:hover {
@@ -611,7 +625,7 @@
                         </div>
                         <div class="custom-input-group" style="flex: 1; margin-bottom: 0;">
                             <label>行为类型</label>
-                            <select id="customModType" class="custom-input" style="appearance: auto;">
+                            <select id="customModType" class="custom-input">
                                 <option value="">分流组</option>
                                 <option value="reject">拒绝组</option>
                             </select>

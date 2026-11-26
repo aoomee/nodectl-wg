@@ -8,7 +8,7 @@
         --editor-surface: #f5f6f8;
         --editor-paper: #ffffff;
         --editor-accent: #007aff;
-        --editor-radius: 12px;
+        --editor-radius: 14px;
         --editor-card-radius: 18px;
         --editor-pill: 999px;
         font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
@@ -60,25 +60,31 @@
     .traffic-input-group {
         display: flex;
         flex: 1;
-        align-items: center;
-        border: 1px solid rgba(0, 0, 0, 0.1);
+        align-items: stretch;
+        min-height: 42px;
+        border: 1px solid var(--editor-border);
         border-radius: var(--editor-radius);
-        background: #f9f9fb;
-        transition: all 0.22s ease;
+        background: #f6f7f9;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
         overflow: hidden;
     }
 
-    .traffic-input-group:focus-within {
+    .traffic-input-group:hover {
+        background: #f2f4f7;
+    }
+
+    .traffic-input-group:focus-within,
+    .traffic-input-group.wa-select-group-open {
         border-color: #007aff;
         background: #fff;
-        box-shadow: 0 0 0 3.5px rgba(0, 122, 255, 0.12);
+        box-shadow: 0 0 0 3.5px rgba(0, 122, 255, 0.14);
     }
 
     .traffic-input-group input {
         flex: 1;
         min-width: 0;
         padding: 9px 13px;
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 600;
         border: none;
         outline: none;
@@ -95,9 +101,15 @@
         position: relative;
         display: flex;
         align-items: center;
+        align-self: stretch;
         border-left: 1px solid rgba(0, 0, 0, 0.06);
-        background: #f2f2f7;
-        height: 100%;
+        background: #eef0f4;
+        transition: background-color 0.18s ease;
+        flex-shrink: 0;
+    }
+
+    .traffic-input-group .select-wrapper:hover {
+        background: #e6e9ef;
     }
 
     .traffic-input-group select {
@@ -106,12 +118,14 @@
         background: transparent;
         border: none;
         outline: none;
-        padding: 0 24px 0 12px;
+        box-shadow: none;
+        padding: 0 28px 0 14px;
         font-size: 13px;
         font-weight: 600;
-        color: #555;
+        color: #3a3a3c;
         cursor: pointer;
         height: 100%;
+        min-height: 40px;
     }
 
     .traffic-input-group select:hover {
@@ -120,8 +134,8 @@
 
     .traffic-input-group .arrow {
         position: absolute;
-        right: 8px;
-        color: #888;
+        right: 10px;
+        color: #6e6e73;
         pointer-events: none;
     }
 
@@ -193,12 +207,7 @@
         width: 380px;
         flex-shrink: 0;
         padding: 25px;
-        border-right: 1px solid transparent;
-        transition: border-color 0.3s;
-    }
-
-    .edit-modal-card.has-content .edit-left-col {
-        border-right-color: #f5f5f7;
+        border-right: 1px solid #f2f2f5;
     }
 
     .edit-section {
@@ -347,7 +356,7 @@
         min-width: 0;
         min-height: 0;
         padding: 25px 30px;
-        display: none;
+        display: flex;
         flex-direction: column;
         background: #fff;
         overflow-y: auto;
@@ -362,7 +371,6 @@
 
     .edit-modal-card.has-content .edit-right-col {
         display: flex;
-        animation: fadeIn 0.3s ease;
     }
 
     /* 整个右栏统一滚动，帮助区不再压缩协议列表。 */
@@ -808,9 +816,18 @@
     #editNodeModal #btnPushConfig[data-confirm="true"] { background: #8a5800; border-color: #8a5800; color: white; }
     #editNodeModal #btnResetNodeLinks[data-confirm="true"] { background: #b42318; border-color: #b42318; color: white; }
     #editNodeModal :is(.node-editor-button, .btn-footer-close, .btn-add-protocol-left):disabled { opacity: .5; cursor: not-allowed; }
-    #editNodeModal :is(button, select, input, textarea, summary):focus-visible {
+    #editNodeModal :is(button, summary):focus-visible {
         outline: 2px solid var(--editor-accent);
-        outline-offset: 3px;
+        outline-offset: 2px;
+    }
+    #editNodeModal :is(select, input, textarea):focus-visible {
+        outline: none;
+    }
+    #editNodeModal .traffic-input-group :is(input, select):focus,
+    #editNodeModal .traffic-input-group :is(input, select):focus-visible {
+        outline: none !important;
+        box-shadow: none !important;
+        border: none !important;
     }
     #editNodeModal .btn-add-protocol-left { border-style: dashed; color: var(--editor-accent); }
     @media (prefers-reduced-motion: reduce) {
@@ -1256,24 +1273,33 @@
     async function openEditModal(uuid) {
         isInitializingEdit = true;
 
-        // 静默刷新节点数据，确保打开弹窗时数据是最新的
-        try {
-            const resp = await fetch('/api/get-nodes');
-            const result = await resp.json();
-            if (result.status === 'success') {
-                window.allNodesData = {};
-                const cacheNodes = (nodes) => {
-                    if (nodes) nodes.forEach(n => (window.allNodesData[n.uuid] = n));
-                };
-                cacheNodes(result.data.direct_nodes);
-                cacheNodes(result.data.land_nodes);
-            }
-        } catch (e) {
-            console.warn('静默刷新节点数据失败:', e);
-        }
+        // 并行静默刷新节点数据与 WG 选项，确保弹窗在首帧即渲染完整最终状态（杜绝旧→新闪动）
+        const fetchNodesPromise = fetch('/api/get-nodes')
+            .then(r => r.json())
+            .then(result => {
+                if (result && result.status === 'success') {
+                    window.allNodesData = {};
+                    const cacheNodes = (nodes) => {
+                        if (nodes) nodes.forEach(n => (window.allNodesData[n.uuid] = n));
+                    };
+                    cacheNodes(result.data.direct_nodes);
+                    cacheNodes(result.data.land_nodes);
+                }
+            })
+            .catch(e => {
+                console.warn('静默刷新节点数据失败:', e);
+            });
+
+        const fetchWGPromise = (typeof nodeWGRequest === 'function' && uuid)
+            ? nodeWGRequest('/api/node/wg/options?uuid=' + encodeURIComponent(uuid))
+                .then(data => ({ ok: true, data }))
+                .catch(err => ({ ok: false, error: err }))
+            : Promise.resolve(null);
+
+        const [, prefetchedWG] = await Promise.all([fetchNodesPromise, fetchWGPromise]);
 
         const node = window.allNodesData[uuid];
-        if (!node) { alert('数据加载异常，请刷新'); return; }
+        if (!node) { isInitializingEdit = false; alert('数据加载异常，请刷新'); return; }
 
         // 1. 基础信息填充
         if (typeof resetNodeWGEditor === 'function') resetNodeWGEditor();
@@ -1398,11 +1424,13 @@
         }
 
         updateLayoutState();
-        editModalEl.classList.add('active');
         editModalCard.classList.add('has-content');
+        if (typeof loadNodeWGEditor === 'function') {
+            loadNodeWGEditor(uuid, prefetchedWG);
+        }
+        editModalEl.classList.add('active');
 
         setTimeout(() => { isInitializingEdit = false; }, 100);
-        if (typeof loadNodeWGEditor === 'function') loadNodeWGEditor(uuid);
     }
 
     // 渲染多行协议卡片 (支持折叠)

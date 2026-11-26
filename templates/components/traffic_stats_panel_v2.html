@@ -585,12 +585,13 @@
     }
 
     .ts-rank-item:hover {
-        border-color: rgba(0, 122, 255, 0.3);
-        box-shadow: 0 6px 14px rgba(0, 122, 255, 0.07);
+        border-color: rgba(0, 0, 0, 0.12);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
         transform: translateY(-1px);
     }
 
-    .ts-rank-item.active {
+    .ts-rank-item.active,
+    .ts-rank-item.active:hover {
         border-color: #007aff;
         background: #f2f8ff;
         box-shadow: 0 4px 12px rgba(0, 122, 255, 0.1);
@@ -641,7 +642,7 @@
     .ts-rank-bar {
         height: 6px;
         border-radius: 999px;
-        background: #eef1f7;
+        background: #eceef1;
         margin-top: 7px;
         overflow: hidden;
     }
@@ -1331,7 +1332,7 @@
 
             const live = state.liveRates[nodeUUID];
             const nextHtml = (live && !offline)
-                ? ('<span style="color:#34c759;">↑ ' + fmtRate(live.rx_rate_bps) + '</span><span style="color:#1e88ff;">↓ ' + fmtRate(live.tx_rate_bps) + '</span>')
+                ? ('<span style="color:#34c759;">↑ ' + fmtRate(live.tx_rate_bps) + '</span><span style="color:#1e88ff;">↓ ' + fmtRate(live.rx_rate_bps) + '</span>')
                 : '<span class="ts-rate-offline" style="color:#ccc;">--</span>';
             if (rateEl.innerHTML !== nextHtml) {
                 rateEl.innerHTML = nextHtml;
@@ -1576,7 +1577,7 @@
                     if (rateEl) {
                         const live = state.liveRates[item.uuid];
                         if (live && !offline) {
-                            rateEl.innerHTML = '<span style="color:#34c759;">↑ ' + fmtRate(live.rx_rate_bps) + '</span><span style="color:#1e88ff;">↓ ' + fmtRate(live.tx_rate_bps) + '</span>';
+                            rateEl.innerHTML = '<span style="color:#34c759;">↑ ' + fmtRate(live.tx_rate_bps) + '</span><span style="color:#1e88ff;">↓ ' + fmtRate(live.rx_rate_bps) + '</span>';
                         } else {
                             rateEl.innerHTML = '<span class="ts-rate-offline" style="color:#ccc;">--</span>';
                         }
@@ -1601,7 +1602,7 @@
                 const live = state.liveRates[item.uuid];
                 let rateHtml;
                 if (live && !offline) {
-                    rateHtml = '<span style="color:#34c759;">↑ ' + fmtRate(live.rx_rate_bps) + '</span><span style="color:#1e88ff;">↓ ' + fmtRate(live.tx_rate_bps) + '</span>';
+                    rateHtml = '<span style="color:#34c759;">↑ ' + fmtRate(live.tx_rate_bps) + '</span><span style="color:#1e88ff;">↓ ' + fmtRate(live.rx_rate_bps) + '</span>';
                 } else {
                     rateHtml = '<span class="ts-rate-offline" style="color:#ccc;">--</span>';
                 }

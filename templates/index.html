@@ -59,11 +59,28 @@
                 background-image:
                     radial-gradient(at 10% 0%, rgba(0, 122, 255, 0.04) 0px, transparent 48%),
                     radial-gradient(at 90% 0%, rgba(52, 199, 89, 0.03) 0px, transparent 48%);
-                background-attachment: fixed;
+                background-repeat: no-repeat;
                 color: var(--text);
                 min-height: 100vh;
                 display: flex;
                 flex-direction: column;
+            }
+
+            /* 轻盈骨架屏过渡，消除页面刷新时列表空白生硬跳变 */
+            .wa-skeleton-row {
+                height: 54px;
+                border-radius: 16px;
+                background: linear-gradient(90deg, #f3f4f6 25%, #eceef2 50%, #f3f4f6 75%);
+                background-size: 200% 100%;
+                animation: waShimmer 1.3s ease-in-out infinite;
+                margin-bottom: 10px;
+            }
+            .wa-skeleton-row:last-child {
+                margin-bottom: 0;
+            }
+            @keyframes waShimmer {
+                0% { background-position: 200% 0; }
+                100% { background-position: -200% 0; }
             }
 
             /* 通用圓润小图标底座 */
@@ -1635,9 +1652,19 @@
         <footer class="main-footer">WireArc &copy; 2026</footer>
 
         <script>
-            document.addEventListener("DOMContentLoaded", loadNodesList);
-
             window.allNodesData = {};
+
+            // 首页核心 DOM 已就绪：立即渲染轻盈骨架屏并发起拉取，无需苦等下方 15 个隐藏弹窗解析完毕
+            (function bootstrapNodeLists() {
+                const sk = '<div class="wa-skeleton-row"></div>';
+                const dEl = document.getElementById("direct-nodes-list");
+                const lEl = document.getElementById("land-nodes-list");
+                if (dEl && !dEl.children.length) dEl.innerHTML = sk;
+                if (lEl && !lEl.children.length) lEl.innerHTML = sk;
+                queueMicrotask(function () {
+                    if (typeof loadNodesList === "function") loadNodesList();
+                });
+            })();
 
             // 备用调色盘 (用于未知的新协议)
             const tagColorPalette = [

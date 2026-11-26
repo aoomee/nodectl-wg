@@ -683,6 +683,7 @@ func QueryTrafficSeries(opts TrafficSeriesOptions) (*TrafficSeriesResult, error)
 
 	var samples []database.NodeTrafficStat
 	if err := database.DB.
+		Select("reported_at", "hour_key", "tx_bytes", "rx_bytes").
 		Where("node_uuid = ? AND hour_key >= ? AND hour_key <= ?", nodeUUID, hourKey(startHour), hourKey(endHour)).
 		Order("reported_at ASC").
 		Find(&samples).Error; err != nil {
@@ -694,6 +695,7 @@ func QueryTrafficSeries(opts TrafficSeriesOptions) (*TrafficSeriesResult, error)
 	baselineDown := int64(0)
 	hasBaseline := false
 	baselineRes := database.DB.
+		Select("tx_bytes", "rx_bytes").
 		Where("node_uuid = ? AND reported_at < ?", nodeUUID, startHour).
 		Order("reported_at DESC").
 		Limit(1).

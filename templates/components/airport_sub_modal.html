@@ -165,7 +165,7 @@
     .air-sub-list {
         flex: 1;
         overflow-y: auto;
-        padding: 12px;
+        padding: 16px;
         scrollbar-width: thin;
         overscroll-behavior: contain;
         display: flex;
@@ -175,25 +175,27 @@
 
     .air-sub-card {
         background: transparent;
-        border-radius: 8px;
+        border-radius: 14px;
         border: 1px solid transparent;
-        transition: 0.2s;
+        transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
         -webkit-tap-highlight-color: transparent;
         overflow: visible;
     }
 
     .air-sub-card:hover {
-        background: #f0f0f5;
+        background: #f0f2f7;
     }
 
     .air-sub-card.active {
-        background: #e0efff;
-        border-color: #b3d7ff;
+        background: #eaf4ff;
+        border-color: rgba(0, 122, 255, 0.28);
+        box-shadow: 0 2px 8px rgba(0, 122, 255, 0.06);
     }
 
     .air-sub-header-row {
-        padding: 8px 12px;
-        min-height: 38px;
+        padding: 9px 13px;
+        min-height: 42px;
+        box-sizing: border-box;
         cursor: pointer;
         display: flex;
         align-items: center;
@@ -266,9 +268,9 @@
     }
 
     .air-mini-btn {
-        width: 26px;
-        height: 26px;
-        border-radius: 6px;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -279,12 +281,13 @@
     }
 
     .air-mini-btn:hover {
-        background: #e5e5ea;
+        background: #e5e6ec;
     }
 
     .air-mini-btn.confirm-state {
         width: auto;
-        padding: 0 8px;
+        padding: 0 10px;
+        border-radius: 999px;
         background: var(--air-danger);
         color: white !important;
         font-size: 11px;
@@ -299,15 +302,15 @@
         display: none;
         background: #f9f9fc;
         border-top: 1px solid #f0f0f5;
-        border-bottom-left-radius: 10px;
-        border-bottom-right-radius: 10px;
+        border-bottom-left-radius: 14px;
+        border-bottom-right-radius: 14px;
     }
 
     /* ----- 左侧栏底部：添加/编辑 ----- */
     .air-sidebar-footer {
-        padding: 15px;
+        padding: 16px;
         background: #fff;
-        border-top: 1px solid var(--air-border);
+        border-top: 1px solid rgba(0, 0, 0, 0.055);
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
@@ -317,15 +320,16 @@
 
     .air-dashed-btn {
         width: 100%;
-        padding: 12px;
-        background: var(--air-primary-light);
-        border: 1px dashed var(--air-primary);
+        height: 44px;
+        padding: 0 14px;
+        background: #f0f7ff;
+        border: 1px dashed rgba(0, 122, 255, 0.45);
         color: var(--air-primary);
-        border-radius: 10px;
+        border-radius: 14px;
         font-size: 13px;
         font-weight: 600;
         cursor: pointer;
-        transition: all 0.2s;
+        transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -333,7 +337,8 @@
     }
 
     .air-dashed-btn:hover {
-        background: #e0efff;
+        background: #e2f0ff;
+        border-color: var(--air-primary);
         transform: translateY(-1px);
     }
 
@@ -356,18 +361,19 @@
 
     .air-input {
         width: 100%;
-        padding: 10px;
-        border: 1px solid #d1d1d6;
-        border-radius: 8px;
+        padding: 9px 13px;
+        border: 1px solid rgba(0, 0, 0, 0.09);
+        border-radius: 14px;
         font-size: 13px;
         outline: none;
-        background: #fff;
+        background: #f6f7f9;
         box-sizing: border-box;
     }
 
     .air-input:focus {
         border-color: var(--air-primary);
-        box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.1);
+        background: #fff;
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.14);
     }
 
     .air-form-actions {
@@ -377,11 +383,11 @@
     }
 
     .air-btn-cancel {
-        width: 40px;
-        background: #e5e5ea;
-        color: #666;
+        width: 44px;
+        background: #f2f3f7;
+        color: #48484a;
         border: none;
-        border-radius: 10px;
+        border-radius: 14px;
         cursor: pointer;
         display: flex;
         align-items: center;
@@ -389,7 +395,7 @@
     }
 
     .air-btn-cancel:hover {
-        background: #d1d1d6;
+        background: #e5e6ec;
     }
 
     /* ----- 右侧栏：节点内容 ----- */
@@ -403,10 +409,10 @@
     }
 
     .air-main-header {
-        padding: 12px 20px;
-        border-bottom: 1px solid #f0f0f5;
+        padding: 14px 20px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.055);
         display: flex;
-        gap: 12px;
+        gap: 10px;
         align-items: center;
         flex-shrink: 0;
     }
@@ -414,12 +420,14 @@
     .air-search {
         flex: 1;
         min-width: 0;
-        padding: 8px 12px;
-        border: 1px solid #e1e1e8;
-        border-radius: 8px;
+        height: 36px;
+        box-sizing: border-box;
+        padding: 0 14px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 999px !important;
         font-size: 13px;
-        background: #f9f9fc;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        background: #f6f7f9;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .air-search:focus {
@@ -528,10 +536,10 @@
     }
 
     .air-global-test-btn {
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
-        border: 1px solid #e1e1e8;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: 1px solid rgba(0, 0, 0, 0.08);
         background: #fff;
         color: var(--air-primary);
         display: flex;
@@ -554,10 +562,10 @@
     }
 
     .air-history-btn {
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
-        border: 1px solid #e1e1e8;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: 1px solid rgba(0, 0, 0, 0.08);
         background: #fff;
         color: #666;
         display: flex;
@@ -1041,8 +1049,8 @@
     }
 
     .air-footer {
-        padding: 12px 24px;
-        border-top: 1px solid #eee;
+        padding: 14px 26px;
+        border-top: 1px solid rgba(0, 0, 0, 0.06);
         background: #fff;
         display: flex;
         justify-content: flex-end;
@@ -1050,19 +1058,20 @@
     }
 
     .air-btn-close {
-        background: #f5f5f7;
+        background: #f2f3f7;
         border: none;
-        color: #333;
-        padding: 8px 25px;
-        border-radius: 8px;
+        color: #1d1d1f;
+        height: 38px;
+        padding: 0 24px;
+        border-radius: 999px;
         cursor: pointer;
         font-size: 13px;
         font-weight: 600;
-        transition: 0.2s;
+        transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     .air-btn-close:hover {
-        background: #e5e5ea;
+        background: #e5e6ec;
     }
 
     @keyframes spin {
@@ -1222,24 +1231,6 @@
     <div class="air-modal-card" id="airModalCard">
         <div class="air-header">
             <div class="air-title">
-                <button
-                    type="button"
-                    class="wa-sidebar-toggle"
-                    title="收起侧边栏"
-                    aria-label="切换左侧订阅列表"
-                    aria-pressed="false"
-                    onclick="toggleModalSidebar('airModalCard', this)"
-                >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="4.5" width="18" height="15" rx="3.5"></rect>
-                        <rect class="wa-sb-pane" x="3.9" y="5.4" width="5.2" height="13.2" rx="1.8" fill="currentColor" stroke="none"></rect>
-                        <line class="wa-sb-divider" x1="9.2" y1="5.2" x2="9.2" y2="18.8"></line>
-                        <g class="wa-sb-dot-wrap">
-                            <circle cx="20.2" cy="5.2" r="3.4" fill="#f8f8fa" stroke="none"></circle>
-                            <circle cx="20.2" cy="5.2" r="2.2" fill="#007aff" stroke="none"></circle>
-                        </g>
-                    </svg>
-                </button>
                 <span class="ui-icon-badge blue" style="width:28px;height:28px;border-radius:9px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg></span> 机场订阅管理
                 <div class="air-info-tooltip-wrap" tabindex="0">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"

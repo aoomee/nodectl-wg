@@ -98,21 +98,21 @@
 
     /* ================= 左侧协议面板 ================= */
     .gs-left-col {
-        width: 420px;
+        width: 340px;
         flex-shrink: 0;
-        padding: 20px 25px;
+        padding: 22px 22px;
         border-right: 1px solid transparent;
         transition: border-color 0.3s;
     }
 
     .gs-modal-card.has-content .gs-left-col {
-        border-right-color: #f5f5f7;
+        border-right-color: rgba(0, 0, 0, 0.055);
     }
 
     /* ================= 右侧详情面板 ================= */
     .gs-right-col {
         flex: 1;
-        padding: 20px 25px;
+        padding: 22px 26px;
         display: none;
         background: #fff;
     }
@@ -133,40 +133,46 @@
     }
 
     .gs-section-label {
-        display: block;
-        font-size: 13px;
+        display: flex;
+        align-items: center;
+        height: 18px;
+        font-size: 12px;
+        line-height: 18px;
         font-weight: 600;
-        color: #888;
-        margin-bottom: 12px;
+        color: #86868b;
+        margin-bottom: 8px;
     }
 
-    /* 协议选择卡片 */
+    /* 协议选择卡片：统一 14px 大圆角 */
     .proto-nav-card {
-        border: 1px solid #e5e5ea;
-        border-radius: 10px;
+        border: 1px solid rgba(0, 0, 0, 0.065);
+        border-radius: 14px;
         background: #fff;
-        margin-bottom: 10px;
+        margin-bottom: 9px;
         padding: 10px 14px;
+        min-height: 46px;
+        box-sizing: border-box;
         user-select: none;
         cursor: pointer;
-        transition: all 0.2s;
+        transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
         display: flex;
         align-items: center;
         justify-content: space-between;
     }
 
     .proto-nav-card:hover {
-        border-color: #d1d1d6;
-        background: #fafafa;
+        border-color: rgba(0, 122, 255, 0.24);
+        background: #f8faff;
     }
 
     .proto-nav-card.active {
         border-color: #007aff;
         background: #f0f7ff;
+        box-shadow: 0 2px 10px rgba(0, 122, 255, 0.08);
     }
 
     .proto-name {
-        font-size: 14px;
+        font-size: 13.5px;
         font-weight: 600;
         color: #1d1d1f;
         transition: color 0.2s;
@@ -183,39 +189,39 @@
     }
 
     .proto-chip {
-        font-size: 11px;
-        font-weight: 800;
-        padding: 2px 6px;
-        border-radius: 6px;
+        font-size: 10.5px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 999px;
         display: inline-flex;
         align-items: center;
-        height: 22px;
+        height: 20px;
         line-height: 1;
     }
 
     .proto-chip.tcp {
         color: #007aff;
-        background: #e0f0ff;
+        background: #eaf4ff;
     }
 
     .proto-chip.udp {
-        color: #f5a623;
-        background: #fff4e0;
+        color: #d97706;
+        background: #fff4e5;
     }
 
     .port-input {
         width: 58px;
-        padding: 4px;
-        border: 1px solid #e5e5ea;
-        border-radius: 6px;
-        font-size: 13px;
+        padding: 4px 6px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 10px !important;
+        font-size: 12.5px;
         text-align: center;
         color: #1d1d1f;
         font-weight: 600;
-        font-family: monospace;
+        font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, monospace;
         outline: none;
         transition: all 0.2s;
-        background: #f9f9fc;
+        background: #f6f7f9;
     }
 
     .port-input:focus {
@@ -353,24 +359,24 @@
         transform: translateX(20px);
     }
 
-    /* ================= 变种配置区 ================= */
+    /* ================= 变种配置区：统一 16px 大圆角 ================= */
     .variant-section {
-        border: 1px solid #e5e5ea;
-        border-radius: 8px;
-        margin-bottom: 10px;
+        border: 1px solid rgba(0, 0, 0, 0.07);
+        border-radius: 16px;
+        margin-bottom: 12px;
         overflow: hidden;
     }
 
     .variant-section-hd {
-        background: #f5f5f7;
-        padding: 7px 12px;
+        background: #f6f7f9;
+        padding: 8px 14px;
         display: flex;
         align-items: center;
         justify-content: space-between;
         font-size: 12px;
         font-weight: 700;
-        color: #444;
-        border-bottom: 1px solid #e5e5ea;
+        color: #48484a;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.055);
     }
 
     .variant-section-hd-title {
@@ -380,16 +386,16 @@
     }
 
     .variant-port-input {
-        width: 70px;
+        width: 72px;
         padding: 4px 8px;
-        border: 1px solid #d1d1d6;
-        border-radius: 6px;
+        border: 1px solid rgba(0, 0, 0, 0.09);
+        border-radius: 10px !important;
         font-size: 12px;
         color: #1d1d1f;
         outline: none;
         transition: border 0.2s;
         background: #fff;
-        font-family: monospace;
+        font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, monospace;
         text-align: center;
     }
 
@@ -398,7 +404,7 @@
     }
 
     .variant-section-bd {
-        padding: 10px 12px 4px;
+        padding: 12px 14px 6px;
         display: flex;
         gap: 10px;
         flex-wrap: wrap;
@@ -415,16 +421,16 @@
         font-size: 11px;
         color: #86868b;
         font-style: italic;
-        padding: 0 12px 8px;
+        padding: 0 14px 10px;
     }
 
     .tls-path-wrap {
         margin-top: 4px;
-        padding: 10px 12px 2px;
-        background: #fafbfc;
-        border: 1px dashed #d1d1d6;
-        border-radius: 8px;
-        margin-bottom: 10px;
+        padding: 12px 14px 4px;
+        background: #f8f9fb;
+        border: 1px dashed rgba(0, 0, 0, 0.14);
+        border-radius: 14px;
+        margin-bottom: 12px;
     }
 
     .tls-path-wrap .gs-label { color: #555; }
@@ -438,27 +444,28 @@
     }
 
     .gs-footer {
-        padding: 15px 25px;
-        border-top: 1px solid #eee;
+        padding: 14px 26px;
+        border-top: 1px solid rgba(0, 0, 0, 0.06);
         display: flex;
         justify-content: flex-end;
         background: #fff;
     }
 
     .btn-gs-cancel {
-        background: #f5f5f7;
+        background: #f2f3f7;
         border: none;
-        color: #333;
-        padding: 8px 25px;
-        border-radius: 8px;
+        color: #1d1d1f;
+        height: 38px;
+        padding: 0 24px;
+        border-radius: 999px;
         cursor: pointer;
         font-size: 13px;
         font-weight: 600;
-        transition: 0.2s;
+        transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     .btn-gs-cancel:hover {
-        background: #e5e5ea;
+        background: #e5e6ec;
     }
 
     /* ================= 移动端适配：内联展开模式 ================= */
@@ -535,25 +542,7 @@
     <div class="gs-modal-card" id="gsModalCard">
 
         <div class="gs-header">
-            <div class="gs-title-area" style="flex-direction: row; align-items: center; gap: 8px;">
-                <button
-                    type="button"
-                    class="wa-sidebar-toggle"
-                    title="收起侧边栏"
-                    aria-label="切换左侧协议列表"
-                    aria-pressed="false"
-                    onclick="toggleModalSidebar('gsModalCard', this)"
-                >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="4.5" width="18" height="15" rx="3.5"></rect>
-                        <rect class="wa-sb-pane" x="3.9" y="5.4" width="5.2" height="13.2" rx="1.8" fill="currentColor" stroke="none"></rect>
-                        <line class="wa-sb-divider" x1="9.2" y1="5.2" x2="9.2" y2="18.8"></line>
-                        <g class="wa-sb-dot-wrap">
-                            <circle cx="20.2" cy="5.2" r="3.4" fill="#f8f8fa" stroke="none"></circle>
-                            <circle cx="20.2" cy="5.2" r="2.2" fill="#4f46e5" stroke="none"></circle>
-                        </g>
-                    </svg>
-                </button>
+            <div class="gs-title-area">
                 <div class="gs-title"><span class="ui-icon-badge indigo" style="width:28px;height:28px;border-radius:9px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg></span> 全局默认参数</div>
             </div>
             <div class="gs-save-indicator" id="gsSaveIndicator">

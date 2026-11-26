@@ -98,56 +98,88 @@
 
     /* ================= 左侧分类导航面板 ================= */
     .sys-left-col {
-        width: 320px;
+        width: 280px;
         flex-shrink: 0;
-        padding: 20px 25px;
+        padding: 22px 22px;
         border-right: 1px solid transparent;
         transition: border-color 0.3s;
     }
 
     .sys-modal-card.has-content .sys-left-col {
-        width: 320px;
-        border-right-color: #f5f5f7;
+        width: 280px;
+        border-right-color: rgba(0, 0, 0, 0.055);
     }
 
     .sys-section-label {
-        display: block;
-        font-size: 13px;
+        display: flex;
+        align-items: center;
+        height: 18px;
+        font-size: 12px;
+        line-height: 18px;
         font-weight: 600;
-        color: #888;
-        margin-bottom: 12px;
+        color: #86868b;
+        margin-bottom: 8px;
     }
 
-    /* 导航卡片 */
+    /* 导航卡片：统一大圆角 + 柔和描边 + 矢量图标徽章 */
     .sys-nav-card {
-        border: 1px solid #e5e5ea;
-        border-radius: 10px;
-        background: #fff;
-        margin-bottom: 10px;
-        padding: 12px 14px;
+        border: 1px solid rgba(0, 0, 0, 0.065);
+        border-radius: 14px;
+        background: #ffffff;
+        margin-bottom: 9px;
+        padding: 10px 13px;
+        min-height: 46px;
+        box-sizing: border-box;
         user-select: none;
         cursor: pointer;
-        transition: all 0.2s;
+        transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
         display: flex;
         align-items: center;
         justify-content: space-between;
     }
 
     .sys-nav-card:hover {
-        border-color: #d1d1d6;
-        background: #fafafa;
+        border-color: rgba(0, 122, 255, 0.22);
+        background: #f8faff;
     }
 
     .sys-nav-card.active {
         border-color: #007aff;
         background: #f0f7ff;
+        box-shadow: 0 2px 10px rgba(0, 122, 255, 0.08);
     }
 
     .sys-nav-name {
-        font-size: 14px;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 13.5px;
         font-weight: 600;
         color: #1d1d1f;
         transition: color 0.2s;
+    }
+
+    .sys-nav-icon {
+        width: 26px;
+        height: 26px;
+        border-radius: 9px;
+        background: #f2f3f7;
+        color: #636366;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        transition: background-color 0.22s ease, color 0.22s ease, transform 0.24s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .sys-nav-card:hover .sys-nav-icon {
+        background: #e8f2ff;
+        color: #007aff;
+    }
+
+    .sys-nav-card.active .sys-nav-icon {
+        background: #dcebff;
+        color: #007aff;
     }
 
     .sys-nav-card.active .sys-nav-name {
@@ -155,8 +187,8 @@
     }
 
     .sys-expand-indicator {
-        color: #ccc;
-        transition: all 0.2s;
+        color: #c7c7cc;
+        transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
         display: flex;
         align-items: center;
     }
@@ -173,7 +205,7 @@
     /* ================= 右侧/内联详情面板 ================= */
     .sys-right-col {
         flex: 1;
-        padding: 15px 20px;
+        padding: 22px 26px;
         display: none;
         background: #fff;
     }
@@ -193,51 +225,61 @@
         }
     }
 
-    /* 表单组件 */
+    /* 表单组件：统一 14px 大圆角、42px 统一控件高度、精确顶基线对齐 */
     .sys-field {
-        margin-bottom: 14px;
+        margin-bottom: 16px;
     }
 
     .sys-label {
-        display: block;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 18px;
         font-size: 12px;
+        line-height: 18px;
         font-weight: 600;
         color: #86868b;
-        margin-bottom: 5px;
+        margin-bottom: 8px;
         text-transform: uppercase;
     }
 
     .sys-desc {
         font-size: 12px;
-        color: #888;
+        color: #6e6e73;
         margin-top: 8px;
-        line-height: 1.5;
-        background: #f9f9fc;
-        padding: 10px;
-        border-radius: 8px;
-        border: 1px solid #eee;
+        line-height: 1.55;
+        background: #f7f8fa;
+        padding: 11px 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(0, 0, 0, 0.055);
     }
 
     .sys-input,
     .sys-select {
         width: 100%;
-        padding: 10px 12px;
-        border: 1px solid #d1d1d6;
-        border-radius: 8px;
-        font-size: 13px;
+        height: 42px;
+        padding: 0 14px;
+        border: 1px solid rgba(0, 0, 0, 0.09);
+        border-radius: 14px;
+        font-size: 13.5px;
         color: #1d1d1f;
         outline: none;
-        transition: 0.2s;
-        background: #fafbfc;
-        font-family: monospace;
+        transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+        background: #f6f7f9;
+        font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, monospace;
         box-sizing: border-box;
+    }
+
+    textarea.sys-input {
+        height: auto;
+        padding: 11px 14px;
     }
 
     .sys-input:focus,
     .sys-select:focus {
         border-color: #007aff;
         background: #fff;
-        box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.1);
+        box-shadow: 0 0 0 3.5px rgba(0, 122, 255, 0.14);
     }
 
     /* 美化 Select 组件 (隐藏原生箭头，使用自定义 SVG 箭头) */
@@ -246,11 +288,11 @@
         cursor: pointer;
         appearance: none;
         -webkit-appearance: none;
-        background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='%236e6e73' stroke-width='2.3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
         background-repeat: no-repeat;
-        background-position: right 12px center;
-        background-size: 16px;
-        padding-right: 36px;
+        background-position: right 13px center;
+        background-size: 15px;
+        padding-right: 38px;
         font-weight: 500;
     }
 
@@ -331,7 +373,8 @@
 
     .sys-input-group {
         display: flex;
-        gap: 8px;
+        align-items: center;
+        gap: 10px;
     }
 
     .sys-input-group .sys-input {
@@ -339,27 +382,29 @@
     }
 
     .btn-sys-regen {
-        background: #f0f7ff;
-        border: 1px solid #cce4ff;
+        background: #eef6ff;
+        border: 1px solid rgba(0, 122, 255, 0.18);
         color: #007aff;
-        padding: 0 14px;
-        border-radius: 8px;
-        font-size: 12px;
+        height: 42px;
+        padding: 0 16px;
+        border-radius: 14px;
+        font-size: 13px;
         font-weight: 600;
         cursor: pointer;
-        transition: 0.2s;
+        transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
         white-space: nowrap;
+        flex-shrink: 0;
     }
 
     .btn-sys-regen:hover {
-        background: #e0efff;
-        border-color: #b3d7ff;
+        background: #dcebff;
+        border-color: rgba(0, 122, 255, 0.32);
     }
 
     /* 敏感令牌输入框 + 确认按钮 */
     .sys-token-group {
         display: flex;
-        gap: 6px;
+        gap: 10px;
         align-items: center;
     }
 
@@ -372,17 +417,17 @@
         align-items: center;
         justify-content: space-between;
         gap: 10px;
-        margin-bottom: 8px;
+        margin-bottom: 10px;
     }
 
     .sys-offline-batch-btn {
         border: 1px solid #007aff;
         background: #007aff;
         color: #fff;
-        font-size: 12px;
+        font-size: 12.5px;
         font-weight: 600;
-        padding: 8px 14px;
-        border-radius: 8px;
+        padding: 8px 16px;
+        border-radius: 999px;
         cursor: pointer;
         white-space: nowrap;
         transition:
@@ -407,8 +452,8 @@
     }
 
     .sys-offline-table-wrap {
-        border: 1px solid #e5e5ea;
-        border-radius: 10px;
+        border: 1px solid rgba(0, 0, 0, 0.07);
+        border-radius: 16px;
         overflow: hidden;
     }
 
@@ -755,13 +800,13 @@
     }
 
     .btn-sys-token-confirm {
-        background: #f0f0f5;
-        border: 1px solid #d1d1d6;
-        color: #999;
-        padding: 0 12px;
-        height: 38px;
-        border-radius: 8px;
-        font-size: 12px;
+        background: #f2f3f7;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        color: #8e8e93;
+        padding: 0 16px;
+        height: 42px;
+        border-radius: 14px;
+        font-size: 13px;
         font-weight: 600;
         cursor: not-allowed;
         transition: all 0.2s;
@@ -776,7 +821,7 @@
         color: #fff;
         cursor: pointer;
         pointer-events: auto;
-        box-shadow: 0 1px 4px rgba(0, 122, 255, 0.25);
+        box-shadow: 0 2px 8px rgba(0, 122, 255, 0.25);
     }
 
     .btn-sys-token-confirm.active:hover {
@@ -790,21 +835,21 @@
         pointer-events: none;
     }
 
-    /* 开关组件 */
+    /* 开关组件：统一 16px 大圆角卡片 */
     .sys-pref-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 10px 14px;
-        background: #f9f9fc;
-        border: 1px solid #eee;
-        border-radius: 10px;
-        margin-bottom: 10px;
-        transition: 0.2s;
+        padding: 12px 16px;
+        background: #f7f8fa;
+        border: 1px solid rgba(0, 0, 0, 0.055);
+        border-radius: 16px;
+        margin-bottom: 12px;
+        transition: background-color 0.2s ease, border-color 0.2s ease;
     }
 
     .sys-pref-row:hover {
-        background: #f0f0f5;
+        background: #f1f3f7;
     }
 
     .sys-pref-traffic-grid {
@@ -830,18 +875,18 @@
     }
 
     .sys-tg-group {
-        border: 1px solid #e5eaf3;
-        border-radius: 10px;
-        background: #fafcff;
-        padding: 10px;
-        margin-bottom: 14px;
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        border-radius: 16px;
+        background: #fafbfd;
+        padding: 14px;
+        margin-bottom: 16px;
     }
 
     .sys-tg-group-title {
-        font-size: 12px;
+        font-size: 12.5px;
         font-weight: 700;
-        color: #4b5563;
-        margin-bottom: 8px;
+        color: #48484a;
+        margin-bottom: 10px;
         display: flex;
         align-items: center;
         gap: 6px;
@@ -849,7 +894,7 @@
 
     .sys-tg-group .sys-pref-row,
     .sys-tg-group .sys-field {
-        margin-bottom: 8px;
+        margin-bottom: 10px;
     }
 
     .sys-tg-group .sys-pref-row:last-child,
@@ -859,13 +904,13 @@
 
     .sys-collapse-toggle {
         width: 100%;
-        border: 1px dashed #c8d8ef;
-        border-radius: 8px;
+        border: 1px dashed rgba(0, 122, 255, 0.28);
+        border-radius: 14px;
         background: #f4f8ff;
         color: #334155;
-        font-size: 12px;
+        font-size: 12.5px;
         font-weight: 600;
-        padding: 8px 10px;
+        padding: 10px 14px;
         text-align: left;
         cursor: pointer;
     }
@@ -1462,29 +1507,34 @@
         animation: sysSpin 1s linear infinite;
     }
 
-    /* Footer */
+    /* Footer：统一圆角胶囊按钮 */
     .sys-footer {
-        padding: 15px 25px;
-        border-top: 1px solid #eee;
+        padding: 14px 26px;
+        border-top: 1px solid rgba(0, 0, 0, 0.06);
         display: flex;
         justify-content: flex-end;
         background: #fff;
     }
 
     .btn-sys-cancel {
-        background: #f5f5f7;
+        background: #f2f3f7;
         border: none;
-        color: #333;
-        padding: 8px 25px;
-        border-radius: 8px;
+        color: #1d1d1f;
+        height: 38px;
+        padding: 0 24px;
+        border-radius: 999px;
         cursor: pointer;
         font-size: 13px;
         font-weight: 600;
-        transition: 0.2s;
+        transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     .btn-sys-cancel:hover {
-        background: #e5e5ea;
+        background: #e5e6ec;
+    }
+
+    .btn-sys-cancel:active {
+        transform: scale(0.96);
     }
 
     /* ================= 证书管理 ================= */
@@ -1832,9 +1882,9 @@
     .sys-btn-add-dashed {
         width: 100%;
         padding: 12px;
-        background: #eff6ff;
-        border: 1px dashed #007aff;
-        border-radius: 10px;
+        background: #f2f7ff;
+        border: 1px dashed rgba(0, 122, 255, 0.45);
+        border-radius: 14px;
         color: #007aff;
         cursor: pointer;
         font-size: 13px;
@@ -1975,25 +2025,7 @@
 <div class="sys-modal-overlay" id="systemSettingsModal">
     <div class="sys-modal-card" id="sysModalCard">
         <div class="sys-header">
-            <div class="sys-title-area" style="flex-direction: row; align-items: center; gap: 8px;">
-                <button
-                    type="button"
-                    class="wa-sidebar-toggle"
-                    title="收起侧边栏"
-                    aria-label="切换左侧分类导航"
-                    aria-pressed="false"
-                    onclick="toggleModalSidebar('sysModalCard', this)"
-                >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="4.5" width="18" height="15" rx="3.5"></rect>
-                        <rect class="wa-sb-pane" x="3.9" y="5.4" width="5.2" height="13.2" rx="1.8" fill="currentColor" stroke="none"></rect>
-                        <line class="wa-sb-divider" x1="9.2" y1="5.2" x2="9.2" y2="18.8"></line>
-                        <g class="wa-sb-dot-wrap">
-                            <circle cx="20.2" cy="5.2" r="3.4" fill="#f8f8fa" stroke="none"></circle>
-                            <circle cx="20.2" cy="5.2" r="2.2" fill="#007aff" stroke="none"></circle>
-                        </g>
-                    </svg>
-                </button>
+            <div class="sys-title-area">
                 <div class="sys-title"><span class="ui-icon-badge blue" style="width:28px;height:28px;border-radius:9px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></span> 系统核心设置</div>
             </div>
             <div class="sys-save-indicator" id="sysSaveIndicator">
@@ -2010,30 +2042,39 @@
                 <label class="sys-section-label">选择配置分类</label>
 
                 <div class="sys-nav-card" data-sys-id="basic" onclick="selectSysCategory('basic', this)">
-                    <div class="sys-nav-name">⚙️ 基础配置</div>
+                    <div class="sys-nav-name">
+                        <span class="sys-nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></span>
+                        基础配置
+                    </div>
                     <div class="sys-expand-indicator">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
-                            stroke-width="2">
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+                            stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="9 18 15 12 9 6"></polyline>
                         </svg>
                     </div>
                 </div>
 
                 <div class="sys-nav-card" data-sys-id="tgbot" onclick="selectSysCategory('tgbot', this)">
-                    <div class="sys-nav-name">🤖 TG Bot</div>
+                    <div class="sys-nav-name">
+                        <span class="sys-nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg></span>
+                        TG Bot
+                    </div>
                     <div class="sys-expand-indicator">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
-                            stroke-width="2">
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+                            stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="9 18 15 12 9 6"></polyline>
                         </svg>
                     </div>
                 </div>
 
                 <div class="sys-nav-card" data-sys-id="pref" onclick="selectSysCategory('pref', this)">
-                    <div class="sys-nav-name">🎨 偏好设置</div>
+                    <div class="sys-nav-name">
+                        <span class="sys-nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg></span>
+                        偏好设置
+                    </div>
                     <div class="sys-expand-indicator">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
-                            stroke-width="2">
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+                            stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="9 18 15 12 9 6"></polyline>
                         </svg>
                     </div>
@@ -2041,50 +2082,65 @@
 
                 <div class="sys-nav-card" data-sys-id="offline-notify"
                     onclick="selectSysCategory('offline-notify', this)">
-                    <div class="sys-nav-name">📡 节点管理</div>
+                    <div class="sys-nav-name">
+                        <span class="sys-nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="7" rx="2"></rect><rect x="2" y="14" width="20" height="7" rx="2"></rect><line x1="6" y1="6.5" x2="6.01" y2="6.5"></line><line x1="6" y1="17.5" x2="6.01" y2="17.5"></line></svg></span>
+                        节点管理
+                    </div>
                     <div class="sys-expand-indicator">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
-                            stroke-width="2">
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+                            stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="9 18 15 12 9 6"></polyline>
                         </svg>
                     </div>
                 </div>
 
                 <div class="sys-nav-card" data-sys-id="geo" onclick="selectSysCategory('geo', this)">
-                    <div class="sys-nav-name">🌍 Geo 管理</div>
+                    <div class="sys-nav-name">
+                        <span class="sys-nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg></span>
+                        Geo 管理
+                    </div>
                     <div class="sys-expand-indicator">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
-                            stroke-width="2">
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+                            stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="9 18 15 12 9 6"></polyline>
                         </svg>
                     </div>
                 </div>
 
                 <div class="sys-nav-card" data-sys-id="mihomo" onclick="selectSysCategory('mihomo', this)">
-                    <div class="sys-nav-name">🐱 Mihomo</div>
+                    <div class="sys-nav-name">
+                        <span class="sys-nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg></span>
+                        Mihomo
+                    </div>
                     <div class="sys-expand-indicator">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
-                            stroke-width="2">
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+                            stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="9 18 15 12 9 6"></polyline>
                         </svg>
                     </div>
                 </div>
 
                 <div class="sys-nav-card" data-sys-id="database" onclick="selectSysCategory('database', this)">
-                    <div class="sys-nav-name">🗄️ 数据库配置</div>
+                    <div class="sys-nav-name">
+                        <span class="sys-nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg></span>
+                        数据库配置
+                    </div>
                     <div class="sys-expand-indicator">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
-                            stroke-width="2">
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+                            stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="9 18 15 12 9 6"></polyline>
                         </svg>
                     </div>
                 </div>
 
                 <div class="sys-nav-card" data-sys-id="monitor" onclick="selectSysCategory('monitor', this)">
-                    <div class="sys-nav-name">💻 系统监控</div>
+                    <div class="sys-nav-name">
+                        <span class="sys-nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg></span>
+                        系统监控
+                    </div>
                     <div class="sys-expand-indicator">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
-                            stroke-width="2">
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+                            stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="9 18 15 12 9 6"></polyline>
                         </svg>
                     </div>
@@ -2145,14 +2201,14 @@
 
                     <div class="sys-pref-row" style="
                             align-items: center;
-                            border: 1px solid #ffe0e0;
-                            background: #fff7f7;
-                            border-radius: 10px;
-                            padding: 10px 12px;
-                            margin-bottom: 14px;
+                            border: 1px solid rgba(255, 59, 48, 0.16);
+                            background: #fff6f6;
+                            border-radius: 16px;
+                            padding: 12px 16px;
+                            margin-bottom: 16px;
                         ">
                         <div class="sys-pref-info">
-                            <span class="sys-pref-title" style="color: #d32f2f">强制使用 HTTP（忽略安全）</span>
+                            <span class="sys-pref-title" style="color: #d92d20">强制使用 HTTP（忽略安全）</span>
                         </div>
                         <label class="sys-toggle-switch">
                             <input type="checkbox" id="sys_force_http" onchange="triggerSysAutoSave()" />
@@ -2164,7 +2220,7 @@
                             display: grid;
                             grid-template-columns: 1fr 1fr 1fr;
                             gap: 12px;
-                            margin-bottom: 14px;
+                            margin-bottom: 16px;
                         ">
                         <div class="sys-field" style="margin-bottom: 0">
                             <label class="sys-label">计数窗口（秒）</label>

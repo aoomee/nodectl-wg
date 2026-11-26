@@ -38,6 +38,8 @@
                 --shadow-item: 0 2px 10px rgba(0, 0, 0, 0.02);
                 --shadow-item-hover: 0 10px 24px rgba(0, 0, 0, 0.06);
                 --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+                --ease-spell: cubic-bezier(0.34, 1.56, 0.64, 1);
+                --ease-granola: cubic-bezier(0.32, 0.72, 0, 1);
                 --ease-smooth: cubic-bezier(0.25, 0.8, 0.25, 1);
             }
 
@@ -430,7 +432,7 @@
                 display: grid;
                 grid-template-columns: repeat(4, 1fr);
                 gap: 12px;
-                margin-bottom: 18px;
+                margin-bottom: 14px;
                 text-align: center;
             }
 
@@ -439,10 +441,12 @@
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
+                height: 104px;
+                box-sizing: border-box;
                 background: #f7f8fa;
                 border-radius: 20px;
-                padding: 16px 8px;
-                border: 1px solid rgba(0, 0, 0, 0.025);
+                padding: 14px 8px;
+                border: 1px solid rgba(0, 0, 0, 0.04);
                 transition: all 0.28s var(--ease-spring);
             }
 
@@ -550,7 +554,8 @@
                 grid-template-columns: repeat(6, minmax(0, 1fr));
                 gap: 12px;
                 flex: 1;
-                align-items: center;
+                align-items: start;
+                align-content: start;
             }
 
             .btn-edit-rule {
@@ -558,7 +563,8 @@
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                height: 108px;
+                height: 104px;
+                box-sizing: border-box;
                 border: 1px solid rgba(0, 0, 0, 0.04);
                 border-radius: 20px;
                 background: #f7f8fa;
@@ -734,6 +740,7 @@
                 }
 
                 .stat-item {
+                    height: auto;
                     padding: 12px 4px;
                     border-radius: 16px;
                 }
@@ -941,7 +948,7 @@
                 justify-content: center;
                 gap: 8px;
                 margin-top: auto;
-                padding-top: 16px;
+                padding-top: 12px;
                 border-top: 1px dashed rgba(0, 0, 0, 0.06);
             }
 
@@ -1107,7 +1114,8 @@
                 </div>
                 <div class="nav-right-actions">
                     <button
-                        class="mail-log-btn"
+                        class="mail-log-btn wa-spell-mail"
+                        id="mailLogBtn"
                         title="查看最近日志"
                         onclick="openLogViewerModal()"
                     >
@@ -1118,10 +1126,16 @@
                             stroke-width="2"
                             stroke-linecap="round"
                             stroke-linejoin="round"
-                            style="width: 18px; height: 18px"
+                            style="width: 19px; height: 19px; overflow: visible"
                         >
-                            <rect x="3" y="5" width="18" height="14" rx="3"></rect>
-                            <path d="M3 7l9 6 9-6"></path>
+                            <!-- 内部日志卡片：悬停/打开时如 ChatGPT 工具箱般从信封内弹性探出 -->
+                            <g class="wa-mail-sheet">
+                                <rect x="6.5" y="4.5" width="11" height="8" rx="1.6" fill="#ffffff" stroke="currentColor" stroke-width="1.6"></rect>
+                                <line x1="9" y1="7.5" x2="15" y2="7.5" stroke="currentColor" stroke-width="1.5"></line>
+                            </g>
+                            <!-- 外层信封底座：稳固不动 -->
+                            <rect class="wa-mail-body" x="3" y="6.5" width="18" height="13" rx="3" fill="#f0f1f5"></rect>
+                            <path class="wa-mail-flap" d="M3.5 8.5l8.5 5.4 8.5-5.4"></path>
                         </svg>
                     </button>
 
@@ -1207,23 +1221,23 @@
 
         <main class="main-content">
             <div class="top-section-grid">
-                <div class="sub-card">
+                <div class="sub-card wa-overview-card">
                     <div class="card-header">
                         <span class="card-title">
-                            <span class="ui-icon-badge blue">
+                            <span class="ui-icon-badge blue wa-icon-bars">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-                                    <rect x="3" y="12" width="4" height="8" rx="1.5"></rect>
-                                    <rect x="10" y="8" width="4" height="12" rx="1.5"></rect>
-                                    <rect x="17" y="4" width="4" height="16" rx="1.5"></rect>
+                                    <rect class="wa-bar-1" x="3" y="12" width="4" height="8" rx="1.5"></rect>
+                                    <rect class="wa-bar-2" x="10" y="8" width="4" height="12" rx="1.5"></rect>
+                                    <rect class="wa-bar-3" x="17" y="4" width="4" height="16" rx="1.5"></rect>
                                 </svg>
                             </span>
                             节点总览
                         </span>
                         <button
-                            class="btn-custom-common btn-color-blue"
+                            class="btn-custom-common btn-color-blue wa-btn-plus"
                             onclick="openAddNodeModal()"
                         >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                            <svg class="wa-plus-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
                                 <line x1="12" y1="5" x2="12" y2="19"></line>
                                 <line x1="5" y1="12" x2="19" y2="12"></line>
                             </svg>
@@ -1277,15 +1291,20 @@
                         {{end}}
                     </div>
                 </div>
-                <div class="sub-card">
+                <div class="sub-card wa-tools-card" id="quickActionsCard">
                     <div class="card-header">
                         <span class="card-title">
-                            <span class="ui-icon-badge purple">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                    <rect x="3" y="3" width="7" height="7" rx="2"></rect>
-                                    <rect x="14" y="3" width="7" height="7" rx="2"></rect>
-                                    <rect x="14" y="14" width="7" height="7" rx="2"></rect>
-                                    <rect x="3" y="14" width="7" height="7" rx="2"></rect>
+                            <span class="ui-icon-badge purple wa-tools-box" aria-hidden="true">
+                                <!-- ChatGPT Spell 166 灵感：工具箱底座固定，星标与斜向工具在悬停/开启工具弹窗时向上弹性探出 -->
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="overflow: visible">
+                                    <g class="wa-tool-sparkle">
+                                        <path d="M8.4 4.2l.85 2.15 2.15.85-2.15.85-.85 2.15-.85-2.15-2.15-.85 2.15-.85z" fill="currentColor" stroke="none"></path>
+                                    </g>
+                                    <g class="wa-tool-wand">
+                                        <path d="M13.6 10.6l4.4-5.2a1.25 1.25 0 0 1 1.85.15l.25.3a1.25 1.25 0 0 1-.1 1.75l-4.6 4.8"></path>
+                                    </g>
+                                    <path class="wa-tool-tray" d="M4.5 11.5h15a1.5 1.5 0 0 1 1.5 1.5v5a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 18v-5a1.5 1.5 0 0 1 1.5-1.5z" fill="#f2ebff"></path>
+                                    <line class="wa-tool-handle" x1="9.5" y1="15.5" x2="14.5" y2="15.5"></line>
                                 </svg>
                             </span>
                             快捷操作
@@ -1294,7 +1313,7 @@
                             <a
                                 href="javascript:void(0)"
                                 onclick="openSubLinksModal()"
-                                class="btn-custom-common btn-color-blue"
+                                class="btn-custom-common btn-color-blue wa-btn-link"
                             >
                                 <svg
                                     width="14"
@@ -1305,11 +1324,14 @@
                                     stroke-width="2.4"
                                     stroke-linecap="round"
                                     stroke-linejoin="round"
+                                    style="overflow: visible"
                                 >
                                     <path
+                                        class="wa-link-a"
                                         d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
                                     ></path>
                                     <path
+                                        class="wa-link-b"
                                         d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
                                     ></path>
                                 </svg>
@@ -1318,9 +1340,11 @@
                             <a
                                 href="javascript:void(0)"
                                 onclick="openSystemSettingsModal()"
-                                class="btn-custom-common btn-color-soft"
+                                class="btn-custom-common btn-color-soft wa-btn-gear"
+                                id="sysSettingsTriggerBtn"
                             >
                                 <svg
+                                    class="wa-gear-svg"
                                     width="14"
                                     height="14"
                                     viewBox="0 0 24 24"
@@ -1343,11 +1367,12 @@
                         <a
                             href="javascript:void(0)"
                             onclick="openCustomRulesModal()"
-                            class="btn-edit-rule"
+                            class="btn-edit-rule wa-tile-bolt"
+                            data-modal-id="customRulesModal"
                         >
                             <span class="rule-icon-box ui-icon-badge orange">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="overflow: visible">
+                                    <polygon class="wa-bolt-path" points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
                                 </svg>
                             </span>
                             <span class="rule-name">自定义分流</span>
@@ -1355,13 +1380,14 @@
                         <a
                             href="javascript:void(0)"
                             onclick="openGlobalSettingsModal()"
-                            class="btn-edit-rule"
+                            class="btn-edit-rule wa-tile-cube"
+                            data-modal-id="globalSettingsModal"
                         >
                             <span class="rule-icon-box ui-icon-badge indigo">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="overflow: visible">
+                                    <path class="wa-cube-base" d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                                    <polyline class="wa-cube-lid" points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                                    <line class="wa-cube-seam" x1="12" y1="22.08" x2="12" y2="12"></line>
                                 </svg>
                             </span>
                             <span class="rule-name">SingBox配置</span>
@@ -1369,12 +1395,15 @@
                         <a
                             href="javascript:void(0)"
                             onclick="openAirportSubModal()"
-                            class="btn-edit-rule"
+                            class="btn-edit-rule wa-tile-plane"
+                            data-modal-id="airportModal"
                         >
                             <span class="rule-icon-box ui-icon-badge blue">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                    <line x1="22" y1="2" x2="11" y2="13"></line>
-                                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="overflow: visible">
+                                    <g class="wa-plane-body">
+                                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                    </g>
                                 </svg>
                             </span>
                             <span class="rule-name">机场订阅</span>
@@ -1382,19 +1411,18 @@
                         <a
                             href="javascript:void(0)"
                             onclick="openClashModal()"
-                            class="btn-edit-rule"
+                            class="btn-edit-rule wa-tile-sliders"
+                            data-modal-id="clashTemplateModal"
                         >
                             <span class="rule-icon-box ui-icon-badge purple">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                    <line x1="4" y1="21" x2="4" y2="14"></line>
-                                    <line x1="4" y1="10" x2="4" y2="3"></line>
-                                    <line x1="12" y1="21" x2="12" y2="12"></line>
-                                    <line x1="12" y1="8" x2="12" y2="3"></line>
-                                    <line x1="20" y1="21" x2="20" y2="16"></line>
-                                    <line x1="20" y1="12" x2="20" y2="3"></line>
-                                    <line x1="1" y1="14" x2="7" y2="14"></line>
-                                    <line x1="9" y1="8" x2="15" y2="8"></line>
-                                    <line x1="17" y1="16" x2="23" y2="16"></line>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="overflow: visible">
+                                    <!-- 垂直轨道固定，三个滑块旋钮沿各自轨道反向弹性滑动 -->
+                                    <line x1="4" y1="21" x2="4" y2="3" opacity="0.45"></line>
+                                    <line x1="12" y1="21" x2="12" y2="3" opacity="0.45"></line>
+                                    <line x1="20" y1="21" x2="20" y2="3" opacity="0.45"></line>
+                                    <line class="wa-slider-k1" x1="1.5" y1="14" x2="6.5" y2="14"></line>
+                                    <line class="wa-slider-k2" x1="9.5" y1="8" x2="14.5" y2="8"></line>
+                                    <line class="wa-slider-k3" x1="17.5" y1="16" x2="22.5" y2="16"></line>
                                 </svg>
                             </span>
                             <span class="rule-name">Clash规则集</span>
@@ -1402,11 +1430,12 @@
                         <a
                             href="javascript:void(0)"
                             onclick="openCFTunnelModal()"
-                            class="btn-edit-rule"
+                            class="btn-edit-rule wa-tile-cloud"
+                            data-modal-id="cfTunnelModal"
                         >
                             <span class="rule-icon-box ui-icon-badge cyan">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="overflow: visible">
+                                    <path class="wa-cloud-body" d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path>
                                 </svg>
                             </span>
                             <span class="rule-name">CF配置</span>
@@ -1414,12 +1443,13 @@
                         <a
                             href="javascript:void(0)"
                             onclick="openCustomNodesModal()"
-                            class="btn-edit-rule"
+                            class="btn-edit-rule wa-tile-link"
+                            data-modal-id="customNodesModal"
                         >
                             <span class="rule-icon-box ui-icon-badge rose">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-                                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="overflow: visible">
+                                    <path class="wa-link-a" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                                    <path class="wa-link-b" d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
                                 </svg>
                             </span>
                             <span class="rule-name">自定义节点</span>
@@ -1873,16 +1903,16 @@
                         <div class="node-actions-group">
                             <div class="node-status-dot" style="background: ${finalDotColor}; box-shadow: 0 0 0 3px ${finalDotColor}22; margin-right: 4px;"></div>
 
-                            <button type="button" onclick="openScriptModal('${safeUUID}')" class="node-action-btn" style="color: #007aff;" title="生成部署脚本">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            <button type="button" onclick="openScriptModal('${safeUUID}')" class="node-action-btn wa-act-download" style="color: #007aff;" title="生成部署脚本">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="overflow:visible"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><g class="wa-dl-arrow"><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></g></svg>
                             </button>
 
-                            <button type="button" onclick="openEditModal('${safeUUID}')" class="node-action-btn" style="color: #007aff;" title="编辑节点">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            <button type="button" onclick="openEditModal('${safeUUID}')" class="node-action-btn wa-act-edit" style="color: #007aff;" title="编辑节点">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="overflow:visible"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path class="wa-edit-pen" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                             </button>
 
-                            <button type="button" onclick="openDeleteModal('${safeUUID}')" class="node-action-btn" style="color: #ff3b30;" title="删除节点">
-                                <svg style="pointer-events: none; width: 16px; height: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                            <button type="button" onclick="openDeleteModal('${safeUUID}')" class="node-action-btn wa-act-trash" style="color: #ff3b30;" title="删除节点">
+                                <svg style="pointer-events: none; width: 16px; height: 16px; overflow: visible;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><g class="wa-trash-lid"><polyline points="3 6 5 6 21 6"></polyline><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></g><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                             </button>
                         </div>
                     </div>
@@ -2043,6 +2073,376 @@
                     border-radius: 22px !important;
                 }
             }
+
+            /* =========================================================
+               WireArc Micro-Interactions (Design Spells: ChatGPT Tools & Granola Sidebar)
+               ========================================================= */
+            /* 1) ChatGPT Spell 166：外框锚定、内部工具部件弹性探出 */
+            .wa-tools-box .wa-tool-sparkle,
+            .wa-tools-box .wa-tool-wand {
+                transform-box: fill-box;
+                transform-origin: center bottom;
+                transition: transform 0.34s var(--ease-spell);
+            }
+            .wa-tools-box .wa-tool-sparkle {
+                transform: translate(0.5px, 2.2px) scale(0.86);
+            }
+            .wa-tools-box .wa-tool-wand {
+                transform: translate(-0.8px, 2.6px) rotate(-8deg);
+            }
+            .wa-tools-card:hover .wa-tools-box .wa-tool-sparkle,
+            .wa-tools-card.is-tools-open .wa-tools-box .wa-tool-sparkle {
+                transform: translate(-0.8px, -1.6px) rotate(-10deg) scale(1.06);
+            }
+            .wa-tools-card:hover .wa-tools-box .wa-tool-wand,
+            .wa-tools-card.is-tools-open .wa-tools-box .wa-tool-wand {
+                transform: translate(0.9px, -1.7px) rotate(6deg);
+            }
+
+            /* 顶部最近日志信封：内部日志纸片探出 */
+            .wa-spell-mail .wa-mail-sheet,
+            .wa-spell-mail .wa-mail-body {
+                transition: transform 0.34s var(--ease-spell), fill 0.22s ease;
+            }
+            .wa-spell-mail .wa-mail-sheet {
+                transform-box: fill-box;
+                transform-origin: center bottom;
+                transform: translateY(3.2px);
+            }
+            .wa-spell-mail:hover .wa-mail-body,
+            .wa-spell-mail.is-open .wa-mail-body {
+                fill: #eaf4ff;
+            }
+            .wa-spell-mail:hover .wa-mail-sheet,
+            .wa-spell-mail.is-open .wa-mail-sheet {
+                transform: translateY(-2.4px) scale(1.03);
+            }
+
+            /* 快捷操作 6 个图标：各自子部件独立微动效 */
+            .btn-edit-rule svg * {
+                transform-box: fill-box;
+                transform-origin: center;
+                transition: transform 0.32s var(--ease-spell);
+            }
+            .wa-tile-bolt:hover .wa-bolt-path,
+            .wa-tile-bolt.is-open .wa-bolt-path {
+                transform: translateY(-1.5px) rotate(-6deg) scale(1.06);
+            }
+            .wa-tile-cube .wa-cube-lid {
+                transform-origin: center top;
+            }
+            .wa-tile-cube:hover .wa-cube-lid,
+            .wa-tile-cube.is-open .wa-cube-lid {
+                transform: translateY(-1.6px);
+            }
+            .wa-tile-cube:hover .wa-cube-seam,
+            .wa-tile-cube.is-open .wa-cube-seam {
+                transform: scaleY(0.92);
+            }
+            .wa-tile-plane:hover .wa-plane-body,
+            .wa-tile-plane.is-open .wa-plane-body {
+                transform: translate(1.8px, -1.8px) scale(1.04);
+            }
+            .wa-tile-sliders:hover .wa-slider-k1,
+            .wa-tile-sliders.is-open .wa-slider-k1 {
+                transform: translateY(-4.5px);
+            }
+            .wa-tile-sliders:hover .wa-slider-k2,
+            .wa-tile-sliders.is-open .wa-slider-k2 {
+                transform: translateY(4.5px);
+            }
+            .wa-tile-sliders:hover .wa-slider-k3,
+            .wa-tile-sliders.is-open .wa-slider-k3 {
+                transform: translateY(-5px);
+            }
+            .wa-tile-cloud:hover .wa-cloud-body,
+            .wa-tile-cloud.is-open .wa-cloud-body {
+                transform: translateY(-2px) scale(1.04);
+            }
+            .wa-tile-link:hover .wa-link-a,
+            .wa-tile-link.is-open .wa-link-a,
+            .wa-btn-link:hover .wa-link-a {
+                transform: translate(1.1px, -1.1px);
+            }
+            .wa-tile-link:hover .wa-link-b,
+            .wa-tile-link.is-open .wa-link-b,
+            .wa-btn-link:hover .wa-link-b {
+                transform: translate(-1.1px, 1.1px);
+            }
+            .wa-btn-link .wa-link-a,
+            .wa-btn-link .wa-link-b {
+                transform-box: fill-box;
+                transform-origin: center;
+                transition: transform 0.3s var(--ease-spell);
+            }
+
+            /* 节点总览三柱波浪 & 顶部胶囊按钮微动效 */
+            .wa-icon-bars rect {
+                transform-box: fill-box;
+                transform-origin: center bottom;
+                transition: transform 0.32s var(--ease-spell);
+            }
+            .wa-overview-card:hover .wa-icon-bars .wa-bar-1 {
+                transform: scaleY(1.16);
+            }
+            .wa-overview-card:hover .wa-icon-bars .wa-bar-2 {
+                transform: scaleY(0.86);
+                transition-delay: 0.04s;
+            }
+            .wa-overview-card:hover .wa-icon-bars .wa-bar-3 {
+                transform: scaleY(1.08);
+                transition-delay: 0.08s;
+            }
+            .wa-btn-plus .wa-plus-svg {
+                transition: transform 0.34s var(--ease-spell);
+            }
+            .wa-btn-plus:hover .wa-plus-svg {
+                transform: rotate(90deg);
+            }
+            .wa-btn-gear .wa-gear-svg {
+                transition: transform 0.42s var(--ease-spell);
+            }
+            .wa-btn-gear:hover .wa-gear-svg,
+            .wa-btn-gear.is-open .wa-gear-svg {
+                transform: rotate(52deg);
+            }
+
+            /* 节点行操作按钮微动效 */
+            .wa-act-download .wa-dl-arrow,
+            .wa-act-edit .wa-edit-pen,
+            .wa-act-trash .wa-trash-lid {
+                transform-box: fill-box;
+                transition: transform 0.28s var(--ease-spell);
+            }
+            .wa-act-download:hover .wa-dl-arrow {
+                transform: translateY(1.8px);
+            }
+            .wa-act-edit .wa-edit-pen {
+                transform-origin: left bottom;
+            }
+            .wa-act-edit:hover .wa-edit-pen {
+                transform: translate(0.6px, -0.8px) rotate(-7deg);
+            }
+            .wa-act-trash .wa-trash-lid {
+                transform-origin: right bottom;
+            }
+            .wa-act-trash:hover .wa-trash-lid {
+                transform: translateY(-1.4px) rotate(14deg);
+            }
+
+            /* 2) Granola Spell 328：侧边栏状态联动图标 + 真实平滑折叠侧栏 */
+            .wa-sidebar-toggle {
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                border: none;
+                background: transparent;
+                color: #6e6e73;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                flex-shrink: 0;
+                padding: 0;
+                transition: background-color 0.2s ease, color 0.2s ease, transform 0.22s var(--ease-spell);
+            }
+            .wa-sidebar-toggle:hover {
+                background: rgba(0, 0, 0, 0.055);
+                color: #1d1d1f;
+            }
+            .wa-sidebar-toggle:active {
+                transform: scale(0.92);
+            }
+            .wa-sidebar-toggle:focus-visible {
+                outline: 2px solid rgba(0, 122, 255, 0.45);
+                outline-offset: 2px;
+            }
+            .wa-sidebar-toggle svg {
+                width: 18px;
+                height: 18px;
+                overflow: visible;
+            }
+            /* 左侧边栏图标几何（弹窗导航栏） */
+            .wa-sidebar-toggle .wa-sb-pane {
+                transform-box: fill-box;
+                transform-origin: left center;
+                opacity: 0.24;
+                transition: transform 0.34s var(--ease-granola), opacity 0.26s ease;
+            }
+            .wa-sidebar-toggle .wa-sb-divider {
+                transition: transform 0.34s var(--ease-granola);
+            }
+            .wa-sidebar-toggle .wa-sb-dot-wrap {
+                transform-box: fill-box;
+                transform-origin: center;
+                transform: scale(0);
+                opacity: 0;
+                transition: transform 0.36s var(--ease-spell), opacity 0.2s ease;
+            }
+            /* 悬停预告微动（未收起时微微向左示意收起；已收起时微微向右示意展开） */
+            .wa-sidebar-toggle:not(.is-collapsed):hover .wa-sb-divider {
+                transform: translateX(-0.9px);
+            }
+            .wa-sidebar-toggle:not(.is-collapsed):hover .wa-sb-pane {
+                transform: scaleX(0.84);
+            }
+            /* 收起状态：内侧栏压缩为极细竖线 + 右上角状态点弹出（Granola 标志性细节） */
+            .wa-sidebar-toggle.is-collapsed .wa-sb-pane {
+                transform: scaleX(0.08);
+                opacity: 0;
+            }
+            .wa-sidebar-toggle.is-collapsed .wa-sb-divider {
+                transform: translateX(-3.1px);
+            }
+            .wa-sidebar-toggle.is-collapsed:hover .wa-sb-divider {
+                transform: translateX(-2px);
+            }
+            .wa-sidebar-toggle.is-collapsed .wa-sb-dot-wrap {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            /* 右侧边栏变体（首页流量统计节点排行栏） */
+            .wa-sidebar-toggle.wa-sb-right .wa-sb-pane {
+                transform-origin: right center;
+            }
+            .wa-sidebar-toggle.wa-sb-right:not(.is-collapsed):hover .wa-sb-divider {
+                transform: translateX(0.9px);
+            }
+            .wa-sidebar-toggle.wa-sb-right.is-collapsed .wa-sb-divider {
+                transform: translateX(3.1px);
+            }
+            .wa-sidebar-toggle.wa-sb-right.is-collapsed:hover .wa-sb-divider {
+                transform: translateX(2px);
+            }
+
+            /* 弹窗侧边栏真实平滑折叠（sys / cft / gs / air 四大分栏弹窗共用） */
+            .sys-left-col,
+            .cft-left-col,
+            .gs-left-col,
+            .air-sidebar {
+                transition: width 0.34s var(--ease-granola), padding 0.34s var(--ease-granola), opacity 0.24s ease, border-color 0.28s ease !important;
+            }
+            .sys-modal-card.wa-sidebar-collapsed .sys-left-col,
+            .cft-modal-card.wa-sidebar-collapsed .cft-left-col,
+            .gs-modal-card.wa-sidebar-collapsed .gs-left-col,
+            .air-modal-card.wa-sidebar-collapsed .air-sidebar {
+                width: 0 !important;
+                min-width: 0 !important;
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+                border-right-color: transparent !important;
+                opacity: 0 !important;
+                overflow: hidden !important;
+                pointer-events: none !important;
+            }
+            @media (max-width: 768px) {
+                .wa-sidebar-toggle {
+                    display: none !important;
+                }
+            }
+
+            /* 无障碍：尊重系统“减弱动态效果”设置 */
+            @media (prefers-reduced-motion: reduce) {
+                .wa-tools-box *,
+                .wa-spell-mail *,
+                .btn-edit-rule svg *,
+                .wa-icon-bars rect,
+                .wa-btn-plus .wa-plus-svg,
+                .wa-btn-gear .wa-gear-svg,
+                .wa-btn-link *,
+                .wa-act-download *,
+                .wa-act-edit *,
+                .wa-act-trash *,
+                .wa-sidebar-toggle,
+                .wa-sidebar-toggle *,
+                .sys-left-col,
+                .cft-left-col,
+                .gs-left-col,
+                .air-sidebar,
+                .ts-layout,
+                .ts-right {
+                    transition: none !important;
+                    animation: none !important;
+                }
+            }
         </style>
+        <script id="wirearc-micro-interactions">
+            (function () {
+                // Granola 风格分栏弹窗侧边栏折叠控制
+                window.toggleModalSidebar = function (cardId, btn) {
+                    const card = document.getElementById(cardId);
+                    if (!card) return;
+                    const willCollapse = !card.classList.contains("wa-sidebar-collapsed");
+                    // 若当前尚未选中任何分类导致右侧为空，先选中第一项再折叠，避免出现空白内容区
+                    if (willCollapse && cardId !== "airModalCard" && !card.classList.contains("has-content")) {
+                        const firstNav = card.querySelector(".sys-nav-card, .cft-nav-card, .proto-nav-card[data-proto-id]");
+                        if (firstNav) firstNav.click();
+                    }
+                    const collapsed = card.classList.toggle("wa-sidebar-collapsed");
+                    if (btn) {
+                        btn.classList.toggle("is-collapsed", collapsed);
+                        btn.setAttribute("aria-pressed", collapsed ? "true" : "false");
+                        btn.title = collapsed ? "展开侧边栏" : "收起侧边栏";
+                    }
+                };
+
+                // Granola 风格首页流量统计右侧排行栏折叠控制
+                window.toggleTrafficSidebar = function (btn) {
+                    const card = document.getElementById("traffic-stats-card");
+                    if (!card) return;
+                    const collapsed = card.classList.toggle("ts-sidebar-collapsed");
+                    if (btn) {
+                        btn.classList.toggle("is-collapsed", collapsed);
+                        btn.setAttribute("aria-pressed", collapsed ? "true" : "false");
+                        btn.title = collapsed ? "展开节点排行栏" : "收起节点排行栏";
+                    }
+                };
+
+                // 同步弹窗打开状态与首页触发图标（如 ChatGPT Tools / Mail 打开保持展开姿态）
+                const quickModalIds = [
+                    "customRulesModal",
+                    "globalSettingsModal",
+                    "airportModal",
+                    "clashTemplateModal",
+                    "cfTunnelModal",
+                    "customNodesModal",
+                ];
+
+                function syncIconActiveStates() {
+                    const quickCard = document.getElementById("quickActionsCard");
+                    let anyQuickOpen = false;
+                    quickModalIds.forEach((id) => {
+                        const modal = document.getElementById(id);
+                        const isOpen = !!(modal && modal.classList.contains("active"));
+                        if (isOpen) anyQuickOpen = true;
+                        const tile = document.querySelector(`.btn-edit-rule[data-modal-id="${id}"]`);
+                        if (tile) tile.classList.toggle("is-open", isOpen);
+                    });
+                    if (quickCard) quickCard.classList.toggle("is-tools-open", anyQuickOpen);
+
+                    const logModal = document.getElementById("logViewerModal");
+                    const mailBtn = document.getElementById("mailLogBtn");
+                    if (mailBtn) {
+                        mailBtn.classList.toggle("is-open", !!(logModal && logModal.classList.contains("active")));
+                    }
+
+                    const sysModal = document.getElementById("systemSettingsModal");
+                    const sysBtn = document.getElementById("sysSettingsTriggerBtn");
+                    if (sysBtn) {
+                        sysBtn.classList.toggle("is-open", !!(sysModal && sysModal.classList.contains("active")));
+                    }
+                }
+
+                document.addEventListener("DOMContentLoaded", function () {
+                    const observer = new MutationObserver(syncIconActiveStates);
+                    [...quickModalIds, "logViewerModal", "systemSettingsModal"].forEach((id) => {
+                        const el = document.getElementById(id);
+                        if (el) observer.observe(el, { attributes: true, attributeFilter: ["class"] });
+                    });
+                    syncIconActiveStates();
+                });
+            })();
+        </script>
     </body>
 </html>

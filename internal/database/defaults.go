@@ -71,7 +71,7 @@ func initBasicSettings() {
 		{Key: "pref_speed_test_file_size", Value: "50", Description: "节点测速文件大小(MB)"},
 		{Key: "pref_traffic_stats_retention_days", Value: "14", Description: "流量统计记录最长保留天数"},
 
-		{Key: "pref_traffic_point_persist_interval_sec", Value: "0", Description: "实时流量点数据落库间隔(秒)，0表示关闭"},
+		{Key: "pref_traffic_point_persist_interval_sec", Value: "60", Description: "实时流量点数据落库间隔(秒)，0表示关闭"},
 		{Key: "auth_cookie_ttl_mode", Value: "3d", Description: "后台登录 Cookie 有效期选项(1d/3d/7d/never)"},
 		{Key: "login_ip_retry_window_sec", Value: "120", Description: "同IP登录失败计数窗口时长(秒)"},
 		{Key: "login_ip_max_retries", Value: "5", Description: "同IP登录失败最大重试次数"},

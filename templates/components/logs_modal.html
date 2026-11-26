@@ -167,31 +167,49 @@
 
     .logv-select,
     .logv-btn {
-        border: 1px solid #d1d1d6;
-        border-radius: 8px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 999px;
         background: #fff;
         color: #1d1d1f;
         height: 32px;
-        font-size: 13px;
-        padding: 0 10px;
+        font-size: 12.5px;
+        font-weight: 600;
+        padding: 0 12px;
         cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        transition: all 0.2s ease;
+    }
+
+    .logv-clear-btn {
+        background: #fff5f5;
+        border-color: rgba(255, 59, 48, 0.18);
+        color: #d70015;
+    }
+
+    .logv-clear-btn:hover:not(:disabled) {
+        background: #ffe8e6;
+        border-color: rgba(255, 59, 48, 0.34);
+    }
+
+    .logv-clear-btn:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
     }
 
     .logv-close {
         width: 32px;
         padding: 0;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        background: #f5f5f7;
+        background: #f2f3f7;
         color: #555;
-        border-color: #e5e5ea;
+        border-color: transparent;
     }
 
     .logv-close:hover {
         background: #e5e5ea;
-        border-color: #e5e5ea;
-        color: #333;
+        color: #1d1d1f;
     }
 
     .logv-live-dot {
@@ -255,10 +273,10 @@
 
     .logv-item {
         background: #fff;
-        border: 1px solid #e9e9ef;
-        border-radius: 9px;
-        padding: 9px 10px;
-        margin-bottom: 7px;
+        border: 1px solid rgba(0, 0, 0, 0.055);
+        border-radius: 12px;
+        padding: 10px 12px;
+        margin-bottom: 8px;
     }
 
     .logv-line {
@@ -385,6 +403,16 @@
             display: none;
         }
 
+        .logv-clear-btn {
+            width: 30px;
+            height: 30px;
+            padding: 0;
+        }
+
+        .logv-clear-btn span {
+            display: none;
+        }
+
         .logv-capsule {
             position: relative;
             overflow: visible;
@@ -486,6 +514,10 @@
                 </div>
                 <span class="logv-live-dot" id="logViewerLiveDot"></span>
                 <span class="logv-live-text" id="logViewerLiveText">实时更新</span>
+                <button type="button" class="logv-btn logv-clear-btn" id="logViewerClearBtn" onclick="clearRecentLogs()" title="清空日志">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>
+                    <span>清空</span>
+                </button>
                 <button class="logv-btn logv-close" onclick="closeLogViewerModal()">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
@@ -710,6 +742,29 @@
 
         stopRecentLogsStream();
         fetchRecentLogsSnapshot();
+    }
+
+    async function clearRecentLogs() {
+        if (!confirm('确定清空日志中心的所有历史日志吗？')) {
+            return;
+        }
+        const btn = document.getElementById('logViewerClearBtn');
+        if (btn) btn.disabled = true;
+        try {
+            const res = await fetch('/api/recent-logs/clear', { method: 'POST' });
+            const data = await res.json();
+            if (!res.ok || !data || data.status !== 'success') {
+                alert((data && data.message) ? data.message : '清空日志失败');
+                return;
+            }
+            logViewerAllLogs = [];
+            logViewerHasData = false;
+            renderRecentLogs([]);
+        } catch (e) {
+            alert('清空日志失败，请检查网络连接');
+        } finally {
+            if (btn) btn.disabled = false;
+        }
     }
 
     logViewerLiveDotEl.addEventListener('click', function () {

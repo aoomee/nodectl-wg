@@ -79,7 +79,7 @@ func boundDial(ctx context.Context, device, source, destination string) (net.Con
 	if ip == nil || ip.To4() == nil || device == "" {
 		return nil, errors.New("invalid bound dial parameters")
 	}
-	d := net.Dialer{Timeout: 5 * time.Second, KeepAlive: 30 * time.Second, LocalAddr: &net.TCPAddr{IP: ip}, Control: func(_, _ string, raw syscall.RawConn) error {
+	d := net.Dialer{Timeout: 8 * time.Second, KeepAlive: 30 * time.Second, LocalAddr: &net.TCPAddr{IP: ip}, Control: func(_, _ string, raw syscall.RawConn) error {
 		var bindErr error
 		if err := raw.Control(func(fd uintptr) {
 			bindErr = syscall.SetsockoptString(int(fd), syscall.SOL_SOCKET, syscall.SO_BINDTODEVICE, device)

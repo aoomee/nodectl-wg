@@ -41,6 +41,7 @@ type ServerCommand struct {
 
 // CommandResult Agent 回传命令执行结果
 type CommandResult struct {
+	ErrorCode string          `json:"error_code,omitempty"`
 	Data      json.RawMessage `json:"data,omitempty"`
 	InstallID string          `json:"install_id,omitempty"`
 	Type      string          `json:"type"` // "accepted" / "progress" / "result"

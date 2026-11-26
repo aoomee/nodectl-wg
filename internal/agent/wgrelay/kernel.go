@@ -309,12 +309,14 @@ func (m *Manager) handshake(ctx context.Context, r *record) error {
 			continue
 		}
 		timestamp, e := strconv.ParseInt(f[1], 10, 64)
-		if e == nil && timestamp > 0 {
-			age := time.Since(time.Unix(timestamp, 0))
-			if age >= -5*time.Second && age <= 3*time.Minute {
-				return nil
-			}
+		if e != nil || timestamp < 0 {
+			return errors.New("invalid WireGuard handshake timestamp")
 		}
+		age := time.Since(time.Unix(timestamp, 0))
+		if timestamp > 0 && age >= -5*time.Second && age <= 3*time.Minute {
+			return nil
+		}
+		return ErrProbeTimeout
 	}
-	return errors.New("WireGuard peer has no recent handshake")
+	return errors.New("configured WireGuard peer missing")
 }

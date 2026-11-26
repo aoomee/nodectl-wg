@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"os"
 	"path/filepath"
@@ -234,19 +235,29 @@ func (m *Manager) Execute(ctx context.Context, action string, raw json.RawMessag
 		if r.Phase != "configured" && r.Phase != "verified" && r.Phase != "active" {
 			return nil, errors.New("relay is not configured")
 		}
-		active := r.Phase == "active"
-		r.Phase = "verifying"
-		r.LastAction = action
-		if err = m.save(r); err != nil {
-			return nil, m.failed(r, err)
+		prevPhase := r.Phase
+		wasVerified := r.Config.Topology == "reality_ss_v2" && (prevPhase == "verified" || prevPhase == "active")
+		if !wasVerified {
+			r.Phase = "verifying"
+			r.LastAction = action
+			if err = m.save(r); err != nil {
+				return nil, m.failed(r, err)
+			}
 		}
 		if err = m.verify(ctx, r); err != nil {
+			// A single transient probe failure on an already-verified/active tunnel
+			// must not tear down the live kernel link; the coordinator retries and
+			// issues explicit wg-remove if failures persist.
+			if wasVerified && errors.Is(err, ErrProbeTimeout) {
+				return nil, err
+			}
 			return nil, m.failed(r, err)
 		}
 		r.Phase = "verified"
-		if active {
+		if prevPhase == "active" {
 			r.Phase = "active"
 		}
+		r.LastAction = action
 	case "wg-activate":
 		if r.Config.Topology == "reality_ss_v2" {
 			return nil, errors.New("v2 topology requires REALITY route activation, not TCP proxy")
@@ -405,22 +416,30 @@ func (m *Manager) verify(ctx context.Context, r *record) error {
 	vctx, cancel := context.WithTimeout(ctx, 12*time.Second)
 	defer cancel()
 	if r.Config.Role == "entry" {
+		// Detect a replaced peer even if the ensuing TCP dial would time out.
+		if err := m.handshake(vctx, r); err != nil && !errors.Is(err, ErrProbeTimeout) {
+			return err
+		}
 		c, err := m.dial(vctx, r.Interface, strings.TrimSuffix(r.Config.LocalAddress, "/32"), net.JoinHostPort(strings.TrimSuffix(r.Config.PeerAddress, "/32"), strconv.Itoa(r.Config.TargetPort)))
 		if err != nil {
+			var timeout net.Error
+			if errors.As(err, &timeout) && timeout.Timeout() {
+				return fmt.Errorf("bound WireGuard target TCP verification failed: %w", ErrProbeTimeout)
+			}
 			return errors.New("bound WireGuard target TCP verification failed")
 		}
 		_ = c.Close()
 		r.TargetVerified = true
 	}
 	for {
-		if err = m.handshake(vctx, r); err == nil {
-			return nil
+		if err = m.handshake(vctx, r); !errors.Is(err, ErrProbeTimeout) {
+			return err
 		}
 		timer := time.NewTimer(200 * time.Millisecond)
 		select {
 		case <-vctx.Done():
 			timer.Stop()
-			return errors.New("WireGuard handshake verification failed")
+			return fmt.Errorf("WireGuard handshake verification failed: %w", ErrProbeTimeout)
 		case <-timer.C:
 		}
 	}

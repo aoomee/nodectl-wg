@@ -168,7 +168,12 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
    // Failed/disabled fail-closed pair still requires explicit restore direct.
    pair={...pair,enabled:false,status:'disabled',phase:'blocked',restore_direct:false};await page.evaluate(()=>loadNodeWGEditor('a'));
    assert.equal(await page.locator('#nodeWGPairBadge').innerText(),'已阻断');
-   assert.match(await page.locator('#nodeWGStatus').innerText(),/已阻断/);await page.locator('#nodeWGCleanup').click();await page.waitForFunction(()=>nodeWGEditor.pair?.restore_direct);
+   assert.match(await page.locator('#nodeWGStatus').innerText(),/已阻断/);
+   await page.locator('#nodeWGRetry').click();await page.waitForFunction(()=>nodeWGEditor.pair?.status==='active');
+   assert.equal(requests.at(-1).retry_blocked,true);assert.equal(requests.at(-1).enabled,true);
+   assert.equal(await page.locator('#nodeWGRetry').isVisible(),false);
+   pair={...pair,enabled:false,status:'disabled',phase:'blocked',restore_direct:false};await page.evaluate(()=>loadNodeWGEditor('a'));
+   await page.locator('#nodeWGCleanup').click();await page.waitForFunction(()=>nodeWGEditor.pair?.restore_direct);
    assert.equal(requests.at(-1).enabled,false);
 
    // New WG cannot proceed on failed autosave or backend readiness.

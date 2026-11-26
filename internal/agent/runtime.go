@@ -48,6 +48,7 @@ type Runtime struct {
 	commandCtx        context.Context
 	wgRouteLease      *time.Timer
 	wgLeaseGeneration uint64
+	wgLeaseDeadline   time.Time
 }
 
 // NewRuntime 创建运行时实例

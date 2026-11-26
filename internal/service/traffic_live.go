@@ -124,12 +124,14 @@ type AgentCommand struct {
 
 // AgentCommandResult Agent 回传命令执行结果
 type AgentCommandResult struct {
-	Data      json.RawMessage `json:"data,omitempty"`
-	Type      string          `json:"type"` // "accepted" / "progress" / "result"
-	CommandID string          `json:"command_id"`
-	Status    string          `json:"status,omitempty"` // "ok" / "error"
-	Message   string          `json:"message,omitempty"`
-	Stage     string          `json:"stage,omitempty"` // 执行阶段描述
+	disconnected bool            // Set by the local hub only.
+	ErrorCode    string          `json:"error_code,omitempty"`
+	Data         json.RawMessage `json:"data,omitempty"`
+	Type         string          `json:"type"` // "accepted" / "progress" / "result"
+	CommandID    string          `json:"command_id"`
+	Status       string          `json:"status,omitempty"` // "ok" / "error"
+	Message      string          `json:"message,omitempty"`
+	Stage        string          `json:"stage,omitempty"` // 执行阶段描述
 }
 
 // TrafficHub 实时流量中枢：管理 Agent 连接与前端订阅

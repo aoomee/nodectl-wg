@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/glebarez/sqlite"
@@ -27,6 +28,7 @@ type wgFake struct {
 	states         map[string]wgrelay.Status
 	offline        map[string]bool
 	fail           string
+	failErr        error
 	badRevision    bool
 	ssPort         int
 	ssDigest       string
@@ -60,6 +62,9 @@ func (f *wgFake) send(ctx context.Context, id, action string, v interface{}) (js
 	}
 	f.calls = append(f.calls, id+":"+action)
 	if f.fail == id+":"+action {
+		if f.failErr != nil {
+			return nil, f.failErr
+		}
 		return nil, errors.New("SECRET credential must not escape")
 	}
 	s := f.states[id]
@@ -251,8 +256,8 @@ func TestWGPairHappyPathAndSubscriptions(t *testing.T) {
 		t.Fatal("offline subscription not filtered immediately")
 	}
 	wgSteps(t, c, p.ID, 1)
-	if wgStored(t, c, p.ID).Status != "cleanup_pending" {
-		t.Fatal("offline pair not failed closed")
+	if row := wgStored(t, c, p.ID); row.Status != "active" || row.RetryCount != 1 {
+		t.Fatal("short control disconnect tore down active route")
 	}
 }
 
@@ -625,6 +630,175 @@ func TestWGPairV2ActiveHealthAndSourceDrift(t *testing.T) {
 				t.Fatal("lost dependency did not fail closed")
 			}
 		})
+	}
+}
+
+func TestWGPairV2ActiveToleratesTransientProbeFailures(t *testing.T) {
+	c, f := newWGTest(t)
+	p := createWG(t, c)
+	wgSteps(t, c, p.ID, 8)
+	if wgStored(t, c, p.ID).Status != "active" {
+		t.Fatal("pair not active")
+	}
+	f.failErr = errWGTransient
+	now := c.now()
+	advance := func() {
+		now = now.Add(wgHealthRetryDelay)
+		c.now = func() time.Time { return now }
+	}
+	f.fail = "aaaaaaaaaaaa:wg-v2-status"
+	for i := 1; i < wgActiveFailureLimit; i++ {
+		advance()
+		wgSteps(t, c, p.ID, 1)
+		row := wgStored(t, c, p.ID)
+		if row.Status != "active" || int(row.RetryCount) != i {
+			t.Fatalf("transient failure %d tore down tunnel: %+v", i, wgDTO(row))
+		}
+	}
+	f.fail = ""
+	advance()
+	wgSteps(t, c, p.ID, 1)
+	if row := wgStored(t, c, p.ID); row.Status != "active" || row.RetryCount != 0 {
+		t.Fatalf("recovery did not reset retries: %+v", wgDTO(row))
+	}
+	f.fail = "aaaaaaaaaaaa:wg-v2-status"
+	for i := 0; i < wgActiveFailureLimit; i++ {
+		advance()
+		wgSteps(t, c, p.ID, 1)
+	}
+	if wgStored(t, c, p.ID).Status != "cleanup_pending" {
+		t.Fatal("persistent failure did not fail closed")
+	}
+}
+
+func TestWGActiveLandingReconnect(t *testing.T) {
+	c, f := newWGTest(t)
+	p := createWG(t, c)
+	wgSteps(t, c, p.ID, 8)
+	active := wgStored(t, c, p.ID)
+	calls := len(f.calls)
+	now := c.now().Add(wgHealthInterval)
+	c.now = func() time.Time { return now }
+	online := false
+	c.agentStatus = func(id string) string {
+		if id == active.PeerInstallID && !online {
+			return "offline"
+		}
+		return "ready"
+	}
+	wgSteps(t, c, p.ID, 1)
+	row := wgStored(t, c, p.ID)
+	if row.Status != "active" || row.RetryCount != 1 || !row.HealthCheckedAt.Equal(active.HealthCheckedAt) || len(f.calls) != calls {
+		t.Fatalf("landing disconnect should only schedule a retry: %+v calls=%v", wgDTO(row), f.calls[calls:])
+	}
+	online = true
+	now = now.Add(wgHealthRetryDelay)
+	wgSteps(t, c, p.ID, 1)
+	row = wgStored(t, c, p.ID)
+	want := []string{active.PeerInstallID + ":wg-v2-ss", active.PeerInstallID + ":wg-verify", active.EntryInstallID + ":wg-v2-status"}
+	if row.Status != "active" || row.RetryCount != 0 || !row.HealthCheckedAt.Equal(now) || fmt.Sprint(f.calls[calls:]) != fmt.Sprint(want) {
+		t.Fatalf("reconnected pair should pass its health checks: %+v calls=%v", wgDTO(row), f.calls[calls:])
+	}
+}
+
+func TestWGHealthFailureWireFormat(t *testing.T) {
+	for _, tc := range []struct {
+		action, payload string
+		want            bool
+	}{
+		{"wg-v2-status", `{"status":"error","error_code":"wg_probe_timeout"}`, true},
+		{"wg-verify", `{"status":"error","error_code":"wg_probe_timeout"}`, true},
+		{"wg-v2-ss", `{"status":"error","error_code":"wg_probe_timeout"}`, false},
+		{"wg-v2-status", `{"status":"error","message":"agent disconnected","disconnected":true}`, false},
+		{"wg-v2-status", `{"status":"error","error_code":"unknown"}`, false},
+	} {
+		var result AgentCommandResult
+		if err := json.Unmarshal([]byte(tc.payload), &result); err != nil {
+			t.Fatal(err)
+		}
+		if result.retryableWGFailure(tc.action) != tc.want {
+			t.Fatal(tc.action, tc.payload)
+		}
+	}
+}
+
+func TestWGActiveStepDeadlineCountsOnce(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		c, f := newWGTest(t)
+		c.now = time.Now
+		c.timeout = time.Minute
+		p := createWG(t, c)
+		wgSteps(t, c, p.ID, 8)
+		confirmed := wgStored(t, c, p.ID).HealthCheckedAt
+		c.send = func(ctx context.Context, id, action string, payload interface{}) (json.RawMessage, error) {
+			if action == "wg-v2-status" {
+				<-ctx.Done()
+				return nil, ctx.Err()
+			}
+			return f.send(ctx, id, action, payload)
+		}
+		wgSteps(t, c, p.ID, 1)
+		row := wgStored(t, c, p.ID)
+		if row.Status != "active" || row.RetryCount != 1 || !row.HealthCheckedAt.Equal(confirmed) || !row.NextRetryAt.Equal(time.Now().Add(wgHealthRetryDelay)) {
+			t.Fatalf("step deadline lost retry: %+v", wgDTO(row))
+		}
+		c.send = f.send
+		wgSteps(t, c, p.ID, 1)
+		if wgStored(t, c, p.ID).RetryCount != 1 {
+			t.Fatal("ignored retry delay")
+		}
+		time.Sleep(wgHealthRetryDelay)
+		wgSteps(t, c, p.ID, 1)
+		if row = wgStored(t, c, p.ID); row.RetryCount != 0 || !row.HealthCheckedAt.After(confirmed) {
+			t.Fatal("recovery failed")
+		}
+	})
+}
+
+func TestWGExplicitRetryKeepsEntryGuarded(t *testing.T) {
+	c, f := newWGTest(t)
+	p := createWG(t, c)
+	wgSteps(t, c, p.ID, 8)
+	// A definite (or untyped legacy) agent rejection must start cleanup immediately.
+	f.fail = "aaaaaaaaaaaa:wg-v2-status"
+	wgSteps(t, c, p.ID, 1)
+	if wgStored(t, c, p.ID).Status != "cleanup_pending" {
+		t.Fatal("hard agent rejection retried")
+	}
+	f.fail = ""
+	wgSteps(t, c, p.ID, 3)
+	row := wgStored(t, c, p.ID)
+	req := WGPairPush{UUID: row.EntryUUID, PeerUUID: row.PeerUUID, EntryPort: row.EntryPort, Revision: row.DesiredRevision + 1, Enabled: true, RetryBlocked: true}
+	for i := 0; i < 2; i++ {
+		if _, err := c.save(context.Background(), req); err != nil {
+			t.Fatal(err)
+		}
+	}
+	before := len(f.calls)
+	for i := 0; i < 8; i++ {
+		if c.realitySubscriptionAllowed("entry") || len(c.subscriptionLinks(0)) != 0 {
+			t.Fatal("entry exposed before verification")
+		}
+		wgSteps(t, c, p.ID, 1)
+	}
+	if f.calls[before] != "aaaaaaaaaaaa:wg-v2-guard" || strings.Contains(strings.Join(f.calls[before:], ","), "wg-v2-direct") || len(c.subscriptionLinks(0)) != 1 {
+		t.Fatal("retry did not restore guarded route", f.calls[before:])
+	}
+}
+
+func TestWGOfflineDoesNotMaskRevokedPeer(t *testing.T) {
+	c, _ := newWGTest(t)
+	p := createWG(t, c)
+	wgSteps(t, c, p.ID, 8)
+	c.agentStatus = func(id string) string {
+		if id == "aaaaaaaaaaaa" {
+			return "offline"
+		}
+		return "unauthenticated"
+	}
+	wgSteps(t, c, p.ID, 1)
+	if wgStored(t, c, p.ID).Status != "cleanup_pending" {
+		t.Fatal("revoked peer was retried")
 	}
 }
 

@@ -1975,7 +1975,25 @@
 <div class="sys-modal-overlay" id="systemSettingsModal">
     <div class="sys-modal-card" id="sysModalCard">
         <div class="sys-header">
-            <div class="sys-title-area">
+            <div class="sys-title-area" style="flex-direction: row; align-items: center; gap: 8px;">
+                <button
+                    type="button"
+                    class="wa-sidebar-toggle"
+                    title="收起侧边栏"
+                    aria-label="切换左侧分类导航"
+                    aria-pressed="false"
+                    onclick="toggleModalSidebar('sysModalCard', this)"
+                >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="4.5" width="18" height="15" rx="3.5"></rect>
+                        <rect class="wa-sb-pane" x="3.9" y="5.4" width="5.2" height="13.2" rx="1.8" fill="currentColor" stroke="none"></rect>
+                        <line class="wa-sb-divider" x1="9.2" y1="5.2" x2="9.2" y2="18.8"></line>
+                        <g class="wa-sb-dot-wrap">
+                            <circle cx="20.2" cy="5.2" r="3.4" fill="#f8f8fa" stroke="none"></circle>
+                            <circle cx="20.2" cy="5.2" r="2.2" fill="#007aff" stroke="none"></circle>
+                        </g>
+                    </svg>
+                </button>
                 <div class="sys-title"><span class="ui-icon-badge blue" style="width:28px;height:28px;border-radius:9px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></span> 系统核心设置</div>
             </div>
             <div class="sys-save-indicator" id="sysSaveIndicator">

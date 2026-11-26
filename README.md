@@ -113,8 +113,8 @@ docker exec $(docker ps --format '{{.Names}}' | grep -i wirearc | head -n1) cat 
 cd /opt/wirearc && docker compose pull && docker compose up -d
 
 # 离线镜像加载
-docker load -i wirearc-v1.1.0-linux-amd64.tar.gz
-NODECTL_IMAGE=ghcr.io/aoomee/wirearc:v1.1.0 docker compose up -d
+docker load -i wirearc-v1.1.3-linux-amd64.tar.gz
+NODECTL_IMAGE=ghcr.io/aoomee/wirearc:v1.1.3 docker compose up -d
 
 # 本地源码构建
 git clone https://github.com/aoomee/wirearc.git && cd wirearc

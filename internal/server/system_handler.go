@@ -395,6 +395,24 @@ func apiGetRecentLogs(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// apiClearRecentLogs 清空日志中心历史日志
+func apiClearRecentLogs(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if err := service.ClearRecentLogs(); err != nil {
+		logger.Log.Error("清空系统日志失败", "error", err)
+		sendJSON(w, "error", "清空日志失败，请稍后重试")
+		return
+	}
+
+	sendJSON(w, "success", map[string]interface{}{
+		"message": "日志已清空",
+	})
+}
+
 // apiStreamRecentLogs 通过 SSE 持续推送最近日志（含中文解读）
 func apiStreamRecentLogs(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {

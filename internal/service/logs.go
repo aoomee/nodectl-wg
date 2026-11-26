@@ -8,6 +8,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"nodectl/internal/logger"
 )
 
 type RecentLogEntry struct {
@@ -97,6 +99,11 @@ var (
 		"agent_startup_silent_update_enabled":     "Agent 静默更新",
 	}
 )
+
+// ClearRecentLogs 清空系统日志文件及已归档备份。
+func ClearRecentLogs() error {
+	return logger.ClearLogFiles()
+}
 
 // GetRecentLogs 读取并解析最近日志，按时间倒序返回。
 func GetRecentLogs(limit int) ([]RecentLogEntry, error) {

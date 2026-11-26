@@ -196,6 +196,8 @@ func apiUpdateSettings(w http.ResponseWriter, r *http.Request) {
 		switch k {
 		case "sys_log_level":
 			logger.SetLevel(v)
+		case "pref_traffic_point_persist_interval_sec":
+			service.NotifyTrafficPointPersistIntervalChanged()
 		case "login_ip_retry_window_sec", "login_ip_max_retries", "login_ip_block_ttl_sec":
 			needReloadLoginRateLimit = true
 		case "tg_bot_enabled", "tg_bot_token", "tg_bot_whitelist", "tg_bot_register_commands", "tg_bot_socks5_enabled", "tg_bot_socks5_addr", "tg_bot_socks5_user", "tg_bot_socks5_pass":

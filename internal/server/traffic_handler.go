@@ -77,7 +77,8 @@ func apiGetTrafficSeries(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sendJSON(w, "success", map[string]interface{}{
-		"series": result,
+		"series":                     result,
+		"point_persist_interval_sec": service.GetTrafficPointPersistIntervalSec(),
 	})
 }
 

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/glebarez/sqlite"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -22,6 +23,11 @@ var ConsoleAndLog *slog.Logger
 
 // levelVar 支持运行时热切换日志等级
 var levelVar = new(slog.LevelVar)
+
+var (
+	logFileMu     sync.Mutex
+	activeLogFile *lumberjack.Logger
+)
 
 // parseLevel 解析日志等级字符串
 func parseLevel(level string) (slog.Level, bool) {
@@ -146,6 +152,9 @@ func Init(initialLevel string) {
 		MaxAge:     30,                                           // 保留旧日志文件的最大天数 (单位: 天)
 		Compress:   true,                                         // 是否对切割后的旧日志文件进行 gzip 压缩
 	}
+	logFileMu.Lock()
+	activeLogFile = logFile
+	logFileMu.Unlock()
 
 	replaceAttr := newReplaceAttr()
 
@@ -173,4 +182,42 @@ func Init(initialLevel string) {
 		Log.Warn("启动时读取到非法日志等级配置，已回退为 info", "value", initialLevel)
 	}
 	Log.Debug("日志组件初始化完成", slog.String("模块", "logger"), slog.String("等级", CurrentLevel()))
+}
+
+// ClearLogFiles 安全清空当前日志文件及已切割的历史日志备份。
+func ClearLogFiles() error {
+	logFileMu.Lock()
+	defer logFileMu.Unlock()
+
+	logPath := filepath.Join("data", "logs", "nodectl.log")
+	if activeLogFile != nil {
+		if activeLogFile.Filename != "" {
+			logPath = activeLogFile.Filename
+		}
+		_ = activeLogFile.Close()
+	}
+
+	logDir := filepath.Dir(logPath)
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		return err
+	}
+	if err := os.WriteFile(logPath, nil, 0644); err != nil {
+		return err
+	}
+
+	entries, err := os.ReadDir(logDir)
+	if err == nil {
+		base := strings.TrimSuffix(filepath.Base(logPath), filepath.Ext(logPath))
+		prefix := base + "-"
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+			name := entry.Name()
+			if strings.HasPrefix(name, prefix) {
+				_ = os.Remove(filepath.Join(logDir, name))
+			}
+		}
+	}
+	return nil
 }

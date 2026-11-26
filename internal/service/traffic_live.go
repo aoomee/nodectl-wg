@@ -176,6 +176,9 @@ type TrafficHub struct {
 	// 命令日志：command_id → CommandLog（供 SSE 流式推送）
 	cmdLogs map[string]*CommandLog
 	logMu   sync.Mutex
+
+	// 流量点落库间隔变更唤醒通道
+	pointPersistWakeCh chan struct{}
 }
 
 // globalHub 全局单例（在 for 循环外持有生命周期）
@@ -186,14 +189,15 @@ var hubOnce sync.Once
 func GetTrafficHub() *TrafficHub {
 	hubOnce.Do(func() {
 		globalHub = &TrafficHub{
-			nodes:         make(map[string]*NodeLiveState),
-			idCache:       make(map[string]string),
-			subscribers:   make(map[string]map[chan FrontendPushMsg]struct{}),
-			agentConns:    make(map[string]*websocket.Conn),
-			agentSessions: make(map[*websocket.Conn]agentSession),
-			cmdOwners:     make(map[string]commandOwner),
-			cmdResults:    make(map[string]chan AgentCommandResult),
-			cmdLogs:       make(map[string]*CommandLog),
+			nodes:              make(map[string]*NodeLiveState),
+			idCache:            make(map[string]string),
+			subscribers:        make(map[string]map[chan FrontendPushMsg]struct{}),
+			agentConns:         make(map[string]*websocket.Conn),
+			agentSessions:      make(map[*websocket.Conn]agentSession),
+			cmdOwners:          make(map[string]commandOwner),
+			cmdResults:         make(map[string]chan AgentCommandResult),
+			cmdLogs:            make(map[string]*CommandLog),
+			pointPersistWakeCh: make(chan struct{}, 1),
 		}
 		go globalHub.runTotalPersistLoop()
 		go globalHub.runPointPersistLoop()
@@ -268,12 +272,42 @@ func (h *TrafficHub) runTotalPersistLoop() {
 	}
 }
 
+// GetTrafficPointPersistIntervalSec 返回当前生效的实时流量点数据落库间隔（秒，0 表示关闭）。
+func GetTrafficPointPersistIntervalSec() int {
+	return loadTrafficPointPersistIntervalSec()
+}
+
+// NotifyTrafficPointPersistIntervalChanged 通知点数据落库循环配置已变更，立即生效并采一次点。
+func NotifyTrafficPointPersistIntervalChanged() {
+	hub := GetTrafficHub()
+	if hub == nil || hub.pointPersistWakeCh == nil {
+		return
+	}
+	select {
+	case hub.pointPersistWakeCh <- struct{}{}:
+	default:
+	}
+}
+
 func (h *TrafficHub) runPointPersistLoop() {
 	for {
 		interval := loadTrafficPointPersistIntervalSec()
 		if interval == 0 {
-			// 落库已关闭，每 30 秒重新检查配置是否变更
-			time.Sleep(30 * time.Second)
+			// 落库已关闭，每 30 秒重新检查配置是否变更，或被设置变更立即唤醒
+			timer := time.NewTimer(30 * time.Second)
+			select {
+			case <-timer.C:
+			case <-h.pointPersistWakeCh:
+				if !timer.Stop() {
+					select {
+					case <-timer.C:
+					default:
+					}
+				}
+				if loadTrafficPointPersistIntervalSec() > 0 {
+					h.flushNodeTrafficPoint()
+				}
+			}
 			continue
 		}
 		now := time.Now()
@@ -283,8 +317,21 @@ func (h *TrafficHub) runPointPersistLoop() {
 		if sleepDur <= 0 {
 			sleepDur = intervalDur
 		}
-		time.Sleep(sleepDur)
-		h.flushNodeTrafficPoint()
+		timer := time.NewTimer(sleepDur)
+		select {
+		case <-timer.C:
+			h.flushNodeTrafficPoint()
+		case <-h.pointPersistWakeCh:
+			if !timer.Stop() {
+				select {
+				case <-timer.C:
+				default:
+				}
+			}
+			if loadTrafficPointPersistIntervalSec() > 0 {
+				h.flushNodeTrafficPoint()
+			}
+		}
 	}
 }
 

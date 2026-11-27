@@ -4653,13 +4653,18 @@
 
             const seen = new Set();
             const merged = [];
-            const appendItems = (rawList, kind) => {
+            const appendItems = (rawList, defaultKind) => {
                 if (!Array.isArray(rawList)) return;
                 for (const item of rawList) {
                     const id = String(item.id || "");
                     if (id && seen.has(id)) continue;
                     if (id) seen.add(id);
-                    merged.push({ ...item, _kind: kind });
+                    const rawName = String(item.name || "");
+                    const resolvedKind =
+                        rawName.startsWith("wirearc-node-") || rawName.startsWith("nodetunnel-")
+                            ? "node"
+                            : defaultKind;
+                    merged.push({ ...item, _kind: resolvedKind });
                 }
             };
             if (panelJson.status === "success") appendItems(panelJson.data, "panel");

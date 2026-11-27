@@ -1,14 +1,11 @@
+# Runtime & build artifacts
 data/
-tmp.exe
-wirearc.exe
-wirearc-agent.exe
-AGENT_MEMORY_OPTIMIZATION_PLAN.md
-更新计划.txt
-更新日志.md
-CF优选IP实施方案.md
-tmp
-outputs/
+bin/
+dist/
+*.exe
+
+# Local tooling & OS metadata
+.DS_Store
+.venv/
 **/__pycache__/
 **/*.pyc
-
-.DS_Store

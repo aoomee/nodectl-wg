@@ -1,6 +1,14 @@
 .git
+.github
+bin
 data
-outputs
+dist
+docs
+scripts
+tests
+*.md
+*.exe
+.DS_Store
+.venv
 **/__pycache__
 **/*.pyc
-.venv

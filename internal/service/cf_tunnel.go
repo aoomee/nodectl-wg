@@ -682,14 +682,14 @@ func generateNodeTunnelSuffix() (string, error) {
 	return string(b), nil
 }
 
-// sanitizeNodeTunnelName 生成节点专属 Tunnel 名称：nodetunnel-{random6}
+// sanitizeNodeTunnelName 生成节点专属 Tunnel 名称：wirearc-node-{random6}
 // 使用随机后缀代替节点名，避免特殊字符和命名碰撞
 func sanitizeNodeTunnelName(name string) string {
 	suffix, err := generateNodeTunnelSuffix()
 	if err != nil {
-		return "nodetunnel-node"
+		return "wirearc-node-default"
 	}
-	return "nodetunnel-" + suffix
+	return "wirearc-node-" + suffix
 }
 
 // fetchTunnelTokenString 从 CF API 获取指定 Tunnel 的运行 Token（不保存到全局配置）

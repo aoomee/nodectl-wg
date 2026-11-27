@@ -437,8 +437,8 @@ main() {
         mv /var/lib/nodectl-agent "$DATA_DIR" 2>/dev/null || true
     fi
 
-    # 若以全新的 install_id 重新安装（换绑新面板或重建节点），清理旧节点遗留的 WG 路由守卫文件，避免阻塞新配对
-    if [ -n "$PREV_INSTALL_ID" ] && [ "$PREV_INSTALL_ID" != "$INSTALL_ID" ]; then
+    # 若以全新的 install_id 重新安装（换绑新面板、重建节点或原配置已清空），清理遗留的 WG 路由守卫文件，避免阻塞新配对
+    if [ "$PREV_INSTALL_ID" != "$INSTALL_ID" ]; then
         rm -f "$DATA_DIR/singbox-config.json.wg-route.json"
     fi
 

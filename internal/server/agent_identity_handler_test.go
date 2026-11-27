@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"net/http"
 	"net/http/httptest"
-	"nodectl/internal/requestmeta"
+	"wirearc/internal/requestmeta"
 	"strings"
 	"testing"
 )
@@ -33,7 +33,7 @@ func TestAgentIdentityHandlersRejectInsecureAndMalformedRequests(t *testing.T) {
 					r.TLS = &tls.ConnectionState{}
 				}
 				r.Header.Set("Content-Type", "application/json")
-				r.Header.Set("X-NodeCtl-WG", "1")
+				r.Header.Set("X-WireArc-WG", "1")
 				r.Header.Set("X-Forwarded-Proto", "https")
 				w := httptest.NewRecorder()
 				handler.fn(w, r)
@@ -73,7 +73,7 @@ func TestAgentIdentityTrustedProxyGuard(t *testing.T) {
 			r.Header.Set("X-Forwarded-Proto", tc.proto)
 			r.Header.Set("Origin", tc.origin)
 			r.Header.Set("Content-Type", "application/json")
-			r.Header.Set("X-NodeCtl-WG", "1")
+			r.Header.Set("X-WireArc-WG", "1")
 			w := httptest.NewRecorder()
 			var body struct{}
 			accepted := agentIdentityRequest(w, r, true, &body)
@@ -95,7 +95,7 @@ func TestEnrollmentTokenIssuedThroughTrustedProxy(t *testing.T) {
 	r.Header.Set("X-Forwarded-Proto", "https")
 	r.Header.Set("Origin", "https://panel.example")
 	r.Header.Set("Content-Type", "application/json")
-	r.Header.Set("X-NodeCtl-WG", "1")
+	r.Header.Set("X-WireArc-WG", "1")
 	w := httptest.NewRecorder()
 	apiNodeAgentEnrollment(w, r)
 	if w.Code != 200 || !strings.Contains(w.Body.String(), `"token":`) {
@@ -106,7 +106,7 @@ func TestAgentIdentityAdminOriginGuard(t *testing.T) {
 	for _, origin := range []string{"https://attacker.example", "http://panel.example"} {
 		r := httptest.NewRequest("POST", "https://panel.example/api/node/agent/enrollment", strings.NewReader(`{}`))
 		r.Header.Set("Content-Type", "application/json")
-		r.Header.Set("X-NodeCtl-WG", "1")
+		r.Header.Set("X-WireArc-WG", "1")
 		r.Header.Set("Origin", origin)
 		w := httptest.NewRecorder()
 		apiNodeAgentEnrollment(w, r)

@@ -1,8 +1,8 @@
 package service
 
 import (
-	"nodectl/internal/database"
-	"nodectl/internal/logger"
+	"wirearc/internal/database"
+	"wirearc/internal/logger"
 	"strings"
 
 	"gorm.io/gorm"

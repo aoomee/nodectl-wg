@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"nodectl/internal/agent/wgrelay"
-	"nodectl/internal/database"
+	"wirearc/internal/agent/wgrelay"
+	"wirearc/internal/database"
 )
 
 func TestWGRestartRevalidatesLivePairWithoutActivation(t *testing.T) {

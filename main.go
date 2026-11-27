@@ -3,12 +3,12 @@ package main
 import (
 	"context"
 	"embed"
-	"nodectl/internal/database"
-	"nodectl/internal/logger"
-	"nodectl/internal/requestmeta"
-	"nodectl/internal/server"
-	"nodectl/internal/service"
-	"nodectl/internal/version"
+	"wirearc/internal/database"
+	"wirearc/internal/logger"
+	"wirearc/internal/requestmeta"
+	"wirearc/internal/server"
+	"wirearc/internal/service"
+	"wirearc/internal/version"
 	"os"
 	"os/signal"
 	"syscall"
@@ -27,7 +27,7 @@ func main() {
 
 	// 1. 初始化日志组件
 	logger.Init(logger.LoadPersistedLogLevel())
-	logger.Log.Debug("Nodectl Core 正在启动", "版本号", version.Version)
+	logger.Log.Debug("WireArc Core 正在启动", "版本号", version.Version)
 	if err := requestmeta.Configure(os.Getenv(requestmeta.TrustedProxiesEnv)); err != nil {
 		logger.ConsoleAndLog.Error("可信反向代理配置无效，服务未启动", "error", err)
 		os.Exit(1)
@@ -77,7 +77,7 @@ func main() {
 		defer cancel()
 		server.GracefulShutdown(ctx)
 
-		logger.Log.Info("Nodectl Core 已安全退出")
+		logger.Log.Info("WireArc Core 已安全退出")
 		os.Exit(0)
 	}()
 

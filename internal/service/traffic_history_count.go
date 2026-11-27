@@ -11,8 +11,8 @@ package service
 import (
 	"sync"
 
-	"nodectl/internal/database"
-	"nodectl/internal/logger"
+	"wirearc/internal/database"
+	"wirearc/internal/logger"
 )
 
 // trafficHistoryCountInitMu 保护并发初始化同一节点的计数

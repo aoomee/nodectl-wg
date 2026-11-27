@@ -6,7 +6,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"nodectl/internal/agent/singbox"
+	"wirearc/internal/agent/singbox"
 )
 
 // generateSS 生成 Shadowsocks 链接

@@ -2,7 +2,7 @@ package service
 
 import (
 	"encoding/json"
-	"nodectl/internal/database"
+	"wirearc/internal/database"
 	"strings"
 	"testing"
 )

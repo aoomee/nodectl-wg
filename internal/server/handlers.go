@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"nodectl/internal/database"
-	"nodectl/internal/requestmeta"
-	"nodectl/internal/service"
+	"wirearc/internal/database"
+	"wirearc/internal/requestmeta"
+	"wirearc/internal/service"
 )
 
 // AppStartTime 记录后端程序启动的确切时间

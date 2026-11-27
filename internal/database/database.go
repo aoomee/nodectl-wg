@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"nodectl/internal/logger"
+	"wirearc/internal/logger"
 
 	"github.com/glebarez/sqlite"
 	"github.com/google/uuid"
@@ -397,7 +397,7 @@ func (n *CustomNode) BeforeCreate(tx *gorm.DB) (err error) {
 
 // openSQLite 打开 SQLite 数据库连接
 func openSQLite() (*gorm.DB, error) {
-	dbPath := filepath.Join("data", "nodectl.db")
+	dbPath := filepath.Join("data", "wirearc.db")
 	// 通过 DSN 绑定 PRAGMA，确保连接池重建连接后外键、WAL 与锁超时设置不丢失。
 	dsn := dbPath + "?_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=synchronous(NORMAL)&_pragma=temp_store(MEMORY)&_pragma=cache_size(-16000)"
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
@@ -472,7 +472,7 @@ func autoMigrateAll(db *gorm.DB) error {
 func InitDB() {
 	if err := os.MkdirAll("data", os.ModePerm); err != nil {
 		logger.Log.Error("创建 data 目录失败", "err", err.Error())
-		panic("NodeCTL工作目录初始化失败")
+		panic("WireArc工作目录初始化失败")
 	}
 
 	cfg := LoadDBConfig()
@@ -569,7 +569,7 @@ func GetDBStatus() DBStatus {
 			status.SizeHuman = formatBytesHuman(size)
 		}
 	} else {
-		dbPath := filepath.Join("data", "nodectl.db")
+		dbPath := filepath.Join("data", "wirearc.db")
 		if info, err := os.Stat(dbPath); err == nil {
 			status.SizeBytes = info.Size()
 			status.SizeHuman = formatBytesHuman(info.Size())

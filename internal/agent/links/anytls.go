@@ -5,7 +5,7 @@ package links
 import (
 	"fmt"
 
-	"nodectl/internal/agent/singbox"
+	"wirearc/internal/agent/singbox"
 )
 
 // generateAnyTLS 生成 AnyTLS 链接

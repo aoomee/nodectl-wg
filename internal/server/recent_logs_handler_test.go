@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"nodectl/internal/logger"
+	"wirearc/internal/logger"
 )
 
 func TestClearRecentLogsTruncatesActiveAndBackupFiles(t *testing.T) {
@@ -25,7 +25,7 @@ func TestClearRecentLogsTruncatesActiveAndBackupFiles(t *testing.T) {
 	logger.Init("info")
 	logger.Log.Info("测试日志条目")
 
-	backupPath := filepath.Join("data", "logs", "nodectl-2026-01-01T00-00-00.000.log.gz")
+	backupPath := filepath.Join("data", "logs", "wirearc-2026-01-01T00-00-00.000.log.gz")
 	if err := os.WriteFile(backupPath, []byte("backup"), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +42,7 @@ func TestClearRecentLogsTruncatesActiveAndBackupFiles(t *testing.T) {
 		t.Fatalf("clear logs failed: status=%d body=%s", w.Code, w.Body.String())
 	}
 
-	data, err := os.ReadFile(filepath.Join("data", "logs", "nodectl.log"))
+	data, err := os.ReadFile(filepath.Join("data", "logs", "wirearc.log"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +55,7 @@ func TestClearRecentLogsTruncatesActiveAndBackupFiles(t *testing.T) {
 
 	// Verify logger cleanly reopens and writes at offset 0 after clearing.
 	logger.Log.Info("清空后新日志")
-	after, err := os.ReadFile(filepath.Join("data", "logs", "nodectl.log"))
+	after, err := os.ReadFile(filepath.Join("data", "logs", "wirearc.log"))
 	if err != nil {
 		t.Fatal(err)
 	}

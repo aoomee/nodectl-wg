@@ -11,8 +11,8 @@ import (
 	"testing"
 
 	gormlogger "gorm.io/gorm/logger"
-	"nodectl/internal/database"
-	"nodectl/internal/logger"
+	"wirearc/internal/database"
+	"wirearc/internal/logger"
 )
 
 func settingsTest(t *testing.T) *bytes.Buffer {

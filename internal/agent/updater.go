@@ -44,8 +44,8 @@ const (
 	maxCrashCount = 3
 	// HTTP 请求超时
 	httpTimeout = 60 * time.Second
-	// 产物文件名正则（优先匹配 wirearc-agent-linux-<arch>-v*，兼容过渡期旧版 nodectl-agent-linux-<arch>-v*）
-	assetPattern = `^(?:wirearc|nodectl)-agent-linux-%s-(v\d+\.\d+\.\d+.*)$`
+	// 产物文件名正则（匹配 wirearc-agent-linux-<arch>-v*）
+	assetPattern = `^wirearc-agent-linux-%s-(v\d+\.\d+\.\d+.*)$`
 )
 
 // updateState 更新状态持久化结构体
@@ -518,7 +518,7 @@ func (u *Updater) findLatestStableRelease(ctx context.Context) (version, binaryU
 		return "", "", "", fmt.Errorf("解析 release JSON 失败: %w", err)
 	}
 
-	// 构造匹配模式: nodectl-agent-linux-amd64-v1.4.2
+	// 构造匹配模式: wirearc-agent-linux-amd64-v1.0.0
 	arch := runtime.GOARCH
 	pattern := regexp.MustCompile(fmt.Sprintf(assetPattern, regexp.QuoteMeta(arch)))
 

@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"nodectl/internal/logger"
-	"nodectl/internal/service"
+	"wirearc/internal/logger"
+	"wirearc/internal/service"
 )
 
 func wgPairDecodeRequest(w http.ResponseWriter, r *http.Request, body any) bool {
@@ -25,7 +25,7 @@ func wgPairDecodeRequest(w http.ResponseWriter, r *http.Request, body any) bool 
 		wgPairError(w, http.StatusUnsupportedMediaType, "请求必须为 JSON")
 		return false
 	}
-	if r.Header.Get("X-NodeCtl-WG") != "1" || r.Header.Get("Sec-Fetch-Site") == "cross-site" {
+	if r.Header.Get("X-WireArc-WG") != "1" || r.Header.Get("Sec-Fetch-Site") == "cross-site" {
 		wgPairError(w, http.StatusForbidden, "请求来源校验失败，请从面板操作")
 		return false
 	}

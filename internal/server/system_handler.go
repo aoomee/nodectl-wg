@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"nodectl/internal/database"
-	"nodectl/internal/logger"
-	"nodectl/internal/service"
+	"wirearc/internal/database"
+	"wirearc/internal/logger"
+	"wirearc/internal/service"
 
 	"github.com/shirou/gopsutil/v4/process"
 )
@@ -110,7 +110,7 @@ func apiGetSystemMonitor(w http.ResponseWriter, r *http.Request) {
 	uptimeStr += fmt.Sprintf("%d时%d分%d秒", hours, minutes, seconds)
 
 	// 组装监控数据
-	procStats := collectNodectlProcessStats()
+	procStats := collectWireArcProcessStats()
 	data := map[string]interface{}{
 		"os_arch":       fmt.Sprintf("%s / %s", runtime.GOOS, runtime.GOARCH), // 系统和架构
 		"go_version":    runtime.Version(),                                    // Go版本
@@ -131,7 +131,7 @@ func apiGetSystemMonitor(w http.ResponseWriter, r *http.Request) {
 		"num_gc":          m.NumGC,                       // 垃圾回收次数
 		"pause_total_ms":  float64(m.PauseTotalNs) / 1e6, // GC总暂停时间(毫秒)
 		"gc_cpu_fraction": m.GCCPUFraction,               // GC占用CPU的时间比例
-		// NodeCTL 进程树（含子进程）监控
+		// WireArc 进程树（含子进程）监控
 		"process_tree_pid":               procStats.RootPID,
 		"process_tree_count":             procStats.ProcessCount,
 		"process_tree_children_count":    procStats.ChildrenCount,
@@ -160,7 +160,7 @@ type monitorProcessTreeStats struct {
 	Error           string
 }
 
-func collectNodectlProcessStats() monitorProcessTreeStats {
+func collectWireArcProcessStats() monitorProcessTreeStats {
 	stats := monitorProcessTreeStats{Items: make([]map[string]interface{}, 0)}
 	rootPID := int32(os.Getpid())
 	stats.RootPID = int(rootPID)
@@ -290,7 +290,7 @@ func flattenProcessTree(root *process.Process) []*process.Process {
 
 func classifyChildProcessRole(pid int32, rootPID int32, name, exe, cmdline string) string {
 	if pid == rootPID {
-		return "nodectl"
+		return "wirearc"
 	}
 	merged := strings.ToLower(name + " " + exe + " " + cmdline)
 	if strings.Contains(merged, "cloudflared") {

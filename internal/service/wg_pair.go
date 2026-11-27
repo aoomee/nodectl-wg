@@ -20,9 +20,9 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"nodectl/internal/agent/wgrelay"
-	"nodectl/internal/database"
-	"nodectl/internal/logger"
+	"wirearc/internal/agent/wgrelay"
+	"wirearc/internal/database"
+	"wirearc/internal/logger"
 )
 
 var ErrWGConflict = errors.New("pair revision or node reservation conflict")

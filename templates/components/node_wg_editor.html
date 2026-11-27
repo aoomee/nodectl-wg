@@ -336,7 +336,7 @@ function nodeWGMessage(message, tone = 'error') {
     }
 }
 async function nodeWGRequest(path, body) {
-    const response = await fetch(path, body === undefined ? {cache:'no-store'} : {method:'POST', headers:{'Content-Type':'application/json','X-NodeCtl-WG':'1'}, body:JSON.stringify(body)});
+    const response = await fetch(path, body === undefined ? {cache:'no-store'} : {method:'POST', headers:{'Content-Type':'application/json','X-WireArc-WG':'1'}, body:JSON.stringify(body)});
     if (response.redirected || !response.headers.get('Content-Type')?.includes('application/json')) {
         throw new Error('登录已失效或服务响应异常，请刷新页面重试');
     }

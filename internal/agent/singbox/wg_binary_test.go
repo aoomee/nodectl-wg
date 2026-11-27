@@ -14,9 +14,9 @@ import (
 
 // Opt in with a pinned sing-box executable; checks real schema, not a fake checker.
 func TestWGConfigPinnedBinary(t *testing.T) {
-	binary := os.Getenv("NODECTL_TEST_SINGBOX")
+	binary := os.Getenv("WIREARC_TEST_SINGBOX")
 	if binary == "" {
-		t.Skip("set NODECTL_TEST_SINGBOX to pinned sing-box 1.13.2")
+		t.Skip("set WIREARC_TEST_SINGBOX to pinned sing-box 1.13.2")
 	}
 	dir := t.TempDir()
 	cm := NewConfigManagerWithPaths(filepath.Join(dir, "config.json"), filepath.Join(dir, "protocols.json"), dir)

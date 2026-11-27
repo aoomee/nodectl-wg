@@ -19,8 +19,8 @@ import (
 	"sync"
 	"time"
 
-	"nodectl/internal/database"
-	"nodectl/internal/logger"
+	"wirearc/internal/database"
+	"wirearc/internal/logger"
 )
 
 // ===================== 常量与路径约定 =====================
@@ -499,7 +499,7 @@ func CreateCFTunnel() (string, error) {
 	accountID := getCFConfig("cf_account_id")
 	tunnelName := getCFConfig("cf_tunnel_name")
 	if tunnelName == "" {
-		tunnelName = "nodectl"
+		tunnelName = "wirearc"
 	}
 
 	if accountID == "" {
@@ -1202,7 +1202,7 @@ func RenderTunnelConfig() error {
 		return fmt.Errorf("创建日志目录失败: %w", err)
 	}
 
-	config := fmt.Sprintf(`# Cloudflare Tunnel 配置文件 (由 NodeCTL 自动生成)
+	config := fmt.Sprintf(`# Cloudflare Tunnel 配置文件 (由 WireArc 自动生成)
 # 生成时间: %s
 tunnel: %s
 credentials-file: %s
@@ -1541,7 +1541,7 @@ func GetCFTunnelStatus() CFTunnelStatus {
 	return status
 }
 
-// AutoStartCFTunnel 自动启动 Tunnel（NodeCTL 启动时调用）
+// AutoStartCFTunnel 自动启动 Tunnel（WireArc 启动时调用）
 func AutoStartCFTunnel() {
 	// 延迟 2 秒，确保 Web 服务完全就绪
 	time.Sleep(2 * time.Second)
@@ -1871,11 +1871,11 @@ func VerifyCFTokenPermissions(token string) (*CFTokenVerifyResult, error) {
 			}
 
 			// DNS Edit: 尝试创建一个临时 TXT 记录然后删除
-			testRecordName := "_nodectl-perm-test." + result.Zones[0]
+			testRecordName := "_wirearc-perm-test." + result.Zones[0]
 			createBody := map[string]interface{}{
 				"type":    "TXT",
 				"name":    testRecordName,
-				"content": "nodectl-permission-test",
+				"content": "wirearc-permission-test",
 				"ttl":     120,
 			}
 			createData, createErr := apiCall("POST",
@@ -1922,7 +1922,7 @@ func VerifyCFTokenPermissions(token string) (*CFTokenVerifyResult, error) {
 
 		// Tunnel:Edit 检测 — 创建并立即删除一个测试 Tunnel
 		testTunnelBody := map[string]interface{}{
-			"name":          "_nodectl_perm_test_" + strconv.FormatInt(time.Now().Unix(), 10),
+			"name":          "_wirearc_perm_test_" + strconv.FormatInt(time.Now().Unix(), 10),
 			"config_src":    "cloudflare",
 			"tunnel_secret": generateTunnelSecret(),
 		}
@@ -2166,7 +2166,7 @@ type OneClickSetupProgress struct {
 }
 
 // OneClickSetupCFTunnel 一键部署 Cloudflare Tunnel
-// 参数: token, subdomain (必填), domain (可选，自动发现), tunnelName (可选，默认 nodectl)
+// 参数: token, subdomain (必填), domain (可选，自动发现), tunnelName (可选，默认 wirearc)
 // 通过 progressFn 回调报告每个步骤的进度
 func OneClickSetupCFTunnel(token, subdomain, domain, tunnelName string, progressFn func(OneClickSetupProgress)) error {
 	totalSteps := 8
@@ -2208,7 +2208,7 @@ func OneClickSetupCFTunnel(token, subdomain, domain, tunnelName string, progress
 	}
 
 	if tunnelName == "" {
-		tunnelName = "nodectl"
+		tunnelName = "wirearc"
 	}
 
 	report(1, "discover", fmt.Sprintf("✅ 账户: %s | 域名: %s | 子域名: %s", discovered.AccountName, domain, subdomain))
@@ -2338,7 +2338,7 @@ func GetCloudflaredRemoteVersion() (string, error) {
 		return "", fmt.Errorf("创建请求失败: %w", err)
 	}
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
-	req.Header.Set("User-Agent", "nodectl")
+	req.Header.Set("User-Agent", "wirearc")
 
 	resp, err := client.Do(req)
 	if err != nil {

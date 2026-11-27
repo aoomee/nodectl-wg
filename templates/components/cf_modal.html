@@ -1891,7 +1891,7 @@
                                 type="button"
                                 onclick="
                                     event.stopPropagation();
-                                    cftQueryNodectlTunnels();
+                                    cftQueryWireArcTunnels();
                                 "
                                 style="padding: 6px 12px"
                             >
@@ -4696,7 +4696,7 @@
         }
     }
 
-    async function cftQueryNodectlTunnels() {
+    async function cftQueryWireArcTunnels() {
         const emptyEl = document.getElementById("cft-tunnel-list-empty");
         const wrapEl = document.getElementById("cft-tunnel-list-wrap");
         const tbody = document.getElementById("cft-tunnel-list-tbody");
@@ -4817,7 +4817,7 @@
             const json = await res.json();
             if (json.status === "success") {
                 cftShowSaveIndicator("success", "Tunnel 已删除");
-                cftQueryNodectlTunnels();
+                cftQueryWireArcTunnels();
                 cftQueryNodetunnelTunnels();
                 cftLoadStatus();
                 cftLoadSettings();

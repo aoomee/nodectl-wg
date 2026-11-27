@@ -15,7 +15,7 @@ import (
 )
 
 const InitialAdminPasswordFile = "initial-admin-password"
-const InitialAdminPasswordEnv = "NODECTL_INITIAL_ADMIN_PASSWORD"
+const InitialAdminPasswordEnv = "WIREARC_INITIAL_ADMIN_PASSWORD"
 
 // ValidateAdminPassword also guards bcrypt's 72-byte limit without truncation.
 func ValidateAdminPassword(password string) error {

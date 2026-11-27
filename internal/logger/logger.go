@@ -78,7 +78,7 @@ func SetLevel(level string) bool {
 func LoadPersistedLogLevel() string {
 	defaultLevel := "info"
 
-	dbPath := filepath.Join("data", "nodectl.db")
+	dbPath := filepath.Join("data", "wirearc.db")
 	if _, err := os.Stat(dbPath); err != nil {
 		return defaultLevel
 	}
@@ -146,7 +146,7 @@ func Init(initialLevel string) {
 
 	// 1. 配置文件切割
 	logFile := &lumberjack.Logger{
-		Filename:   filepath.Join("data", "logs", "nodectl.log"), // 日志文件的绝对或相对路径
+		Filename:   filepath.Join("data", "logs", "wirearc.log"), // 日志文件的绝对或相对路径
 		MaxSize:    2,                                            // 每个日志文件保存的最大尺寸 (单位: MB)，超过该大小会自动切割
 		MaxBackups: 3,                                            // 系统中最多保留的旧日志文件个数
 		MaxAge:     30,                                           // 保留旧日志文件的最大天数 (单位: 天)
@@ -189,7 +189,7 @@ func ClearLogFiles() error {
 	logFileMu.Lock()
 	defer logFileMu.Unlock()
 
-	logPath := filepath.Join("data", "logs", "nodectl.log")
+	logPath := filepath.Join("data", "logs", "wirearc.log")
 	if activeLogFile != nil {
 		if activeLogFile.Filename != "" {
 			logPath = activeLogFile.Filename

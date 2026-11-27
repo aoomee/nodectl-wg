@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"strings"
 
-	"nodectl/internal/agent/singbox"
+	"wirearc/internal/agent/singbox"
 )
 
 // Link 通用链接结构

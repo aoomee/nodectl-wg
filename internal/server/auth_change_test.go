@@ -12,8 +12,8 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
-	"nodectl/internal/database"
-	"nodectl/internal/middleware"
+	"wirearc/internal/database"
+	"wirearc/internal/middleware"
 )
 
 func TestAdminCredentialChangesAreAtomic(t *testing.T) {
@@ -101,7 +101,7 @@ func TestAdminCredentialChangesAreAtomic(t *testing.T) {
 				t.Fatal(err)
 			}
 			request := httptest.NewRequest(http.MethodGet, "https://panel.test/", nil)
-			request.AddCookie(&http.Cookie{Name: "nodectl_token", Value: token})
+			request.AddCookie(&http.Cookie{Name: "wirearc_token", Value: token})
 			response := httptest.NewRecorder()
 			middleware.Auth(func(http.ResponseWriter, *http.Request) { t.Fatal("old session survived password change") })(response, request)
 			if response.Code != http.StatusFound {

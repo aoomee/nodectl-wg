@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 	"nhooyr.io/websocket"
-	"nodectl/internal/database"
+	"wirearc/internal/database"
 )
 
 func setupTrafficTestDB(t *testing.T) *gorm.DB {

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"nodectl/internal/logger"
+	"wirearc/internal/logger"
 )
 
 func TestMissingCookieRedirectAndWarning(t *testing.T) {

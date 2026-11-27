@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"nodectl/internal/logger"
-	"nodectl/internal/service"
+	"wirearc/internal/logger"
+	"wirearc/internal/service"
 )
 
 // ------------------- [自定义节点 API] -------------------

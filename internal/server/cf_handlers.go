@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"nodectl/internal/database"
-	"nodectl/internal/logger"
-	"nodectl/internal/service"
+	"wirearc/internal/database"
+	"wirearc/internal/logger"
+	"wirearc/internal/service"
 )
 
 // apiCFTunnelTest POST /api/cf/tunnel/test

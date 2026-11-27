@@ -54,7 +54,7 @@ func isVirtualInterface(name string) bool {
 		"br-",
 		"virbr",
 		"wg",
-		"nw", // WireArc / nodectl WG 内核隧道接口（nw<13hex>）
+		"nw", // WireArc WG 内核隧道接口（nw<13hex>）
 		"tun",
 		"tap",
 		"tailscale",

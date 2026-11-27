@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"nodectl/internal/agent/singbox"
+	"wirearc/internal/agent/singbox"
 )
 
 // DefaultConfigPath 默认配置文件路径；LegacyDefaultConfigPath 用于兼容从旧版 nodectl-agent 就地自更新的节点

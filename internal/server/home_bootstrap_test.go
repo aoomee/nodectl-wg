@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"nodectl/internal/database"
+	"wirearc/internal/database"
 )
 
 func TestHomeBootstrapJSONContainsNodesTrafficAndMasksHTTP(t *testing.T) {

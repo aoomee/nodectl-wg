@@ -43,7 +43,7 @@ func GenerateSelfSignedCert(certPath, keyPath, commonName string) error {
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
 			CommonName:   commonName,
-			Organization: []string{"NodeCTL"},
+			Organization: []string{"WireArc"},
 		},
 		NotBefore:             notBefore,
 		NotAfter:              notAfter,

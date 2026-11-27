@@ -12,12 +12,12 @@ import (
 	"strings"
 	"time"
 
-	"nodectl/internal/database"
-	"nodectl/internal/logger"
-	"nodectl/internal/middleware"
-	"nodectl/internal/requestmeta"
-	"nodectl/internal/service"
-	"nodectl/internal/version"
+	"wirearc/internal/database"
+	"wirearc/internal/logger"
+	"wirearc/internal/middleware"
+	"wirearc/internal/requestmeta"
+	"wirearc/internal/service"
+	"wirearc/internal/version"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
@@ -120,7 +120,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		http.SetCookie(w, &http.Cookie{
-			Name:     "nodectl_token",
+			Name:     "wirearc_token",
 			Value:    tokenString,
 			Path:     "/",
 			HttpOnly: true,
@@ -314,7 +314,7 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	reqPath := r.URL.Path
 
 	http.SetCookie(w, &http.Cookie{
-		Name:     "nodectl_token",
+		Name:     "wirearc_token",
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
@@ -488,7 +488,7 @@ func apiChangePassword(w http.ResponseWriter, r *http.Request) {
 	logger.Log.Info("管理员账号/密码修改成功", "username_changed", wantUsernameChange, "password_changed", wantPasswordChange, "ip", clientIP, "path", reqPath)
 
 	http.SetCookie(w, &http.Cookie{
-		Name:     "nodectl_token",
+		Name:     "wirearc_token",
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
@@ -533,7 +533,7 @@ func apiResetJWT(w http.ResponseWriter, r *http.Request) {
 
 	// 清除当前用户的 Cookie
 	http.SetCookie(w, &http.Cookie{
-		Name:     "nodectl_token",
+		Name:     "wirearc_token",
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,

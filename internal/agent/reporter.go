@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"nodectl/internal/agent/reporter"
+	"wirearc/internal/agent/reporter"
 
 	"nhooyr.io/websocket"
 )
@@ -115,8 +115,8 @@ func (r *Reporter) Connect(ctx context.Context) error {
 
 	headers := make(http.Header)
 	if id := strings.TrimSpace(r.cfg.InstallID); id != "" {
-		headers.Set("X-NodeCtl-Install-ID", id)
-		headers.Set("X-NodeCtl-Capabilities", agentCapability)
+		headers.Set("X-WireArc-Install-ID", id)
+		headers.Set("X-WireArc-Capabilities", agentCapability)
 	}
 	if r.cfg.AgentToken != "" {
 		if err := validateAgentTransport(r.cfg); err != nil {
@@ -125,7 +125,7 @@ func (r *Reporter) Connect(ctx context.Context) error {
 		headers.Set("Authorization", "Bearer "+r.cfg.AgentToken)
 	}
 	conn, _, err := websocket.Dial(dialCtx, r.cfg.WSURL, &websocket.DialOptions{
-		Subprotocols: []string{"wirearc-agent", "nodectl-agent"},
+		Subprotocols: []string{"wirearc-agent"},
 		HTTPHeader:   headers,
 		HTTPClient:   &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }},
 	})

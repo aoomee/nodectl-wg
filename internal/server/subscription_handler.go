@@ -8,10 +8,10 @@ import (
 	"sort"
 	"strings"
 
-	"nodectl/internal/database"
-	"nodectl/internal/logger"
-	"nodectl/internal/requestmeta"
-	"nodectl/internal/service"
+	"wirearc/internal/database"
+	"wirearc/internal/logger"
+	"wirearc/internal/requestmeta"
+	"wirearc/internal/service"
 )
 
 // ------------------- [订阅与分流规则 API] -------------------

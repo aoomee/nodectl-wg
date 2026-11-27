@@ -1,16 +1,16 @@
 services:
   wirearc:
-    image: ${NODECTL_IMAGE:-ghcr.io/aoomee/wirearc:latest}
+    image: ${WIREARC_IMAGE:-ghcr.io/aoomee/wirearc:latest}
     restart: unless-stopped
     init: true
     environment:
       # 仅首次创建账号时读取；留空则生成随机密码文件。
-      NODECTL_INITIAL_ADMIN_PASSWORD: ${NODECTL_INITIAL_ADMIN_PASSWORD:-}
+      WIREARC_INITIAL_ADMIN_PASSWORD: ${WIREARC_INITIAL_ADMIN_PASSWORD:-}
       # 宿主机反代（1Panel/NGINX/Caddy）转发时填写反代网段或 Docker 网关 IP（如 172.16.0.0/12 或 172.27.0.1/32），
       # 以便记录真实公网 IP、按真实 IP 限流防误封，并自动开启 Secure Cookie。
-      NODECTL_TRUSTED_PROXIES: ${NODECTL_TRUSTED_PROXIES:-}
+      WIREARC_TRUSTED_PROXIES: ${WIREARC_TRUSTED_PROXIES:-}
     ports:
-      - "${NODECTL_BIND:-127.0.0.1}:${NODECTL_PORT:-7878}:8080"
+      - "${WIREARC_BIND:-127.0.0.1}:${WIREARC_PORT:-7878}:8080"
     volumes:
       - ./data:/app/data
     stop_grace_period: 75s

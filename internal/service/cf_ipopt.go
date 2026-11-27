@@ -21,8 +21,8 @@ import (
 	"sync"
 	"time"
 
-	"nodectl/internal/database"
-	"nodectl/internal/logger"
+	"wirearc/internal/database"
+	"wirearc/internal/logger"
 )
 
 // ===================== 常量与路径约定 =====================
@@ -1867,7 +1867,7 @@ func GetCFIPOptRemoteVersion() (string, error) {
 		return "", fmt.Errorf("创建请求失败: %w", err)
 	}
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
-	req.Header.Set("User-Agent", "nodectl")
+	req.Header.Set("User-Agent", "wirearc")
 
 	resp, err := client.Do(req)
 	if err != nil {

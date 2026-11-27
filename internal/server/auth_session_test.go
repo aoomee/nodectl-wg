@@ -12,8 +12,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
-	"nodectl/internal/database"
-	"nodectl/internal/middleware"
+	"wirearc/internal/database"
+	"wirearc/internal/middleware"
 )
 
 func seedSessionTest(t *testing.T) string {
@@ -50,7 +50,7 @@ func sessionToken(t *testing.T, secret string) string {
 func sessionAccepted(token string) bool {
 	accepted := false
 	r := httptest.NewRequest(http.MethodGet, "https://panel.test/", nil)
-	r.AddCookie(&http.Cookie{Name: "nodectl_token", Value: token})
+	r.AddCookie(&http.Cookie{Name: "wirearc_token", Value: token})
 	middleware.Auth(func(http.ResponseWriter, *http.Request) { accepted = true })(httptest.NewRecorder(), r)
 	return accepted
 }

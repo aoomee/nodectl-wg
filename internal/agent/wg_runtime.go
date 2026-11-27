@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"nodectl/internal/agent/singbox"
-	"nodectl/internal/agent/wgrelay"
+	"wirearc/internal/agent/singbox"
+	"wirearc/internal/agent/wgrelay"
 )
 
 func (rt *Runtime) ensureWGManager() error {

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"nodectl/internal/version"
+	"wirearc/internal/version"
 )
 
 // generateMinimalInstallScript 🆕 生成新版极简安装脚本
@@ -24,7 +24,7 @@ func generateMinimalInstallScript(installID, panelURL string, enableBBR bool) st
 	}
 
 	return fmt.Sprintf(`#!/usr/bin/env bash
-# NodeCTL Agent 安装脚本 (新版极简模式)
+# WireArc Agent 安装脚本 (新版极简模式)
 # 由面板动态生成，用户无需手动修改
 # 可选参数：--report-url <URL>  指定备用回调地址（如 Tunnel 隧道地址）
 

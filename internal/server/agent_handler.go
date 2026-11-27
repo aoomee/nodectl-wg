@@ -12,11 +12,11 @@ import (
 	"sync"
 	"time"
 
-	"nodectl/internal/database"
-	"nodectl/internal/logger"
-	"nodectl/internal/requestmeta"
-	"nodectl/internal/service"
-	"nodectl/internal/version"
+	"wirearc/internal/database"
+	"wirearc/internal/logger"
+	"wirearc/internal/requestmeta"
+	"wirearc/internal/service"
+	"wirearc/internal/version"
 )
 
 // ============================================================
@@ -109,7 +109,7 @@ func apiAgentInitConfig(w http.ResponseWriter, r *http.Request) {
 // 安装脚本通过此接口下载与面板版本匹配的 Agent 二进制
 //
 // 核心逻辑：通过 GitHub API 查询面板版本对应的 Release，从 assets 列表中
-// 动态匹配 agent 文件名（前缀 nodectl-agent-linux-{arch}-），避免面板版本号
+// 动态匹配 agent 文件名（前缀 wirearc-agent-linux-{arch}-），避免面板版本号
 // 与 agent 版本号不一致导致 404 错误。
 func apiDownloadAgent(w http.ResponseWriter, r *http.Request) {
 	arch := strings.TrimSpace(r.URL.Query().Get("arch"))
@@ -402,7 +402,7 @@ var agentAssetCache = struct {
 // 参数：
 //   - repo: GitHub 仓库（如 "aoomee/wirearc"）
 //   - tag:  Release tag（如 "v0.2.0"）
-//   - prefix: 文件名前缀（如 "nodectl-agent-linux-amd64-"）
+//   - prefix: 文件名前缀（如 "wirearc-agent-linux-amd64-"）
 //
 // 返回匹配的第一个（非 .sha256）asset 的 browser_download_url
 func findAgentAssetURL(repo, tag, prefix string) (string, error) {

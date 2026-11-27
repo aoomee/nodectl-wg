@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"nodectl/internal/database"
-	"nodectl/internal/logger"
-	"nodectl/internal/requestmeta"
+	"wirearc/internal/database"
+	"wirearc/internal/logger"
+	"wirearc/internal/requestmeta"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -240,8 +240,8 @@ func Auth(next http.HandlerFunc) http.HandlerFunc {
 		clientIP := getClientIP(r)
 		reqPath := r.URL.Path
 
-		// 1. 尝试从请求中获取名为 nodectl_token 的 Cookie
-		cookie, err := r.Cookie("nodectl_token")
+		// 1. 尝试从请求中获取名为 wirearc_token 的 Cookie
+		cookie, err := r.Cookie("wirearc_token")
 		if err != nil {
 			// 没有带 Cookie，说明未登录，重定向到登录页。
 			home := reqPath == "/" || reqPath == "/index.html"
@@ -249,7 +249,7 @@ func Auth(next http.HandlerFunc) http.HandlerFunc {
 				logger.Log.Debug("未登录访问首页，跳转登录页", "path", reqPath, "method", r.Method, "ip", clientIP)
 			} else if home || strings.HasPrefix(reqPath, "/api/") {
 				logger.Log.Warn("未授权访问拦截",
-					"reason", "请求缺少 nodectl_token Cookie",
+					"reason", "请求缺少 wirearc_token Cookie",
 					"ip", clientIP,
 					"path", reqPath,
 					"method", r.Method,
@@ -306,7 +306,7 @@ func Auth(next http.HandlerFunc) http.HandlerFunc {
 			)
 
 			http.SetCookie(w, &http.Cookie{
-				Name:     "nodectl_token",
+				Name:     "wirearc_token",
 				Value:    "",
 				Path:     "/",
 				MaxAge:   -1,

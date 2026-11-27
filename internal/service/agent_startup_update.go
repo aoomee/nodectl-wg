@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"nodectl/internal/database"
-	"nodectl/internal/logger"
+	"wirearc/internal/database"
+	"wirearc/internal/logger"
 
 	"golang.org/x/mod/semver"
 )

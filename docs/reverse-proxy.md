@@ -6,16 +6,16 @@
 浏览器 / Agent ── HTTPS / WSS ──> NGINX ── HTTP / WS ──> WireArc (127.0.0.1:7878)
 ```
 
-本说明适用于包含 `NODECTL_TRUSTED_PROXIES` 支持的 WireArc 版本。Agent 的外部接入可使用带有效证书的 HTTPS/WSS 域名（或受控网络下的直连地址）。
+本说明适用于包含 `WIREARC_TRUSTED_PROXIES` 支持的 WireArc 版本。Agent 的外部接入可使用带有效证书的 HTTPS/WSS 域名（或受控网络下的直连地址）。
 
 ## 1. 配置可信代理
 
-面板默认不信任任何反代头。`NODECTL_TRUSTED_PROXIES` 接受逗号分隔的 IP 或 CIDR，判断依据是直接连接面板的 TCP 对端，**不是访客 IP、面板域名或转发头里的地址**。
+面板默认不信任任何反代头。`WIREARC_TRUSTED_PROXIES` 接受逗号分隔的 IP 或 CIDR，判断依据是直接连接面板的 TCP 对端，**不是访客 IP、面板域名或转发头里的地址**。
 
 原生运行面板、同机 NGINX 连接 127.0.0.1 时，可在面板服务环境变量中配置：
 
 ```text
-NODECTL_TRUSTED_PROXIES=127.0.0.1,::1
+WIREARC_TRUSTED_PROXIES=127.0.0.1,::1
 ```
 
 Docker 下，即使 NGINX 访问宿主机 `127.0.0.1:7878`，面板看到的对端通常是 Docker 网桥网关，并不是 127.0.0.1。在 Compose 项目目录查看网络：
@@ -28,10 +28,10 @@ docker inspect "$(docker compose ps -q wirearc)" --format '{{range $name, $net :
 
 ```yaml
 environment:
-  NODECTL_TRUSTED_PROXIES: "172.30.0.1"
+  WIREARC_TRUSTED_PROXIES: "172.30.0.1"
 ```
 
-若使用仓库提供的 `compose.yaml`，也可以在同目录 `.env` 填写 `NODECTL_TRUSTED_PROXIES=172.30.0.1`。Docker Run 使用 `-e NODECTL_TRUSTED_PROXIES=172.30.0.1`。配置后重新创建容器或重启面板进程。
+若使用仓库提供的 `compose.yaml`，也可以在同目录 `.env` 填写 `WIREARC_TRUSTED_PROXIES=172.30.0.1`。Docker Run 使用 `-e WIREARC_TRUSTED_PROXIES=172.30.0.1`。配置后重新创建容器或重启面板进程。
 
 `172.30.0.1` 只是示例，不能直接套用。网桥、rootless Docker 和端口转发实现可能使实际来源不同。不要配置整个 `172.16.0.0/12` 或所有私网来省事；网络重建后代理 IP 变化需要更新配置。错误的 IP/CIDR 配置会阻止面板启动，并在日志中说明。
 
@@ -75,7 +75,7 @@ NGINX 的 HTTP 端口只重定向到 HTTPS。面板宿主机映射继续保留 `
 ## 3. 验证与排查
 
 1. 检查 NGINX 配置有效后重新加载，通过 HTTPS 域名登录。
-2. 浏览器中 `nodectl_token` 应包含 `Secure` 和 `HttpOnly`。
+2. 浏览器中 `wirearc_token` 应包含 `Secure` 和 `HttpOnly`。
 3. Agent 通过安装脚本接入后建立 WebSocket 连接，完成普通协议部署，即可直接选择 WG 出站并推送。
 
 若出现 `HTTPS required`，检查运行版本、可信代理地址和 NGINX 的 `X-Forwarded-Proto $scheme`。若是来源拒绝，检查 Host 是否保留，以及是否通过同一 HTTPS 域名打开页面。若 Agent 连接失败，检查有效证书、外部 HTTPS/WSS 地址和 WebSocket Upgrade 配置。
@@ -86,4 +86,4 @@ NGINX 的 HTTP 端口只重定向到 HTTPS。面板宿主机映射继续保留 `
 
 ## 自动验证
 
-Go 测试覆盖来源伪造、多跳 IP、IPv6、Cookie、授权接口和 WG 提交。`NODECTL_TEST_NGINX=/usr/sbin/nginx go test ./internal/service -run TestAuthenticatedAgentThroughHTTPSProxy -v` 使用真实 NGINX 进程、临时受信任证书和 HTTP 后端验证 WSS 命令往返、撤销与重连拒绝；没有该变量时只运行 Go TLS 代理变体。CI 强制运行 NGINX 变体。
+Go 测试覆盖来源伪造、多跳 IP、IPv6、Cookie、授权接口和 WG 提交。`WIREARC_TEST_NGINX=/usr/sbin/nginx go test ./internal/service -run TestAuthenticatedAgentThroughHTTPSProxy -v` 使用真实 NGINX 进程、临时受信任证书和 HTTP 后端验证 WSS 命令往返、撤销与重连拒绝；没有该变量时只运行 Go TLS 代理变体。CI 强制运行 NGINX 变体。

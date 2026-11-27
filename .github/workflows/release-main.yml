@@ -58,9 +58,9 @@ jobs:
           CGO_ENABLED: '0'
         run: |
           mkdir -p bin dist digests
-          go build -trimpath -ldflags="-s -w -X nodectl/internal/version.Version=$VERSION" -o "bin/nodectl-linux-$ARCH" .
-          cp "bin/nodectl-linux-$ARCH" "dist/wirearc-linux-$ARCH"
-          go build -trimpath -ldflags="-s -w -X nodectl/internal/agent.AgentVersion=$VERSION -X nodectl/internal/agent.GitCommit=$GITHUB_SHA -X nodectl/internal/agent.UpdateRepoOwner=aoomee -X nodectl/internal/agent.UpdateRepoName=wirearc" -o "dist/wirearc-agent-linux-$ARCH-$VERSION" ./cmd/wirearc-agent
+          go build -trimpath -ldflags="-s -w -X wirearc/internal/version.Version=$VERSION" -o "bin/wirearc-linux-$ARCH" .
+          cp "bin/wirearc-linux-$ARCH" "dist/wirearc-linux-$ARCH"
+          go build -trimpath -ldflags="-s -w -X wirearc/internal/agent.AgentVersion=$VERSION -X wirearc/internal/agent.GitCommit=$GITHUB_SHA -X wirearc/internal/agent.UpdateRepoOwner=aoomee -X wirearc/internal/agent.UpdateRepoName=wirearc" -o "dist/wirearc-agent-linux-$ARCH-$VERSION" ./cmd/wirearc-agent
           (cd dist && sha256sum "wirearc-agent-linux-$ARCH-$VERSION" > "wirearc-agent-linux-$ARCH-$VERSION.sha256")
       - uses: docker/setup-buildx-action@v3
       - name: Build image for native smoke test

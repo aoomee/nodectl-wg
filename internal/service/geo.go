@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"nodectl/internal/database"
+	"wirearc/internal/database"
 
 	"github.com/oschwald/geoip2-golang"
 )
@@ -106,7 +106,7 @@ func (s *GeoService) GetRemoteVersion() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("User-Agent", "NodeCTL-Updater")
+	req.Header.Set("User-Agent", "WireArc-Updater")
 
 	resp, err := client.Do(req)
 	if err != nil {

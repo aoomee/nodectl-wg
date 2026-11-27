@@ -21,8 +21,8 @@ import (
 	"sync"
 	"time"
 
-	"nodectl/internal/database"
-	"nodectl/internal/logger"
+	"wirearc/internal/database"
+	"wirearc/internal/logger"
 
 	"gopkg.in/yaml.v3"
 )
@@ -90,7 +90,7 @@ func (s *MihomoService) GetLocalVersion() string {
 func (s *MihomoService) GetRemoteVersion() (version string, downloadURL string, isZip bool, err error) {
 	client := &http.Client{Timeout: 15 * time.Second}
 	req, _ := http.NewRequest("GET", MihomoApiURL, nil)
-	req.Header.Set("User-Agent", "NodeCTL-Core-Manager")
+	req.Header.Set("User-Agent", "WireArc-Core-Manager")
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -401,7 +401,7 @@ func (s *MihomoService) RunBatchTestWithMode(ctx context.Context, nodes []databa
 	batchTargets := make([]batchTestTarget, 0, len(nodes))
 	configNodes := make([]TestNodeInfo, 0, len(nodes))
 	for i, n := range nodes {
-		proxyName := fmt.Sprintf("__nodectl_%d_%d", time.Now().UnixNano(), i)
+		proxyName := fmt.Sprintf("__wirearc_%d_%d", time.Now().UnixNano(), i)
 		batchTargets = append(batchTargets, batchTestTarget{
 			NodeID:    n.ID,
 			NodeName:  n.Name,

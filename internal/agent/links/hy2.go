@@ -5,7 +5,7 @@ package links
 import (
 	"fmt"
 
-	"nodectl/internal/agent/singbox"
+	"wirearc/internal/agent/singbox"
 )
 
 // generateHY2 生成 Hysteria2 链接

@@ -17,9 +17,9 @@ import (
 	"sync"
 	"time"
 
-	"nodectl/internal/database"
-	"nodectl/internal/logger"
-	"nodectl/internal/requestmeta"
+	"wirearc/internal/database"
+	"wirearc/internal/logger"
+	"wirearc/internal/requestmeta"
 
 	"github.com/go-acme/lego/v4/certcrypto"
 	"github.com/go-acme/lego/v4/certificate"

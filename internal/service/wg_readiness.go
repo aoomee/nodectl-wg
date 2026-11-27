@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"gorm.io/gorm"
-	"nodectl/internal/database"
+	"wirearc/internal/database"
 )
 
 type WGReadinessCheck struct {

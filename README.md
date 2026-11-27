@@ -46,8 +46,8 @@ services:
     restart: unless-stopped
     init: true
     environment:
-      NODECTL_INITIAL_ADMIN_PASSWORD: ""
-      NODECTL_TRUSTED_PROXIES: ""
+      WIREARC_INITIAL_ADMIN_PASSWORD: ""
+      WIREARC_TRUSTED_PROXIES: ""
     ports:
       - "127.0.0.1:7878:8080"
     volumes:
@@ -85,7 +85,7 @@ docker run -d \
 docker exec $(docker ps --format '{{.Names}}' | grep -i wirearc | head -n1) cat /app/data/initial-admin-password
 ```
 
-> 登录后修改密码会自动清理初始密码文件。自动化部署可在首次启动时传入 `NODECTL_INITIAL_ADMIN_PASSWORD`（12–72 字符）。
+> 登录后修改密码会自动清理初始密码文件。自动化部署可在首次启动时传入 `WIREARC_INITIAL_ADMIN_PASSWORD`（12–72 字符）。
 
 ---
 
@@ -94,7 +94,7 @@ docker exec $(docker ps --format '{{.Names}}' | grep -i wirearc | head -n1) cat 
 面板默认仅绑定宿主机回环地址 `127.0.0.1:7878`：
 
 - **本地 SSH 转发**：`ssh -L 7878:127.0.0.1:7878 root@<服务器IP>`，浏览器访问 `http://127.0.0.1:7878`。
-- **HTTPS 反向代理**：使用 NGINX / Caddy / 1Panel 将 HTTPS 域名反代至 `http://127.0.0.1:7878`，保留 `Host`、开启 WebSocket `Upgrade` 并配置 `NODECTL_TRUSTED_PROXIES`（或在面板「系统设置」中放行内网回源）。详见 [NGINX 反代配置指南](docs/reverse-proxy.md)。
+- **HTTPS 反向代理**：使用 NGINX / Caddy / 1Panel 将 HTTPS 域名反代至 `http://127.0.0.1:7878`，保留 `Host`、开启 WebSocket `Upgrade` 并配置 `WIREARC_TRUSTED_PROXIES`（或在面板「系统设置」中放行内网回源）。详见 [NGINX 反代配置指南](docs/reverse-proxy.md)。
 
 ---
 
@@ -114,7 +114,7 @@ cd /opt/wirearc && docker compose pull && docker compose up -d
 
 # 离线镜像加载
 docker load -i wirearc-v1.1.3-linux-amd64.tar.gz
-NODECTL_IMAGE=ghcr.io/aoomee/wirearc:v1.1.3 docker compose up -d
+WIREARC_IMAGE=ghcr.io/aoomee/wirearc:v1.0.0 docker compose up -d
 
 # 本地源码构建
 git clone https://github.com/aoomee/wirearc.git && cd wirearc

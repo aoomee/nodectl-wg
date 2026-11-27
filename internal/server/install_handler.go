@@ -420,8 +420,9 @@ main() {
     local DATA_DIR="/var/lib/wirearc-agent"
     local LOG_DIR="/var/log"
 
-    # 平滑迁移旧版数据目录（复用已有 sing-box 与证书，避免重复下载）
-    if [ ! -d "$DATA_DIR" ] && [ -d "/var/lib/nodectl-agent" ]; then
+    # 平滑迁移旧版数据目录（复用已有 sing-box、protocols.json、WG 状态与证书；若存在半迁移空目录先清理再迁移）
+    if [ -d "/var/lib/nodectl-agent" ] && [ ! -f "$DATA_DIR/sing-box" ]; then
+        rm -rf "$DATA_DIR"
         mv /var/lib/nodectl-agent "$DATA_DIR" 2>/dev/null || true
     fi
 

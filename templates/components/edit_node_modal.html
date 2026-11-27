@@ -1913,9 +1913,12 @@
         const name = document.getElementById('editNodeName').value || uuid;
         if (!uuid) return;
 
-        const msg = '确定要触发「' + name + '」执行 Agent 检查更新吗？';
+        const isWGActive = typeof nodeWGBlocksOrdinary === 'function' && nodeWGBlocksOrdinary();
+        const msg = isWGActive
+            ? '确定要触发「' + name + '」执行 Agent 检查更新吗？\n\n⚠️ 注意：该节点正处于 WG 双机中转中，Agent 原地重启后会触发安全阻断（TCP 通但代理暂停），升级完成后请在 WG 卡片点击「重试」恢复转发；若当前正通过该节点访问面板，建议先临时切换线路再执行。'
+            : '确定要触发「' + name + '」执行 Agent 检查更新吗？';
         const confirmed = typeof window.waConfirm === 'function'
-            ? await window.waConfirm(msg, { title: '检查 Agent 更新', confirmText: '开始检查', tone: 'info' })
+            ? await window.waConfirm(msg, { title: '检查 Agent 更新', confirmText: '开始检查', tone: isWGActive ? 'warning' : 'info' })
             : confirm(msg);
         if (!confirmed) {
             return;

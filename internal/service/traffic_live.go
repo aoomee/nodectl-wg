@@ -1592,10 +1592,9 @@ func (h *TrafficHub) handleNodeOnline(msg wsMessage, clientIP string) {
 		updates["ipv6"] = ipv6
 	}
 
-	// 使用 GeoIP 解析 Region（国家 ISO Code，如 US、CN）
-	// 优先使用 IPv4 查询地区，IPv4 为空时使用 IPv6
-	newRegion := ""
-	if GlobalGeoIP != nil {
+	// 使用 GeoIP 解析 Region（国家 ISO Code，如 US、CN）；若用户已手动指定地区则不覆盖
+	if !node.RegionManual && GlobalGeoIP != nil {
+		newRegion := ""
 		checkIP := ipv4
 		if checkIP == "" {
 			checkIP = ipv6
@@ -1603,9 +1602,9 @@ func (h *TrafficHub) handleNodeOnline(msg wsMessage, clientIP string) {
 		if checkIP != "" {
 			newRegion = GlobalGeoIP.GetCountryIsoCode(checkIP)
 		}
-	}
-	if newRegion != "" && newRegion != node.Region {
-		updates["region"] = newRegion
+		if newRegion != "" && newRegion != node.Region {
+			updates["region"] = newRegion
+		}
 	}
 
 	// 更新 Agent 版本
@@ -1686,8 +1685,8 @@ func (h *TrafficHub) handleLinksUpdate(msg wsMessage, clientIP string) {
 		updates["ipv6"] = luIPv6
 	}
 
-	// 使用 GeoIP 解析 Region（国家 ISO Code，如 US、CN）
-	if GlobalGeoIP != nil {
+	// 使用 GeoIP 解析 Region（国家 ISO Code，如 US、CN）；若用户已手动指定地区则不覆盖
+	if !node.RegionManual && GlobalGeoIP != nil {
 		checkIP := luIPv4
 		if checkIP == "" {
 			checkIP = luIPv6

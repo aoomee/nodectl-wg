@@ -972,11 +972,55 @@
             <div class="edit-body no-scrollbar">
                 <div class="edit-left-col no-scrollbar">
                     <div class="edit-section"
-                        style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                        style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px;">
                         <label class="section-label"
                             style="margin-bottom: 0; white-space: nowrap; width: 70px;">节点名称</label>
                         <input type="text" id="editNodeName" class="title-input" placeholder="例如：HK-CN2"
                             oninput="triggerNodeAutoSave()" style="flex: 1;">
+                    </div>
+
+                    <div class="edit-section"
+                        style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                        <label class="section-label"
+                            style="margin-bottom: 0; white-space: nowrap; width: 70px;">地区旗帜</label>
+                        <select id="editNodeRegion" class="title-input" onchange="triggerNodeAutoSave(true)" style="flex: 1;">
+                            <option value="">自动识别 (GeoIP)</option>
+                            <option value="HK">🇭🇰 香港 (HK)</option>
+                            <option value="TW">🇹🇼 台湾 (TW)</option>
+                            <option value="MO">🇲🇴 澳门 (MO)</option>
+                            <option value="CN">🇨🇳 中国大陆 (CN)</option>
+                            <option value="JP">🇯🇵 日本 (JP)</option>
+                            <option value="SG">🇸🇬 新加坡 (SG)</option>
+                            <option value="KR">🇰🇷 韩国 (KR)</option>
+                            <option value="US">🇺🇸 美国 (US)</option>
+                            <option value="CA">🇨🇦 加拿大 (CA)</option>
+                            <option value="GB">🇬🇧 英国 (GB)</option>
+                            <option value="DE">🇩🇪 德国 (DE)</option>
+                            <option value="FR">🇫🇷 法国 (FR)</option>
+                            <option value="NL">🇳🇱 荷兰 (NL)</option>
+                            <option value="AU">🇦🇺 澳大利亚 (AU)</option>
+                            <option value="RU">🇷🇺 俄罗斯 (RU)</option>
+                            <option value="IN">🇮🇳 印度 (IN)</option>
+                            <option value="MY">🇲🇾 马来西亚 (MY)</option>
+                            <option value="TH">🇹🇭 泰国 (TH)</option>
+                            <option value="VN">🇻🇳 越南 (VN)</option>
+                            <option value="PH">🇵🇭 菲律宾 (PH)</option>
+                            <option value="ID">🇮🇩 印度尼西亚 (ID)</option>
+                            <option value="TR">🇹🇷 土耳其 (TR)</option>
+                            <option value="AE">🇦🇪 阿联酋 (AE)</option>
+                            <option value="CH">🇨🇭 瑞士 (CH)</option>
+                            <option value="SE">🇸🇪 瑞典 (SE)</option>
+                            <option value="FI">🇫🇮 芬兰 (FI)</option>
+                            <option value="NO">🇳🇴 挪威 (NO)</option>
+                            <option value="IT">🇮🇹 意大利 (IT)</option>
+                            <option value="ES">🇪🇸 西班牙 (ES)</option>
+                            <option value="PL">🇵🇱 波兰 (PL)</option>
+                            <option value="IE">🇮🇪 爱尔兰 (IE)</option>
+                            <option value="LU">🇱🇺 卢森堡 (LU)</option>
+                            <option value="BR">🇧🇷 巴西 (BR)</option>
+                            <option value="AR">🇦🇷 阿根廷 (AR)</option>
+                            <option value="ZA">🇿🇦 南非 (ZA)</option>
+                        </select>
                     </div>
 
                     <div class="edit-section" id="editNodeIPModeSection">
@@ -1305,6 +1349,27 @@
         if (typeof resetNodeWGEditor === 'function') resetNodeWGEditor();
         document.getElementById('editNodeUUID').value = node.uuid;
         document.getElementById('editNodeName').value = node.name;
+        const regionSelectEl = document.getElementById('editNodeRegion');
+        if (regionSelectEl) {
+            const currentRegion = String(node.region || '').trim().toUpperCase();
+            const autoOpt = regionSelectEl.options[0];
+            if (autoOpt) {
+                autoOpt.textContent = (!node.region_manual && currentRegion)
+                    ? `自动识别 (当前: ${currentRegion})`
+                    : '自动识别 (GeoIP)';
+            }
+            if (node.region_manual && currentRegion) {
+                if (!Array.from(regionSelectEl.options).some(o => o.value === currentRegion)) {
+                    const customOpt = document.createElement('option');
+                    customOpt.value = currentRegion;
+                    customOpt.textContent = currentRegion;
+                    regionSelectEl.appendChild(customOpt);
+                }
+                regionSelectEl.value = currentRegion;
+            } else {
+                regionSelectEl.value = '';
+            }
+        }
         const resetDay = Number(node.reset_day || 0);
         const resetMode = normalizeClientResetMode(node.traffic_reset_mode, resetDay);
         document.getElementById('editNodeResetMode').value = resetMode;
@@ -1843,12 +1908,16 @@
     }
 
     // 远程触发 Agent 检查更新（流式输出 - 内嵌右栏）
-    function confirmCheckAgentUpdate() {
+    async function confirmCheckAgentUpdate() {
         const uuid = document.getElementById('editNodeUUID').value;
         const name = document.getElementById('editNodeName').value || uuid;
         if (!uuid) return;
 
-        if (!confirm('确定要触发「' + name + '」执行 Agent 检查更新吗？')) {
+        const msg = '确定要触发「' + name + '」执行 Agent 检查更新吗？';
+        const confirmed = typeof window.waConfirm === 'function'
+            ? await window.waConfirm(msg, { title: '检查 Agent 更新', confirmText: '开始检查', tone: 'info' })
+            : confirm(msg);
+        if (!confirmed) {
             return;
         }
 
@@ -1919,6 +1988,7 @@
             editNodeAutoSaveTimer = null;
             editNodeSaveRunning++;
             const name = document.getElementById('editNodeName').value;
+            const regionOverride = document.getElementById('editNodeRegion') ? document.getElementById('editNodeRegion').value : '';
             const uiState = parseInt(document.getElementById('editNodeUIState').value);
             const resetMode = document.getElementById('editNodeResetMode').value || 'fixed_day';
             const resetDayRaw = parseInt(document.getElementById('editNodeResetDay').value) || 0;
@@ -2025,6 +2095,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         uuid, name,
+                        region_override: regionOverride,
                         routing_type: finalRoutingType,
                         links,
                         is_blocked: finalIsBlocked,
@@ -2050,6 +2121,9 @@
                     setTimeout(() => indicator.style.opacity = '0', 2000);
 
                     if (typeof loadNodesList === 'function') loadNodesList();
+                    if (typeof window.trafficStatsRefresh === 'function' && nodeOriginal && ((!!nodeOriginal.region_manual !== !!regionOverride) || (regionOverride && String(nodeOriginal.region || '').toUpperCase() !== regionOverride))) {
+                        window.trafficStatsRefresh();
+                    }
                 } else {
                     // 🚨关键修复：读取并展示后端的 res.message 错误详情
                     indicator.innerHTML = `<span style="color:#ff3b30;">保存失败: ${res.message || '未知错误'}</span>`;

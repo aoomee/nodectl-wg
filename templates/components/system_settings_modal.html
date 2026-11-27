@@ -4514,10 +4514,13 @@
     }
 
     // 确认清除历史流量数据
-    function confirmClearTrafficHistory(uuid, nodeName, count) {
+    async function confirmClearTrafficHistory(uuid, nodeName, count) {
         if (count <= 0) return;
-        const msg = `是否清除该节点的历史流量统计数据？\n\n节点：${nodeName}\n记录数：${count} 条\n\n⚠️ 此操作不影响累计流量统计。`;
-        if (!confirm(msg)) return;
+        const msg = `是否清除该节点的历史流量统计数据？\n\n节点：${nodeName}\n记录数：${count} 条\n\n此操作不影响累计流量统计。`;
+        const confirmed = typeof window.waConfirm === 'function'
+            ? await window.waConfirm(msg, { title: '清除历史流量数据', confirmText: '确认清除', tone: 'danger' })
+            : confirm(msg);
+        if (!confirmed) return;
 
         // 执行清除
         doClearTrafficHistory(uuid);
@@ -5858,11 +5861,11 @@
             alert("请先通过连接测试");
             return;
         }
-        if (
-            !confirm(
-                "确认要直接切换到 PostgreSQL 吗？\n\n⚠️ 如果目标数据库是空的，切换后将丢失原有数据。\n建议选择下方的「迁移数据并切换」以保留数据。",
-            )
-        ) {
+        const switchMsg = "确认要直接切换到 PostgreSQL 吗？\n\n如果目标数据库是空的，切换后将丢失原有数据。\n建议选择下方的「迁移数据并切换」以保留数据。";
+        const switchConfirmed = typeof window.waConfirm === 'function'
+            ? await window.waConfirm(switchMsg, { title: '切换数据库', confirmText: '确认切换', tone: 'danger' })
+            : confirm(switchMsg);
+        if (!switchConfirmed) {
             return;
         }
 
@@ -5935,11 +5938,11 @@
     }
 
     async function switchBackToSqlite() {
-        if (
-            !confirm(
-                "确认要切换回 SQLite 吗？\n切换后系统将使用本地嵌入式数据库。",
-            )
-        ) {
+        const sqliteMsg = "确认要切换回 SQLite 吗？\n切换后系统将使用本地嵌入式数据库。";
+        const sqliteConfirmed = typeof window.waConfirm === 'function'
+            ? await window.waConfirm(sqliteMsg, { title: '切回 SQLite', confirmText: '确认切换', tone: 'warning' })
+            : confirm(sqliteMsg);
+        if (!sqliteConfirmed) {
             return;
         }
 
@@ -5966,11 +5969,11 @@
             alert("请先通过连接测试");
             return;
         }
-        if (
-            !confirm(
-                "确认要执行数据迁移并切换到 PostgreSQL 吗？\n\n⚠️ 此操作会清空目标 PostgreSQL 中的同名表数据，然后将 SQLite 的数据复制过去，完成后自动切换引擎。\n\n建议先备份 PostgreSQL 数据库。",
-            )
-        ) {
+        const migrateMsg = "确认要执行数据迁移并切换到 PostgreSQL 吗？\n\n此操作会清空目标 PostgreSQL 中的同名表数据，然后将 SQLite 的数据复制过去，完成后自动切换引擎。\n\n建议先备份 PostgreSQL 数据库。";
+        const migrateConfirmed = typeof window.waConfirm === 'function'
+            ? await window.waConfirm(migrateMsg, { title: '迁移并切换数据库', confirmText: '确认迁移', tone: 'danger' })
+            : confirm(migrateMsg);
+        if (!migrateConfirmed) {
             return;
         }
 

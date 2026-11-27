@@ -3119,7 +3119,11 @@
             cftShowMsg("cft-security-msg", "error", "请选择证书绑定域名");
             return;
         }
-        if (!confirm(`确认使用域名 ${domain} 申请证书吗？`)) return;
+        const certMsg = `确认使用域名 ${domain} 申请证书吗？`;
+        const certConfirmed = typeof window.waConfirm === 'function'
+            ? await window.waConfirm(certMsg, { title: '申请 SSL 证书', confirmText: '确认申请', tone: 'info' })
+            : confirm(certMsg);
+        if (!certConfirmed) return;
 
         const rawToken = (
             document.getElementById("cft-token-input")?.value || ""
@@ -3250,7 +3254,10 @@
     }
 
     async function cftTriggerCoreRestart() {
-        if (!confirm("确定要重启系统核心吗？")) return;
+        const restartConfirmed = typeof window.waConfirm === 'function'
+            ? await window.waConfirm("确定要重启系统核心吗？", { title: '重启系统核心', confirmText: '确认重启', tone: 'warning' })
+            : confirm("确定要重启系统核心吗？");
+        if (!restartConfirmed) return;
         try {
             const enableResp = await fetch("/api/cf/cert/settings", {
                 method: "POST",
@@ -3653,7 +3660,10 @@
 
     // 删除IP
     async function cftManualIPOptDeleteIP(id) {
-        if (!confirm("确定要删除这个优选IP吗？")) return;
+        const delConfirmed = typeof window.waConfirm === 'function'
+            ? await window.waConfirm("确定要删除这个优选 IP 吗？", { title: '删除优选 IP', confirmText: '确认删除', tone: 'danger' })
+            : confirm("确定要删除这个优选IP吗？");
+        if (!delConfirmed) return;
 
         // 如果是临时ID，直接从本地删除
         if (id.startsWith('temp_')) {
@@ -4211,7 +4221,10 @@
     }
 
     async function cftIPOptDeleteSpeedURL(id) {
-        if (!confirm("确定要删除这个测速地址吗？")) return;
+        const delUrlConfirmed = typeof window.waConfirm === 'function'
+            ? await window.waConfirm("确定要删除这个测速地址吗？", { title: '删除测速地址', confirmText: '确认删除', tone: 'danger' })
+            : confirm("确定要删除这个测速地址吗？");
+        if (!delUrlConfirmed) return;
 
         try {
             const resp = await fetch("/api/cf/ipopt/speed-urls/delete", {
@@ -4789,7 +4802,11 @@
 
     async function cftDeleteTunnelByID(tunnelID, tunnelName) {
         if (!tunnelID) return;
-        if (!confirm(`确认删除 Tunnel：${tunnelName || tunnelID}？`)) return;
+        const delTunnelMsg = `确认删除 Tunnel：${tunnelName || tunnelID}？`;
+        const delTunnelConfirmed = typeof window.waConfirm === 'function'
+            ? await window.waConfirm(delTunnelMsg, { title: '删除 Tunnel', confirmText: '确认删除', tone: 'danger' })
+            : confirm(delTunnelMsg);
+        if (!delTunnelConfirmed) return;
 
         try {
             const res = await fetch("/api/cf/tunnel/delete-by-id", {
@@ -5341,12 +5358,11 @@
 
     async function cftDeleteTunnelNode(uuid) {
         if (!uuid) return;
-        if (
-            !confirm(
-                "确认删除该节点绑定的 Tunnel？\n将清理节点配置；若该 Tunnel 未被其他节点使用，将同步删除 Cloudflare 远端隧道。",
-            )
-        )
-            return;
+        const delNodeTunnelMsg = "确认删除该节点绑定的 Tunnel？\n将清理节点配置；若该 Tunnel 未被其他节点使用，将同步删除 Cloudflare 远端隧道。";
+        const delNodeTunnelConfirmed = typeof window.waConfirm === 'function'
+            ? await window.waConfirm(delNodeTunnelMsg, { title: '删除节点 Tunnel', confirmText: '确认删除', tone: 'danger' })
+            : confirm(delNodeTunnelMsg);
+        if (!delNodeTunnelConfirmed) return;
 
         cftShowSaveIndicator("saving", "正在删除 Tunnel...");
         cftShowTunnelNodeBanner("");
@@ -5411,12 +5427,11 @@
     }
 
     async function cftDelete() {
-        if (
-            !confirm(
-                "确认删除 Tunnel？\n将同时清理 DNS 记录和本地凭据，此操作不可逆。",
-            )
-        )
-            return;
+        const delCurTunnelMsg = "确认删除 Tunnel？\n将同时清理 DNS 记录和本地凭据，此操作不可逆。";
+        const delCurTunnelConfirmed = typeof window.waConfirm === 'function'
+            ? await window.waConfirm(delCurTunnelMsg, { title: '删除 Tunnel', confirmText: '确认删除', tone: 'danger' })
+            : confirm(delCurTunnelMsg);
+        if (!delCurTunnelConfirmed) return;
         cftShowMsg("cft-tunnel-msg", "info", "正在删除...");
         try {
             const resp = await fetch("/api/cf/tunnel/delete", {

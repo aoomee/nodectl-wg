@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"html/template"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -146,7 +147,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var nodes []database.NodePool
-	if err := database.DB.Find(&nodes).Error; err != nil {
+	if err := database.DB.Order("sort_index ASC").Find(&nodes).Error; err != nil {
 		logger.Log.Error("获取节点统计失败", "error", err, "ip", clientIP, "path", reqPath)
 	}
 
@@ -226,13 +227,85 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]interface{}{
-		"Title":      "WireArc 控制台",
-		"Protocols":  database.SupportedProtocols,
-		"Version":    version.Version,
-		"Stats":      stats,
-		"ProtoStats": displayProtoStats,
+		"Title":         "WireArc 控制台",
+		"Protocols":     database.SupportedProtocols,
+		"Version":       version.Version,
+		"Stats":         stats,
+		"ProtoStats":    displayProtoStats,
+		"BootstrapJSON": buildHomeBootstrapJSON(r, nodes),
 	}
 	tmpl.ExecuteTemplate(w, "index.html", data)
+}
+
+// buildHomeBootstrapJSON 预组装首页首屏所需的节点列表与当日流量数据，随 HTML 一次下发以消除刷新时的多轮瀑布请求和布局抖动。
+func buildHomeBootstrapJSON(r *http.Request, nodes []database.NodePool) template.JS {
+	payload := make(map[string]interface{}, 2)
+
+	if nodesData, err := buildNodesResponseData(r, nodes); err == nil {
+		payload["nodes"] = nodesData
+	}
+
+	todayStr := time.Now().Format("2006-01-02")
+	landingNodes, landingErr := service.GetTrafficLandingNodes()
+	rank, rankErr := service.GetTrafficConsumptionRank(200, todayStr)
+	if landingErr == nil && rankErr == nil && rank != nil {
+		selectedUUID := ""
+		var bestScore int64 = -1
+		for _, item := range rank.Items {
+			score := item.TotalBytes
+			if item.HasLiveTotal {
+				score = item.LiveTotalBytes
+			}
+			if selectedUUID == "" || score > bestScore {
+				selectedUUID = item.UUID
+				bestScore = score
+			}
+		}
+		if selectedUUID == "" && len(landingNodes) > 0 {
+			selectedUUID = landingNodes[0].UUID
+		}
+
+		barPoints := make([]service.TrafficSeriesPoint, 0)
+		linePoints := make([]service.TrafficSeriesPoint, 0)
+		if selectedUUID != "" {
+			if barRes, err := service.QueryTrafficSeries(service.TrafficSeriesOptions{
+				NodeUUID:      selectedUUID,
+				Hours:         24,
+				IntervalHours: 1,
+				Mode:          "increment",
+				Date:          todayStr,
+				Raw:           false,
+			}); err == nil && barRes != nil && barRes.Points != nil {
+				barPoints = barRes.Points
+			}
+			if lineRes, err := service.QueryTrafficSeries(service.TrafficSeriesOptions{
+				NodeUUID:      selectedUUID,
+				Hours:         24,
+				IntervalHours: 1,
+				Mode:          "increment",
+				Date:          todayStr,
+				Raw:           true,
+			}); err == nil && lineRes != nil && lineRes.Points != nil {
+				linePoints = lineRes.Points
+			}
+		}
+
+		payload["traffic"] = map[string]interface{}{
+			"date":                       todayStr,
+			"landing_nodes":              landingNodes,
+			"rank":                       rank,
+			"selected_node_uuid":         selectedUUID,
+			"bar_points":                 barPoints,
+			"line_points":                linePoints,
+			"point_persist_interval_sec": service.GetTrafficPointPersistIntervalSec(),
+		}
+	}
+
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		return template.JS("null")
+	}
+	return template.JS(raw)
 }
 
 // logoutHandler 处理安全退出逻辑

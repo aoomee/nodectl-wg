@@ -14,7 +14,7 @@
         <link rel="preconnect" href="https://flagcdn.com" crossorigin />
         <link rel="dns-prefetch" href="https://flagcdn.com" />
 
-        <script src="/assets/vendor/sortable-1.15.7.bf4241bc73fe.min.js" integrity="sha384-DgmC6Xe2bSN2WjTDXzWYbUbxyhNP+NNkGDR/g78pCXV7E7rcVTGxVg0uIVCUUcBc"></script>
+        <script src="/assets/vendor/sortable-1.15.7.bf4241bc73fe.min.js" integrity="sha384-DgmC6Xe2bSN2WjTDXzWYbUbxyhNP+NNkGDR/g78pCXV7E7rcVTGxVg0uIVCUUcBc" defer></script>
         <style>
             /* =========================================================
            1. 全局变量与基础样式 (Global & Reset - Ultra Rounded & Clean)
@@ -87,8 +87,8 @@
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                gap: 8px;
-                min-height: 108px;
+                gap: 6px;
+                min-height: 56px;
                 color: #8e8e93;
                 font-size: 12.5px;
                 font-weight: 500;
@@ -97,16 +97,8 @@
             @keyframes waSpin {
                 to { transform: rotate(360deg); }
             }
-            @keyframes waFadeIn {
-                from { opacity: 0; }
-                to { opacity: 1; }
-            }
-            .node-item {
-                animation: waFadeIn 0.2s ease-out;
-            }
             @media (prefers-reduced-motion: reduce) {
                 .wa-spinner { animation-duration: 1.8s; }
-                .node-item { animation: none; }
             }
 
             /* 通用圓润小图标底座 */
@@ -434,7 +426,6 @@
                 width: 100%;
                 max-width: 1480px;
                 margin: 0 auto;
-                animation: softFadeUp 0.45s var(--ease-spring);
             }
 
             .top-section-grid {
@@ -1137,6 +1128,9 @@
     </head>
 
     <body>
+        <script id="wa-bootstrap-script">
+            window.__WA_BOOTSTRAP__ = {{if .BootstrapJSON}}{{.BootstrapJSON}}{{else}}null{{end}};
+        </script>
         <div
             id="security-banner"
             style="
@@ -1738,11 +1732,6 @@
         <script>
             window.allNodesData = {};
 
-            // 首页主区域框架与转圈占位已在 HTML 首帧就绪，立即并发拉取节点数据
-            queueMicrotask(function () {
-                if (typeof loadNodesList === "function") loadNodesList();
-            });
-
             // 备用调色盘 (用于未知的新协议)
             const tagColorPalette = [
                 { bg: "#dcfce7", text: "#16a34a" }, // Green
@@ -1787,39 +1776,45 @@
                 return tagColorPalette[Math.abs(hash) % tagColorPalette.length];
             }
 
+            function applyNodesPayload(data) {
+                if (!data) return false;
+                window.allNodesData = {};
+
+                const cacheNodes = (nodes) => {
+                    if (nodes)
+                        nodes.forEach(
+                            (n) => (window.allNodesData[n.uuid] = n),
+                        );
+                };
+                cacheNodes(data.direct_nodes);
+                cacheNodes(data.land_nodes);
+                window.allWGPairs = data.wg_pairs || {};
+                window.panelUrl = data.panel_url;
+                window.cftTunnelSubdomain =
+                    data.tunnel_subdomain || "";
+
+                renderNodes(
+                    "direct-nodes-list",
+                    data.direct_nodes,
+                    "#34c759",
+                );
+                renderNodes(
+                    "land-nodes-list",
+                    data.land_nodes,
+                    "#f5a623",
+                );
+
+                initDragAndDrop();
+                return true;
+            }
+
             async function loadNodesList() {
                 try {
                     const response = await fetch("/api/get-nodes");
                     const result = await response.json();
 
                     if (result.status === "success") {
-                        window.allNodesData = {};
-
-                        const cacheNodes = (nodes) => {
-                            if (nodes)
-                                nodes.forEach(
-                                    (n) => (window.allNodesData[n.uuid] = n),
-                                );
-                        };
-                        cacheNodes(result.data.direct_nodes);
-                        cacheNodes(result.data.land_nodes);
-                        window.allWGPairs = result.data.wg_pairs || {};
-                        window.panelUrl = result.data.panel_url;
-                        window.cftTunnelSubdomain =
-                            result.data.tunnel_subdomain || "";
-
-                        renderNodes(
-                            "direct-nodes-list",
-                            result.data.direct_nodes,
-                            "#34c759",
-                        );
-                        renderNodes(
-                            "land-nodes-list",
-                            result.data.land_nodes,
-                            "#f5a623",
-                        );
-
-                        initDragAndDrop();
+                        applyNodesPayload(result.data);
                     } else {
                         showErrorState("direct-nodes-list");
                         showErrorState("land-nodes-list");
@@ -1832,6 +1827,20 @@
             }
 
             function initDragAndDrop() {
+                if (typeof Sortable === "undefined") {
+                    if (!window._waSortablePending) {
+                        window._waSortablePending = true;
+                        document.addEventListener(
+                            "DOMContentLoaded",
+                            function () {
+                                window._waSortablePending = false;
+                                initDragAndDrop();
+                            },
+                            { once: true },
+                        );
+                    }
+                    return;
+                }
                 const directList = document.getElementById("direct-nodes-list");
                 const landList = document.getElementById("land-nodes-list");
 
@@ -1972,12 +1981,12 @@
                         ? "#ff3b30"
                         : dotColor;
 
-                    // 1. 处理跨平台国旗显示 (调用外部 flagcdn 接口转换图片，圆润切角)
+                    // 1. 处理跨平台国旗显示 (调用外部 flagcdn 接口转换图片，圆润切角，固定宽高避免布局抖动)
                     let flagHTML = globeBadgeHTML;
                     if (node.region && node.region.trim() !== "") {
                         const isoCode = node.region.trim().toLowerCase();
                         if (/^[a-z]{2}$/.test(isoCode)) {
-                            flagHTML = `<img src="https://flagcdn.com/${isoCode}.svg" loading="lazy" alt="${isoCode}" style="width: 22px; height: 16px; object-fit: cover; margin-right: 8px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.12);">`;
+                            flagHTML = `<img src="https://flagcdn.com/${isoCode}.svg" width="22" height="16" decoding="async" alt="${isoCode}" style="width: 22px; height: 16px; object-fit: cover; margin-right: 8px; border-radius: 5px; background: #f2f3f7; box-shadow: 0 1px 3px rgba(0,0,0,0.12); flex-shrink: 0;">`;
                         }
                     }
 
@@ -2075,6 +2084,15 @@
                     </div>
                 `;
                     container.appendChild(item);
+                });
+            }
+
+            // 首帧同步注水：若服务端已随 HTML 下发初始节点快照，立即完成首帧渲染；否则回退异步拉取
+            if (window.__WA_BOOTSTRAP__ && window.__WA_BOOTSTRAP__.nodes) {
+                applyNodesPayload(window.__WA_BOOTSTRAP__.nodes);
+            } else {
+                queueMicrotask(function () {
+                    if (typeof loadNodesList === "function") loadNodesList();
                 });
             }
 

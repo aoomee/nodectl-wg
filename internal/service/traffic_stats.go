@@ -260,6 +260,14 @@ type TrafficConsumptionItem struct {
 	TrafficUp        int64  `json:"traffic_up"`
 	TrafficDown      int64  `json:"traffic_down"`
 	TotalBytes       int64  `json:"total_bytes"`
+	TodayTotalBytes  int64  `json:"today_total_bytes"`
+	LiveTotalUp      int64  `json:"live_total_up"`
+	LiveTotalDown    int64  `json:"live_total_down"`
+	LiveTotalBytes   int64  `json:"live_total_bytes"`
+	LiveRXRateBps    int64  `json:"live_rx_rate_bps"`
+	LiveTXRateBps    int64  `json:"live_tx_rate_bps"`
+	LiveLastAt       int64  `json:"live_last_at"`
+	HasLiveTotal     bool   `json:"has_live_total"`
 	UploadRatio      string `json:"upload_ratio"`
 	TrafficUpdateAt  string `json:"traffic_update_at"`
 }
@@ -585,6 +593,8 @@ func GetTrafficConsumptionRank(limit int, rankDate string) (*TrafficConsumptionR
 		}
 	}
 
+	liveSnapshots := GetTrafficLiveSnapshots()
+
 	items := make([]TrafficConsumptionItem, 0, len(nodes))
 	for _, n := range nodes {
 		up := upByNode[n.UUID]
@@ -593,7 +603,20 @@ func GetTrafficConsumptionRank(limit int, rankDate string) (*TrafficConsumptionR
 		limitType := NormalizeTrafficLimitType(n.TrafficLimitType)
 		usedByLimit := ComputeTrafficUsedByLimitType(up, down, limitType)
 
-		offline := !IsNodeOnlineForStatus(n.InstallID)
+		liveUp := n.TrafficUp
+		liveDown := n.TrafficDown
+		hasLiveTotal := liveUp > 0 || liveDown > 0
+		var liveRXRate, liveTXRate, liveLastAt int64
+		offline := true
+		if snap, ok := liveSnapshots[n.InstallID]; ok {
+			offline = snap.Offline
+			liveUp = snap.TotalTXBytes
+			liveDown = snap.TotalRXBytes
+			hasLiveTotal = true
+			liveRXRate = snap.RXRateBps
+			liveTXRate = snap.TXRateBps
+			liveLastAt = snap.LastLiveAt
+		}
 
 		ratio := "0.00"
 		if up > 0 {
@@ -617,6 +640,14 @@ func GetTrafficConsumptionRank(limit int, rankDate string) (*TrafficConsumptionR
 			TrafficUp:        up,
 			TrafficDown:      down,
 			TotalBytes:       total,
+			TodayTotalBytes:  total,
+			LiveTotalUp:      liveUp,
+			LiveTotalDown:    liveDown,
+			LiveTotalBytes:   liveUp + liveDown,
+			LiveRXRateBps:    liveRXRate,
+			LiveTXRateBps:    liveTXRate,
+			LiveLastAt:       liveLastAt,
+			HasLiveTotal:     hasLiveTotal,
 			UploadRatio:      ratio,
 			TrafficUpdateAt:  updateAt,
 		})

@@ -1138,6 +1138,54 @@ func GetAllNodeLiveStates() map[string]*NodeLiveState {
 	return result
 }
 
+// GetTrafficLiveSnapshots 获取所有节点的实时快照（key: install_id），口径与前端 Live WS 完全一致。
+// 若全局 TrafficHub 尚未初始化，直接返回 nil，避免在离线测试中惰性启动后台落库协程。
+func GetTrafficLiveSnapshots() map[string]FrontendPushMsg {
+	hub := globalHubPtr.Load()
+	if hub == nil {
+		return nil
+	}
+
+	hub.agentMu.RLock()
+	onlineSet := make(map[string]struct{}, len(hub.agentConns))
+	for iid := range hub.agentConns {
+		onlineSet[iid] = struct{}{}
+	}
+	hub.agentMu.RUnlock()
+
+	now := time.Now()
+	hub.mu.RLock()
+	result := make(map[string]FrontendPushMsg, len(hub.nodes))
+	for iid, state := range hub.nodes {
+		if state == nil {
+			continue
+		}
+		_, wsOnline := onlineSet[state.InstallID]
+		hasRecentLive := hasRecentTrafficSignal(state.LastLiveAt, now)
+		online := hasRecentLive
+
+		outRX := int64(0)
+		outTX := int64(0)
+		if online && wsOnline && hasRecentLive {
+			outRX = state.RXRateBps
+			outTX = state.TXRateBps
+		}
+
+		result[iid] = FrontendPushMsg{
+			InstallID:    state.InstallID,
+			NodeUUID:     state.NodeUUID,
+			RXRateBps:    outRX,
+			TXRateBps:    outTX,
+			TotalRXBytes: state.TotalRXBytes,
+			TotalTXBytes: state.TotalTXBytes,
+			LastLiveAt:   state.LastLiveAt.Unix(),
+			Offline:      !online,
+		}
+	}
+	hub.mu.RUnlock()
+	return result
+}
+
 // ============================================================
 //  命令下发
 // ============================================================

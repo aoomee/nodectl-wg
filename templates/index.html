@@ -8,7 +8,7 @@
         <link
             rel="icon"
             type="image/svg+xml"
-            href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none'><defs><linearGradient id='g' x1='16' y1='1.5' x2='16' y2='30.5' gradientUnits='userSpaceOnUse'><stop offset='0%25' stop-color='%232296ff'/><stop offset='100%25' stop-color='%23007aff'/></linearGradient></defs><rect x='1.5' y='1.5' width='29' height='29' rx='8.5' fill='url(%23g)'/><path d='M6.6 11.4C7.2 18.6 9.2 22.8 11.4 22.8C13.8 22.8 14.1 9.6 16 9.6C17.9 9.6 18.2 22.8 20.6 22.8C22.8 22.8 24.8 18.6 25.4 11.4' stroke='%23ffffff' stroke-width='2.65' stroke-linecap='round' stroke-linejoin='round'/></svg>"
+            href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none'><defs><linearGradient id='bg' x1='10' y1='4' x2='54' y2='60' gradientUnits='userSpaceOnUse'><stop offset='0%25' stop-color='%232ea8ff'/><stop offset='52%25' stop-color='%23007aff'/><stop offset='100%25' stop-color='%23003d99'/></linearGradient><radialGradient id='glow' cx='0' cy='0' r='1' gradientUnits='userSpaceOnUse' gradientTransform='translate(20 14) rotate(50) scale(36 28)'><stop offset='0%25' stop-color='%23ffffff' stop-opacity='0.45'/><stop offset='100%25' stop-color='%23ffffff' stop-opacity='0'/></radialGradient><linearGradient id='rim' x1='8' y1='4' x2='56' y2='60' gradientUnits='userSpaceOnUse'><stop offset='0%25' stop-color='%23ffffff' stop-opacity='0.85'/><stop offset='48%25' stop-color='%23a6dcff' stop-opacity='0.18'/><stop offset='100%25' stop-color='%23ffffff' stop-opacity='0.52'/></linearGradient><linearGradient id='rib' x1='16' y1='18' x2='48' y2='48' gradientUnits='userSpaceOnUse'><stop offset='0%25' stop-color='%23ffffff'/><stop offset='58%25' stop-color='%23e2f3ff'/><stop offset='100%25' stop-color='%23b5e0ff'/></linearGradient></defs><rect x='2' y='2' width='60' height='60' rx='16.5' fill='url(%23bg)'/><rect x='2' y='2' width='60' height='60' rx='16.5' fill='url(%23glow)'/><rect x='2.8' y='2.8' width='58.4' height='58.4' rx='15.7' stroke='url(%23rim)' stroke-width='1.6'/><path d='M13.2 22.8C14.4 37.2 18.4 45.6 22.8 45.6C27.6 45.6 28.2 19.2 32 19.2C35.8 19.2 36.4 45.6 41.2 45.6C45.6 45.6 49.6 37.2 50.8 22.8' stroke='%23001b4d' stroke-opacity='0.34' stroke-width='6.6' stroke-linecap='round' stroke-linejoin='round' transform='translate(0 2.2)'/><path d='M13.2 22.8C14.4 37.2 18.4 45.6 22.8 45.6C27.6 45.6 28.2 19.2 32 19.2C35.8 19.2 36.4 45.6 41.2 45.6C45.6 45.6 49.6 37.2 50.8 22.8' stroke='url(%23rib)' stroke-width='6.2' stroke-linecap='round' stroke-linejoin='round'/><path d='M13.2 22.8C14.4 37.2 18.4 45.6 22.8 45.6C27.6 45.6 28.2 19.2 32 19.2C35.8 19.2 36.4 45.6 41.2 45.6C45.6 45.6 49.6 37.2 50.8 22.8' stroke='%23ffffff' stroke-opacity='0.85' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round' transform='translate(0 -1.1)'/></svg>"
         />
 
         <link rel="preconnect" href="https://flagcdn.com" crossorigin />
@@ -66,21 +66,47 @@
                 flex-direction: column;
             }
 
-            /* 轻盈骨架屏过渡，消除页面刷新时列表空白生硬跳变 */
-            .wa-skeleton-row {
-                height: 54px;
-                border-radius: 16px;
-                background: linear-gradient(90deg, #f3f4f6 25%, #eceef2 50%, #f3f4f6 75%);
-                background-size: 200% 100%;
-                animation: waShimmer 1.3s ease-in-out infinite;
-                margin-bottom: 10px;
+            /* 全局统一极简加载转圈与平滑入场，框架先稳态占位，内容未就绪时转圈展示 */
+            .wa-spinner {
+                display: inline-block;
+                width: 18px;
+                height: 18px;
+                border-radius: 50%;
+                border: 2.2px solid rgba(0, 122, 255, 0.16);
+                border-top-color: #007aff;
+                animation: waSpin 0.72s linear infinite;
+                flex-shrink: 0;
             }
-            .wa-skeleton-row:last-child {
-                margin-bottom: 0;
+            .wa-spinner.lg {
+                width: 22px;
+                height: 22px;
+                border-width: 2.4px;
             }
-            @keyframes waShimmer {
-                0% { background-position: 200% 0; }
-                100% { background-position: -200% 0; }
+            .wa-loading-state {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                min-height: 108px;
+                color: #8e8e93;
+                font-size: 12.5px;
+                font-weight: 500;
+                user-select: none;
+            }
+            @keyframes waSpin {
+                to { transform: rotate(360deg); }
+            }
+            @keyframes waFadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            .node-item {
+                animation: waFadeIn 0.2s ease-out;
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .wa-spinner { animation-duration: 1.8s; }
+                .node-item { animation: none; }
             }
 
             /* 通用圓润小图标底座 */
@@ -145,9 +171,9 @@
             }
 
             .nav-brand svg {
-                width: 28px;
-                height: 28px;
-                filter: drop-shadow(0 3px 8px rgba(0, 122, 255, 0.24));
+                width: 30px;
+                height: 30px;
+                filter: drop-shadow(0 4px 10px rgba(0, 96, 224, 0.28));
                 transition: transform 0.34s var(--ease-spell);
             }
 
@@ -1167,22 +1193,80 @@
             <div class="top-navbar-inner">
                 <div style="display: flex; align-items: center">
                     <a href="/" class="nav-brand">
-                        <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                        <svg viewBox="0 0 64 64" fill="none" aria-hidden="true">
                             <defs>
-                                <linearGradient id="waNavLogoGrad" x1="16" y1="1.5" x2="16" y2="30.5" gradientUnits="userSpaceOnUse">
-                                    <stop offset="0%" stop-color="#2296ff"></stop>
-                                    <stop offset="100%" stop-color="#007aff"></stop>
+                                <linearGradient id="waNavGlassBg" x1="10" y1="4" x2="54" y2="60" gradientUnits="userSpaceOnUse">
+                                    <stop offset="0%" stop-color="#2ea8ff"></stop>
+                                    <stop offset="52%" stop-color="#007aff"></stop>
+                                    <stop offset="100%" stop-color="#003d99"></stop>
                                 </linearGradient>
+                                <radialGradient id="waNavGlassGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(20 13) rotate(48) scale(38 28)">
+                                    <stop offset="0%" stop-color="#ffffff" stop-opacity="0.46"></stop>
+                                    <stop offset="55%" stop-color="#9ad8ff" stop-opacity="0.12"></stop>
+                                    <stop offset="100%" stop-color="#ffffff" stop-opacity="0"></stop>
+                                </radialGradient>
+                                <radialGradient id="waNavGlassWarm" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(55 40) rotate(110) scale(18 11)">
+                                    <stop offset="0%" stop-color="#ffdcb0" stop-opacity="0.42"></stop>
+                                    <stop offset="100%" stop-color="#ffdcb0" stop-opacity="0"></stop>
+                                </radialGradient>
+                                <linearGradient id="waNavGlassRim" x1="7" y1="3" x2="57" y2="61" gradientUnits="userSpaceOnUse">
+                                    <stop offset="0%" stop-color="#ffffff" stop-opacity="0.88"></stop>
+                                    <stop offset="38%" stop-color="#bde4ff" stop-opacity="0.22"></stop>
+                                    <stop offset="72%" stop-color="#48a8ff" stop-opacity="0.14"></stop>
+                                    <stop offset="100%" stop-color="#ffffff" stop-opacity="0.58"></stop>
+                                </linearGradient>
+                                <linearGradient id="waNavRibbonFill" x1="14" y1="18" x2="50" y2="47" gradientUnits="userSpaceOnUse">
+                                    <stop offset="0%" stop-color="#ffffff"></stop>
+                                    <stop offset="58%" stop-color="#e3f3ff"></stop>
+                                    <stop offset="100%" stop-color="#b4dfff"></stop>
+                                </linearGradient>
+                                <linearGradient id="waNavRibbonSpec" x1="16" y1="17" x2="48" y2="44" gradientUnits="userSpaceOnUse">
+                                    <stop offset="0%" stop-color="#ffffff" stop-opacity="0.96"></stop>
+                                    <stop offset="50%" stop-color="#ffffff" stop-opacity="0.55"></stop>
+                                    <stop offset="100%" stop-color="#ffffff" stop-opacity="0.18"></stop>
+                                </linearGradient>
+                                <filter id="waNavRibbonShadow" x="-15%" y="-15%" width="130%" height="140%">
+                                    <feDropShadow dx="0" dy="2.6" stdDeviation="2.2" flood-color="#00184a" flood-opacity="0.42"></feDropShadow>
+                                </filter>
+                                <clipPath id="waNavSquircleClip">
+                                    <rect x="2" y="2" width="60" height="60" rx="16.5"></rect>
+                                </clipPath>
                             </defs>
-                            <rect x="1.5" y="1.5" width="29" height="29" rx="8.5" fill="url(#waNavLogoGrad)"></rect>
-                            <path
-                                class="wa-logo-ribbon"
-                                d="M6.6 11.4C7.2 18.6 9.2 22.8 11.4 22.8C13.8 22.8 14.1 9.6 16 9.6C17.9 9.6 18.2 22.8 20.6 22.8C22.8 22.8 24.8 18.6 25.4 11.4"
-                                stroke="#ffffff"
-                                stroke-width="2.65"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                            ></path>
+                            <g clip-path="url(#waNavSquircleClip)">
+                                <rect x="2" y="2" width="60" height="60" rx="16.5" fill="url(#waNavGlassBg)"></rect>
+                                <rect x="2" y="2" width="60" height="60" rx="16.5" fill="url(#waNavGlassGlow)"></rect>
+                                <rect x="2" y="2" width="60" height="60" rx="16.5" fill="url(#waNavGlassWarm)"></rect>
+                                <!-- 分层液态玻璃景深背板 -->
+                                <path
+                                    d="M15.6 25.4C16.7 37.6 20 44.6 23.8 44.6C27.8 44.6 28.5 22.6 32 22.6C35.5 22.6 36.2 44.6 40.2 44.6C44 44.6 47.3 37.6 48.4 25.4"
+                                    stroke="#ffffff"
+                                    stroke-opacity="0.24"
+                                    stroke-width="8.5"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    transform="translate(-1.6 1.4)"
+                                ></path>
+                                <!-- 主体磨砂液态玻璃 W 丝带 -->
+                                <g class="wa-logo-ribbon" filter="url(#waNavRibbonShadow)">
+                                    <path
+                                        d="M13.2 22.8C14.4 37.2 18.4 45.6 22.8 45.6C27.6 45.6 28.2 19.2 32 19.2C35.8 19.2 36.4 45.6 41.2 45.6C45.6 45.6 49.6 37.2 50.8 22.8"
+                                        stroke="url(#waNavRibbonFill)"
+                                        stroke-width="6.1"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                    ></path>
+                                    <path
+                                        d="M13.2 22.8C14.4 37.2 18.4 45.6 22.8 45.6C27.6 45.6 28.2 19.2 32 19.2C35.8 19.2 36.4 45.6 41.2 45.6C45.6 45.6 49.6 37.2 50.8 22.8"
+                                        stroke="url(#waNavRibbonSpec)"
+                                        stroke-width="2"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        transform="translate(0 -1.1)"
+                                    ></path>
+                                </g>
+                            </g>
+                            <!-- 精密倒角液态玻璃高光边框 -->
+                            <rect x="2.75" y="2.75" width="58.5" height="58.5" rx="15.75" stroke="url(#waNavGlassRim)" stroke-width="1.5"></rect>
                         </svg>
                         WireArc
                     </a>
@@ -1580,7 +1664,7 @@
                         <div
                             class="node-list-container"
                             id="direct-nodes-list"
-                        ></div>
+                        ><div class="wa-loading-state"><span class="wa-spinner"></span><span>加载直连节点...</span></div></div>
                     </div>
 
                     <div class="node-column-panel theme-yellow">
@@ -1641,7 +1725,7 @@
                         <div
                             class="node-list-container"
                             id="land-nodes-list"
-                        ></div>
+                        ><div class="wa-loading-state"><span class="wa-spinner"></span><span>加载落地节点...</span></div></div>
                     </div>
                 </div>
             </div>
@@ -1654,17 +1738,10 @@
         <script>
             window.allNodesData = {};
 
-            // 首页核心 DOM 已就绪：立即渲染轻盈骨架屏并发起拉取，无需苦等下方 15 个隐藏弹窗解析完毕
-            (function bootstrapNodeLists() {
-                const sk = '<div class="wa-skeleton-row"></div>';
-                const dEl = document.getElementById("direct-nodes-list");
-                const lEl = document.getElementById("land-nodes-list");
-                if (dEl && !dEl.children.length) dEl.innerHTML = sk;
-                if (lEl && !lEl.children.length) lEl.innerHTML = sk;
-                queueMicrotask(function () {
-                    if (typeof loadNodesList === "function") loadNodesList();
-                });
-            })();
+            // 首页主区域框架与转圈占位已在 HTML 首帧就绪，立即并发拉取节点数据
+            queueMicrotask(function () {
+                if (typeof loadNodesList === "function") loadNodesList();
+            });
 
             // 备用调色盘 (用于未知的新协议)
             const tagColorPalette = [
@@ -2460,7 +2537,280 @@
                     transition: none !important;
                 }
             }
+            /* ================= 全局统一极简确认/提示弹窗 (WireArc Dialog) ================= */
+            .wa-dialog-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                z-index: 99990;
+                background: rgba(15, 15, 20, 0.42);
+                backdrop-filter: saturate(180%) blur(10px);
+                -webkit-backdrop-filter: saturate(180%) blur(10px);
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+                box-sizing: border-box;
+                opacity: 0;
+                transition: opacity 0.18s ease;
+            }
+            .wa-dialog-overlay.is-open {
+                display: flex;
+                opacity: 1;
+            }
+            .wa-dialog-card {
+                width: 100%;
+                max-width: 400px;
+                background: #ffffff;
+                border-radius: 24px;
+                border: 1px solid rgba(0, 0, 0, 0.06);
+                box-shadow: 0 24px 60px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.05);
+                padding: 24px 24px 20px;
+                box-sizing: border-box;
+                transform: scale(0.95) translateY(6px);
+                transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+                font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+            }
+            .wa-dialog-overlay.is-open .wa-dialog-card {
+                transform: scale(1) translateY(0);
+            }
+            .wa-dialog-head {
+                display: flex;
+                align-items: center;
+                gap: 11px;
+                margin-bottom: 12px;
+            }
+            .wa-dialog-icon {
+                width: 34px;
+                height: 34px;
+                border-radius: 11px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+            }
+            .wa-dialog-icon.info { background: #eaf4ff; color: #007aff; }
+            .wa-dialog-icon.success { background: #e8fdf0; color: #28a745; }
+            .wa-dialog-icon.warning { background: #fff4e5; color: #d97706; }
+            .wa-dialog-icon.danger { background: #feeceb; color: #ff3b30; }
+            .wa-dialog-title {
+                font-size: 16px;
+                font-weight: 700;
+                color: #1d1d1f;
+                line-height: 1.3;
+            }
+            .wa-dialog-msg {
+                font-size: 13.5px;
+                line-height: 1.65;
+                color: #48484a;
+                white-space: pre-wrap;
+                word-break: break-word;
+                margin-bottom: 20px;
+                max-height: 46vh;
+                overflow-y: auto;
+            }
+            .wa-dialog-actions {
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                gap: 10px;
+            }
+            .wa-dialog-btn {
+                border: none;
+                border-radius: 999px;
+                padding: 9px 20px;
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: background-color 0.16s ease, transform 0.14s ease, box-shadow 0.16s ease;
+                font-family: inherit;
+            }
+            .wa-dialog-btn:active {
+                transform: scale(0.97);
+            }
+            .wa-dialog-btn-cancel {
+                background: #f2f3f7;
+                color: #1d1d1f;
+            }
+            .wa-dialog-btn-cancel:hover {
+                background: #e5e6eb;
+            }
+            .wa-dialog-btn-confirm {
+                background: linear-gradient(180deg, #1a90ff 0%, #007aff 100%);
+                color: #ffffff;
+                box-shadow: 0 3px 10px rgba(0, 122, 255, 0.26);
+            }
+            .wa-dialog-btn-confirm:hover {
+                background: linear-gradient(180deg, #007aff 0%, #0062cc 100%);
+            }
+            .wa-dialog-btn-confirm.danger {
+                background: linear-gradient(180deg, #ff5449 0%, #ff3b30 100%);
+                box-shadow: 0 3px 10px rgba(255, 59, 48, 0.26);
+            }
+            .wa-dialog-btn-confirm.danger:hover {
+                background: linear-gradient(180deg, #f5352a 0%, #d70015 100%);
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .wa-dialog-overlay,
+                .wa-dialog-card {
+                    transition: none !important;
+                }
+            }
         </style>
+        <script id="wirearc-custom-dialog">
+            (function () {
+                const nativeAlert = window.alert ? window.alert.bind(window) : null;
+                let overlay = null;
+                let queue = [];
+                let activeJob = null;
+
+                function inferTone(msg, mode, explicitTone) {
+                    if (explicitTone) return explicitTone;
+                    const text = String(msg || "");
+                    if (/✅|成功/.test(text) && !/失败|错误/.test(text)) return "success";
+                    if (/❌|失败|错误|删除|清空|停用|重置|不可逆|丢失|阻断|异常/.test(text)) return "danger";
+                    if (/⚠️|警告|冲突|确认|重启|切换/.test(text)) return "warning";
+                    return mode === "confirm" ? "warning" : "info";
+                }
+
+                function iconSVG(tone) {
+                    if (tone === "success") {
+                        return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                    }
+                    if (tone === "danger") {
+                        return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
+                    }
+                    if (tone === "warning") {
+                        return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
+                    }
+                    return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
+                }
+
+                function ensureOverlay() {
+                    if (overlay) return overlay;
+                    overlay = document.createElement("div");
+                    overlay.id = "waDialogOverlay";
+                    overlay.className = "wa-dialog-overlay";
+                    overlay.setAttribute("role", "dialog");
+                    overlay.setAttribute("aria-modal", "true");
+                    overlay.innerHTML =
+                        '<div class="wa-dialog-card">' +
+                        '  <div class="wa-dialog-head">' +
+                        '    <span class="wa-dialog-icon info" id="waDialogIcon"></span>' +
+                        '    <div class="wa-dialog-title" id="waDialogTitle">提示</div>' +
+                        "  </div>" +
+                        '  <div class="wa-dialog-msg" id="waDialogMsg"></div>' +
+                        '  <div class="wa-dialog-actions">' +
+                        '    <button type="button" class="wa-dialog-btn wa-dialog-btn-cancel" id="waDialogCancelBtn">取消</button>' +
+                        '    <button type="button" class="wa-dialog-btn wa-dialog-btn-confirm" id="waDialogConfirmBtn">确认</button>' +
+                        "  </div>" +
+                        "</div>";
+
+                    overlay.addEventListener("click", function (e) {
+                        if (e.target === overlay && activeJob) {
+                            finishActive(activeJob.mode === "alert" ? true : false);
+                        }
+                    });
+                    overlay.querySelector("#waDialogCancelBtn").addEventListener("click", function () {
+                        finishActive(false);
+                    });
+                    overlay.querySelector("#waDialogConfirmBtn").addEventListener("click", function () {
+                        finishActive(true);
+                    });
+                    document.body.appendChild(overlay);
+                    return overlay;
+                }
+
+                function finishActive(result) {
+                    if (!activeJob) return;
+                    const job = activeJob;
+                    activeJob = null;
+                    if (overlay) overlay.classList.remove("is-open");
+                    job.resolve(result);
+                    if (queue.length > 0) {
+                        setTimeout(pumpQueue, 30);
+                    }
+                }
+
+                function pumpQueue() {
+                    if (activeJob || queue.length === 0) return;
+                    if (!document.body) {
+                        const job = queue.shift();
+                        if (job.mode === "alert" && nativeAlert) nativeAlert(job.message);
+                        job.resolve(true);
+                        return;
+                    }
+                    const job = queue.shift();
+                    activeJob = job;
+
+                    const el = ensureOverlay();
+                    const tone = inferTone(job.message, job.mode, job.options.tone);
+                    const cleanedMsg = String(job.message || "").replace(/^(?:✅|❌|⚠️)\s*/, "");
+
+                    const iconEl = el.querySelector("#waDialogIcon");
+                    iconEl.className = "wa-dialog-icon " + tone;
+                    iconEl.innerHTML = iconSVG(tone);
+
+                    el.querySelector("#waDialogTitle").textContent =
+                        job.options.title || (job.mode === "confirm" ? "请确认操作" : tone === "success" ? "操作完成" : tone === "danger" ? "操作提示" : "提示");
+                    el.querySelector("#waDialogMsg").textContent = cleanedMsg;
+
+                    const cancelBtn = el.querySelector("#waDialogCancelBtn");
+                    const confirmBtn = el.querySelector("#waDialogConfirmBtn");
+                    if (job.mode === "confirm") {
+                        cancelBtn.style.display = "";
+                        cancelBtn.textContent = job.options.cancelText || "取消";
+                        confirmBtn.textContent = job.options.confirmText || "确认";
+                    } else {
+                        cancelBtn.style.display = "none";
+                        confirmBtn.textContent = job.options.confirmText || "知道了";
+                    }
+                    confirmBtn.className = "wa-dialog-btn wa-dialog-btn-confirm" + (tone === "danger" && job.mode === "confirm" ? " danger" : "");
+
+                    el.classList.add("is-open");
+                    requestAnimationFrame(function () {
+                        try {
+                            confirmBtn.focus({ preventScroll: true });
+                        } catch (_) {}
+                    });
+                }
+
+                document.addEventListener(
+                    "keydown",
+                    function (e) {
+                        if (!activeJob) return;
+                        if (e.key === "Escape") {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            finishActive(activeJob.mode === "alert" ? true : false);
+                        } else if (e.key === "Enter" && document.activeElement !== overlay?.querySelector("#waDialogCancelBtn")) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            finishActive(true);
+                        }
+                    },
+                    true,
+                );
+
+                window.waAlert = function (message, options) {
+                    return new Promise(function (resolve) {
+                        queue.push({ mode: "alert", message: String(message ?? ""), options: options || {}, resolve });
+                        pumpQueue();
+                    });
+                };
+
+                window.waConfirm = function (message, options) {
+                    return new Promise(function (resolve) {
+                        queue.push({ mode: "confirm", message: String(message ?? ""), options: options || {}, resolve });
+                        pumpQueue();
+                    });
+                };
+
+                // 统一接管页面内所有原生 alert()，彻底杜绝丑陋的浏览器原生弹窗
+                window.alert = function (message) {
+                    window.waAlert(message);
+                };
+            })();
+        </script>
         <script id="wirearc-custom-select">
             (function () {
                 let popover = null;

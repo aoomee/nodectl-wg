@@ -277,6 +277,210 @@
         border-radius: 12px;
         padding: 10px 12px;
         margin-bottom: 8px;
+        cursor: pointer;
+        transition: border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+    }
+
+    .logv-item:hover {
+        border-color: rgba(0, 122, 255, 0.28);
+        background: #fbfdff;
+        box-shadow: 0 3px 10px rgba(0, 122, 255, 0.06);
+    }
+
+    .logv-item:active {
+        transform: scale(0.996);
+    }
+
+    .logv-item-arrow {
+        flex-shrink: 0;
+        color: #c7c7cc;
+        transition: color 0.16s ease, transform 0.16s ease;
+    }
+
+    .logv-item:hover .logv-item-arrow {
+        color: #007aff;
+        transform: translateX(2px);
+    }
+
+    /* 日志详情弹窗 */
+    .logd-modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 15, 20, 0.42);
+        backdrop-filter: saturate(180%) blur(10px);
+        -webkit-backdrop-filter: saturate(180%) blur(10px);
+        z-index: 3600;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        box-sizing: border-box;
+    }
+
+    .logd-modal-overlay.active {
+        display: flex;
+    }
+
+    .logd-modal-card {
+        background: #ffffff;
+        width: 100%;
+        max-width: 660px;
+        max-height: 82vh;
+        border-radius: 24px;
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.05);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        animation: cnModalSpring 0.26s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    .logd-header {
+        background: rgba(248, 248, 250, 0.92);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        padding: 15px 20px 15px 22px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .logd-header-meta {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .logd-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 18px 22px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        background: #ffffff;
+    }
+
+    .logd-section-label {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: #86868b;
+        margin-bottom: 6px;
+        letter-spacing: 0.02em;
+    }
+
+    .logd-summary-box {
+        background: #f6f7f9;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        border-radius: 14px;
+        padding: 12px 14px;
+        font-size: 13.5px;
+        line-height: 1.65;
+        color: #1d1d1f;
+        word-break: break-word;
+        white-space: pre-wrap;
+        user-select: text;
+    }
+
+    .logd-fields-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 6px;
+        background: #f9fafb;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        border-radius: 14px;
+        padding: 10px 12px;
+    }
+
+    .logd-field-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        font-size: 12.5px;
+        line-height: 1.5;
+        padding: 4px 2px;
+        border-bottom: 1px dashed rgba(0, 0, 0, 0.05);
+    }
+
+    .logd-field-row:last-child {
+        border-bottom: none;
+    }
+
+    .logd-field-key {
+        flex: 0 0 112px;
+        color: #6e6e73;
+        font-weight: 600;
+        font-family: Menlo, Monaco, Consolas, monospace;
+        font-size: 11.5px;
+        word-break: break-all;
+    }
+
+    .logd-field-val {
+        flex: 1;
+        min-width: 0;
+        color: #1d1d1f;
+        word-break: break-all;
+        white-space: pre-wrap;
+        user-select: text;
+    }
+
+    .logd-raw-box {
+        background: #16181d;
+        color: #e5e7eb;
+        border-radius: 14px;
+        padding: 12px 14px;
+        font-family: "SF Mono", Menlo, Monaco, Consolas, monospace;
+        font-size: 12px;
+        line-height: 1.65;
+        word-break: break-all;
+        white-space: pre-wrap;
+        user-select: text;
+        max-height: 220px;
+        overflow-y: auto;
+    }
+
+    .logd-footer {
+        padding: 13px 20px;
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
+        background: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+    .logd-btn-copy {
+        background: #eaf4ff;
+        color: #007aff;
+        border: 1px solid rgba(0, 122, 255, 0.16);
+        border-radius: 999px;
+        padding: 7px 16px;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.18s ease;
+    }
+
+    .logd-btn-copy:hover {
+        background: #dceeff;
+    }
+
+    .logd-btn-close {
+        background: #f2f3f7;
+        color: #1d1d1f;
+        border: none;
+        border-radius: 999px;
+        padding: 7px 18px;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.18s ease;
+    }
+
+    .logd-btn-close:hover {
+        background: #e5e6eb;
     }
 
     .logv-line {
@@ -483,6 +687,19 @@
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
+
+        .logv-item-arrow {
+            display: none;
+        }
+
+        .logd-field-row {
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .logd-field-key {
+            flex: none;
+        }
     }
 </style>
 
@@ -530,6 +747,40 @@
     </div>
 </div>
 
+<!-- 单条日志完整详情弹窗 -->
+<div class="logd-modal-overlay" id="logDetailModal" role="dialog" aria-modal="true" aria-label="日志详情">
+    <div class="logd-modal-card">
+        <div class="logd-header">
+            <div class="logd-header-meta">
+                <span class="logv-level info" id="logDetailLevel">信息</span>
+                <span class="logv-op" id="logDetailOp">系统日志</span>
+                <span class="logv-time" id="logDetailTime" style="flex:0 0 auto;">--</span>
+            </div>
+            <button type="button" class="logv-btn logv-close" onclick="closeLogDetailModal()" title="关闭详情">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+        <div class="logd-body">
+            <div>
+                <div class="logd-section-label">完整日志内容</div>
+                <div class="logd-summary-box" id="logDetailSummary">--</div>
+            </div>
+            <div id="logDetailFieldsWrap" style="display:none;">
+                <div class="logd-section-label">结构化字段</div>
+                <div class="logd-fields-grid" id="logDetailFields"></div>
+            </div>
+            <div id="logDetailRawWrap" style="display:none;">
+                <div class="logd-section-label">原始日志原文</div>
+                <div class="logd-raw-box" id="logDetailRaw"></div>
+            </div>
+        </div>
+        <div class="logd-footer">
+            <button type="button" class="logd-btn-copy" id="logDetailCopyBtn" onclick="copyLogDetailRaw()">复制完整内容</button>
+            <button type="button" class="logd-btn-close" onclick="closeLogDetailModal()">关闭</button>
+        </div>
+    </div>
+</div>
+
 <script>
     const logViewerModalEl = document.getElementById('logViewerModal');
     const logViewerBodyEl = document.getElementById('logViewerBody');
@@ -543,17 +794,153 @@
     let logViewerStream = null;
     let logViewerHasData = false;
     let logViewerAllLogs = [];
+    let logViewerFilteredLogs = [];
     let logViewerLevelFilter = 'all';
     let logViewerLiveEnabled = true;
     let logViewerLimit = '200';
+    let logDetailCurrentCopyText = '';
+
+    const logDetailModalEl = document.getElementById('logDetailModal');
 
     logViewerModalEl.addEventListener('click', function (e) {
         if (e.target === logViewerModalEl) closeLogViewerModal();
     });
 
+    if (logDetailModalEl) {
+        logDetailModalEl.addEventListener('click', function (e) {
+            if (e.target === logDetailModalEl) closeLogDetailModal();
+        });
+    }
+
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
-            closeLogViewerModal();
+            if (logDetailModalEl && logDetailModalEl.classList.contains('active')) {
+                closeLogDetailModal();
+                return;
+            }
+            if (logViewerModalEl.classList.contains('active')) {
+                closeLogViewerModal();
+            }
+        }
+    });
+
+    function parseRawLogAttrs(raw) {
+        const text = String(raw || '').trim();
+        if (!text) return [];
+        const attrs = [];
+        const skipKeys = new Set(['time', 'level', 'msg']);
+        const regex = /([a-zA-Z0-9_.-]+)=("(?:[^"\\]|\\.)*"|\S+)/g;
+        let match;
+        while ((match = regex.exec(text)) !== null) {
+            const key = match[1];
+            if (skipKeys.has(key)) continue;
+            let val = match[2];
+            if (val.startsWith('"') && val.endsWith('"')) {
+                try {
+                    val = JSON.parse(val);
+                } catch (_) {
+                    val = val.slice(1, -1);
+                }
+            }
+            attrs.push([key, val]);
+        }
+        return attrs;
+    }
+
+    function openLogDetailModal(item) {
+        if (!item || !logDetailModalEl) return;
+        const cls = levelClass(item.level);
+        const levelEl = document.getElementById('logDetailLevel');
+        if (levelEl) {
+            levelEl.className = 'logv-level ' + cls;
+            levelEl.textContent = item.level_cn || item.level || '信息';
+        }
+        const opEl = document.getElementById('logDetailOp');
+        if (opEl) opEl.textContent = item.operation || '系统日志';
+        const timeEl = document.getElementById('logDetailTime');
+        if (timeEl) timeEl.textContent = item.time || '--';
+
+        const fullSummary = item.message_cn || item.message || '--';
+        const summaryEl = document.getElementById('logDetailSummary');
+        if (summaryEl) summaryEl.innerHTML = stylizeStateText(fullSummary);
+
+        const rawText = String(item.raw || '').trim();
+        const attrs = parseRawLogAttrs(rawText);
+        if (item.source && !attrs.some(([k]) => k === 'source')) {
+            attrs.unshift(['source', item.source]);
+        }
+
+        const fieldsWrap = document.getElementById('logDetailFieldsWrap');
+        const fieldsEl = document.getElementById('logDetailFields');
+        if (fieldsWrap && fieldsEl) {
+            if (attrs.length > 0) {
+                fieldsEl.innerHTML = attrs.map(([k, v]) => `
+                    <div class="logd-field-row">
+                        <span class="logd-field-key">${escHTML(k)}</span>
+                        <span class="logd-field-val">${escHTML(v)}</span>
+                    </div>
+                `).join('');
+                fieldsWrap.style.display = 'block';
+            } else {
+                fieldsEl.innerHTML = '';
+                fieldsWrap.style.display = 'none';
+            }
+        }
+
+        const rawWrap = document.getElementById('logDetailRawWrap');
+        const rawEl = document.getElementById('logDetailRaw');
+        if (rawWrap && rawEl) {
+            if (rawText) {
+                rawEl.textContent = rawText;
+                rawWrap.style.display = 'block';
+            } else {
+                rawEl.textContent = '';
+                rawWrap.style.display = 'none';
+            }
+        }
+
+        logDetailCurrentCopyText = rawText || `[${item.time || '--'}] [${item.level_cn || item.level || ''}] ${fullSummary}`;
+        const copyBtn = document.getElementById('logDetailCopyBtn');
+        if (copyBtn) copyBtn.textContent = '复制完整内容';
+
+        logDetailModalEl.classList.add('active');
+    }
+
+    function closeLogDetailModal() {
+        if (logDetailModalEl) logDetailModalEl.classList.remove('active');
+    }
+
+    async function copyLogDetailRaw() {
+        const btn = document.getElementById('logDetailCopyBtn');
+        if (!logDetailCurrentCopyText) return;
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(logDetailCurrentCopyText);
+            } else {
+                const ta = document.createElement('textarea');
+                ta.value = logDetailCurrentCopyText;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                ta.remove();
+            }
+            if (btn) {
+                btn.textContent = '✓ 已复制';
+                setTimeout(() => { btn.textContent = '复制完整内容'; }, 1600);
+            }
+        } catch (_) {
+            if (btn) btn.textContent = '复制失败';
+        }
+    }
+
+    logViewerBodyEl.addEventListener('click', function (e) {
+        const row = e.target && e.target.closest ? e.target.closest('.logv-item[data-log-idx]') : null;
+        if (!row) return;
+        const idx = parseInt(row.getAttribute('data-log-idx'), 10);
+        if (!Number.isNaN(idx) && logViewerFilteredLogs[idx]) {
+            openLogDetailModal(logViewerFilteredLogs[idx]);
         }
     });
 
@@ -570,6 +957,7 @@
     }
 
     function closeLogViewerModal() {
+        closeLogDetailModal();
         stopRecentLogsStream();
         collapseAllCapsules();
         logViewerModalEl.classList.remove('active');
@@ -636,6 +1024,7 @@
 
     function renderRecentLogs(logs) {
         if (!Array.isArray(logs) || !logs.length) {
+            logViewerFilteredLogs = [];
             logViewerBodyEl.innerHTML = `<div class="logv-empty">暂无日志数据</div>`;
             logViewerHasData = false;
             return;
@@ -647,12 +1036,14 @@
             : logs.filter(item => levelClass(item.level) === levelFilter);
 
         if (!filteredLogs.length) {
+            logViewerFilteredLogs = [];
             logViewerBodyEl.innerHTML = `<div class="logv-empty">当前筛选条件下暂无日志</div>`;
             logViewerHasData = false;
             return;
         }
 
-        logViewerBodyEl.innerHTML = filteredLogs.map(item => {
+        logViewerFilteredLogs = filteredLogs;
+        logViewerBodyEl.innerHTML = filteredLogs.map((item, idx) => {
             const cls = levelClass(item.level);
             const levelCN = escHTML(item.level_cn || item.level || '信息');
             const operation = escHTML(item.operation || '系统日志');
@@ -660,12 +1051,13 @@
             const msg = stylizeStateText(rawMsg);
             const msgTitle = escHTML(rawMsg);
             return `
-                <div class="logv-item">
+                <div class="logv-item" data-log-idx="${idx}" title="点击查看完整日志详情">
                     <div class="logv-line">
                         <span class="logv-time">${escHTML(item.time || '--')}</span>
                         <span class="logv-level ${cls}">${levelCN}</span>
                         <span class="logv-op">${operation}</span>
                         <span class="logv-cn" title="${msgTitle}">${msg}</span>
+                        <svg class="logv-item-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
                     </div>
                 </div>
             `;
@@ -677,7 +1069,7 @@
     async function fetchRecentLogsSnapshot() {
         const limit = logViewerLimit || '200';
         if (!logViewerHasData) {
-            logViewerBodyEl.innerHTML = `<div class="logv-empty">正在加载日志快照...</div>`;
+            logViewerBodyEl.innerHTML = `<div class="logv-empty"><div class="wa-loading-state"><span class="wa-spinner"></span><span>正在加载日志快照...</span></div></div>`;
         }
         setLogViewerLiveState(false);
 
@@ -710,7 +1102,7 @@
 
         const limit = logViewerLimit || '200';
         if (!logViewerHasData) {
-            logViewerBodyEl.innerHTML = `<div class="logv-empty">正在连接实时日志流...</div>`;
+            logViewerBodyEl.innerHTML = `<div class="logv-empty"><div class="wa-loading-state"><span class="wa-spinner"></span><span>正在连接实时日志流...</span></div></div>`;
         }
         setLogViewerLiveState(true);
 
@@ -745,7 +1137,10 @@
     }
 
     async function clearRecentLogs() {
-        if (!confirm('确定清空日志中心的所有历史日志吗？')) {
+        const confirmed = typeof window.waConfirm === 'function'
+            ? await window.waConfirm('确定清空日志中心的所有历史日志吗？', { title: '清空历史日志', confirmText: '确认清空', tone: 'danger' })
+            : confirm('确定清空日志中心的所有历史日志吗？');
+        if (!confirmed) {
             return;
         }
         const btn = document.getElementById('logViewerClearBtn');

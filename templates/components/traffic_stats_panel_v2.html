@@ -199,6 +199,42 @@
         display: none;
     }
 
+    .ts-loading-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        background: rgba(255, 255, 255, 0.86);
+        border-radius: 14px;
+        color: #8e8e93;
+        font-size: 12px;
+        font-weight: 500;
+        z-index: 12;
+        opacity: 1;
+        transition: opacity 0.2s ease;
+    }
+
+    .ts-loading-overlay.is-hidden {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .ts-rank-loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 220px;
+        color: #8e8e93;
+        font-size: 12px;
+        font-weight: 500;
+        user-select: none;
+    }
+
     .ts-enable-sample-btn {
         border: none;
         border-radius: 999px;
@@ -691,16 +727,15 @@
     }
 
     .ts-status {
+        display: none;
         margin-top: 8px;
         min-height: 16px;
         color: #888;
         font-size: 12px;
         text-align: center;
     }
-    .ts-status:empty {
-        display: none;
-        margin-top: 0;
-        min-height: 0;
+    .ts-status.is-error {
+        display: block;
     }
 
     .ts-hidden {
@@ -888,6 +923,7 @@
                     </div>
                     <div class="ts-chart-wrap" id="ts-bar-wrap">
                         <svg class="ts-svg" id="ts-bar-svg" viewBox="0 0 960 180" preserveAspectRatio="xMidYMid meet"></svg>
+                        <div class="ts-loading-overlay" id="ts-bar-loading"><span class="wa-spinner lg"></span></div>
                         <div class="ts-tooltip" id="ts-bar-tooltip"></div>
                     </div>
                     <div class="ts-legend">
@@ -922,6 +958,7 @@
                     <div class="ts-chart-wrap" id="ts-line-wrap">
                         <svg class="ts-svg" id="ts-line-svg" viewBox="0 0 960 180"
                             preserveAspectRatio="xMidYMid meet"></svg>
+                        <div class="ts-loading-overlay" id="ts-line-loading"><span class="wa-spinner lg"></span></div>
                         <div class="ts-tooltip" id="ts-line-tooltip"></div>
                     </div>
                     <div class="ts-legend">
@@ -998,7 +1035,9 @@
                 </div>
             </div>
 
-            <div class="ts-rank-list" id="ts-rank-list"></div>
+            <div class="ts-rank-list" id="ts-rank-list">
+                <div class="ts-rank-loading"><span class="wa-spinner"></span><span>加载节点流量...</span></div>
+            </div>
         </div>
     </div>
 
@@ -1345,6 +1384,15 @@
             if (!el) return;
             el.textContent = msg || '';
             el.style.color = isErr ? '#d74242' : '#86868b';
+            el.classList.toggle('is-error', !!(isErr && msg));
+        }
+
+        function setChartLoading(which, loading) {
+            const ids = which === 'both' ? ['ts-bar-loading', 'ts-line-loading'] : [which === 'bar' ? 'ts-bar-loading' : 'ts-line-loading'];
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.toggle('is-hidden', !loading);
+            });
         }
 
         function updateSelectedBadge() {
@@ -2121,40 +2169,55 @@
 
         async function loadBarSeriesAndRender() {
             const reqId = ++seriesReqSeq;
-            const barPts = await fetchSeries('increment', state.barInterval, false);
-            if (reqId !== seriesReqSeq) return;
-            state.barPoints = barPts;
-            renderBar();
-            setStatus('', false);
+            setChartLoading('bar', true);
+            try {
+                const barPts = await fetchSeries('increment', state.barInterval, false);
+                if (reqId !== seriesReqSeq) return;
+                state.barPoints = barPts;
+                renderBar();
+                setStatus('', false);
+            } finally {
+                if (reqId === seriesReqSeq) setChartLoading('bar', false);
+            }
         }
 
         async function loadLineSeriesAndRender() {
             const reqId = ++seriesReqSeq;
-            const linePts = await fetchSeries(state.trendMode, 1, true);
-            if (reqId !== seriesReqSeq) return;
-            state.linePoints = normalizeLineSeries(linePts);
-            renderLine();
-            updateTrendUsageMetric();
-            setStatus('', false);
+            setChartLoading('line', true);
+            try {
+                const linePts = await fetchSeries(state.trendMode, 1, true);
+                if (reqId !== seriesReqSeq) return;
+                state.linePoints = normalizeLineSeries(linePts);
+                renderLine();
+                updateTrendUsageMetric();
+                setStatus('', false);
+            } finally {
+                if (reqId === seriesReqSeq) setChartLoading('line', false);
+            }
         }
 
         async function loadSeriesAndRender() {
             const reqId = ++seriesReqSeq;
-            const [barPts, linePts] = await Promise.all([
-                fetchSeries('increment', state.barInterval, false),
-                fetchSeries(state.trendMode, 1, true)
-            ]);
-            if (reqId !== seriesReqSeq) return;
+            setChartLoading('both', true);
+            try {
+                const [barPts, linePts] = await Promise.all([
+                    fetchSeries('increment', state.barInterval, false),
+                    fetchSeries(state.trendMode, 1, true)
+                ]);
+                if (reqId !== seriesReqSeq) return;
 
-            state.barPoints = barPts;
-            state.linePoints = normalizeLineSeries(linePts);
+                state.barPoints = barPts;
+                state.linePoints = normalizeLineSeries(linePts);
 
-            renderBar();
-            renderLine();
-            updateSelectedBadge();
-            updateTrendUsageMetric();
+                renderBar();
+                renderLine();
+                updateSelectedBadge();
+                updateTrendUsageMetric();
 
-            setStatus('', false);
+                setStatus('', false);
+            } finally {
+                if (reqId === seriesReqSeq) setChartLoading('both', false);
+            }
         }
 
         let calViewYear = new Date().getFullYear();
@@ -2372,6 +2435,7 @@
                 renderRank();
                 await loadSeriesAndRender();
             } catch (e) {
+                setChartLoading('both', false);
                 setStatus((e && e.message) ? e.message : '初始化流量统计失败', true);
             }
         }

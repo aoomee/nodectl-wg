@@ -164,7 +164,11 @@
     }
 
     async function resetJWTSecret() {
-        if (!confirm("确定要重置 JWT 密钥吗？这将会导致所有已登录的设备（包括当前设备）立即下线，需要重新登录。")) {
+        const msg = "确定要重置 JWT 密钥吗？这将会导致所有已登录的设备（包括当前设备）立即下线，需要重新登录。";
+        const confirmed = typeof window.waConfirm === 'function'
+            ? await window.waConfirm(msg, { title: '重置会话密钥', confirmText: '确认重置', tone: 'danger' })
+            : confirm(msg);
+        if (!confirmed) {
             return;
         }
         

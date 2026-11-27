@@ -3,6 +3,7 @@ package agent
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,24 +14,32 @@ import (
 // Collector 网卡流量采集器
 // 优化：使用常驻 FD + 固定栈缓冲实现零堆分配采样
 type Collector struct {
-	mu       sync.RWMutex
-	iface    string    // 目标网卡名
-	prevRX   int64     // 上次采集的 RX 计数器值
-	prevTX   int64     // 上次采集的 TX 计数器值
-	prevTime time.Time // 上次采集时间
-	rxRate   int64     // 实时接收速率 (bytes/s)
-	txRate   int64     // 实时发送速率 (bytes/s)
+	mu            sync.RWMutex
+	iface         string    // 当前目标网卡名
+	autoDetect    bool      // 是否允许在网卡失效时自动重新检测
+	rebindEpoch   uint64    // 网卡切换代次（变更时附加到 boot_id，防止面板把新网卡计数器误算为巨额增量）
+	prevRX        int64     // 上次采集的 RX 计数器值
+	prevTX        int64     // 上次采集的 TX 计数器值
+	prevTime      time.Time // 上次采集时间
+	rxRate        int64     // 实时接收速率 (bytes/s)
+	txRate        int64     // 实时发送速率 (bytes/s)
 	// 零分配优化：常驻 FD 与固定缓冲
-	rxFile *os.File // 常驻 rx_bytes FD
-	txFile *os.File // 常驻 tx_bytes FD
-	rxBuf  [32]byte // 固定栈缓冲，避免堆分配
-	txBuf  [32]byte // 固定栈缓冲，避免堆分配
+	rxFile        *os.File // 常驻 rx_bytes FD
+	txFile        *os.File // 常驻 tx_bytes FD
+	rxBuf         [32]byte // 固定栈缓冲，避免堆分配
+	txBuf         [32]byte // 固定栈缓冲，避免堆分配
+	detectFn      func() (string, error)
+	openCounterFn func(iface, counter string) (*os.File, error)
 }
 
 // NewCollector 创建采集器实例
 func NewCollector(iface string) *Collector {
+	trimmed := strings.TrimSpace(iface)
 	return &Collector{
-		iface: iface,
+		iface:         trimmed,
+		autoDetect:    trimmed == "" || trimmed == "auto",
+		detectFn:      detectInterface,
+		openCounterFn: openSysCounter,
 	}
 }
 
@@ -165,6 +174,102 @@ func openSysCounter(iface, counter string) (*os.File, error) {
 	return f, nil
 }
 
+func (c *Collector) detect() (string, error) {
+	if c.detectFn != nil {
+		return c.detectFn()
+	}
+	return detectInterface()
+}
+
+func (c *Collector) openCounter(iface, counter string) (*os.File, error) {
+	if c.openCounterFn != nil {
+		return c.openCounterFn(iface, counter)
+	}
+	return openSysCounter(iface, counter)
+}
+
+func (c *Collector) closeFilesLocked() {
+	if c.rxFile != nil {
+		_ = c.rxFile.Close()
+		c.rxFile = nil
+	}
+	if c.txFile != nil {
+		_ = c.txFile.Close()
+		c.txFile = nil
+	}
+}
+
+// rebindInterfaceLocked 当当前网卡消失或 FD 无法重开时，自动重新检测可用物理网卡并重置基线。
+func (c *Collector) rebindInterfaceLocked() error {
+	oldIface := c.iface
+	var target string
+	if c.autoDetect {
+		detected, err := c.detect()
+		if err != nil {
+			return fmt.Errorf("自动重新检测网卡失败: %w", err)
+		}
+		target = detected
+	} else {
+		// 用户显式指定了网卡名时仅尝试重绑同一网卡，不擅自切到其他网卡
+		target = c.iface
+	}
+
+	newRX, err := c.openCounter(target, "rx_bytes")
+	if err != nil {
+		return err
+	}
+	newTX, err := c.openCounter(target, "tx_bytes")
+	if err != nil {
+		_ = newRX.Close()
+		return err
+	}
+
+	rx, err := c.readCounterOnce(newRX, &c.rxBuf)
+	if err != nil {
+		_ = newRX.Close()
+		_ = newTX.Close()
+		return fmt.Errorf("读取新网卡 %s rx_bytes 基线失败: %w", target, err)
+	}
+	tx, err := c.readCounterOnce(newTX, &c.txBuf)
+	if err != nil {
+		_ = newRX.Close()
+		_ = newTX.Close()
+		return fmt.Errorf("读取新网卡 %s tx_bytes 基线失败: %w", target, err)
+	}
+
+	c.closeFilesLocked()
+	if oldIface != target {
+		c.rebindEpoch++
+	}
+	c.iface = target
+	c.rxFile = newRX
+	c.txFile = newTX
+	c.prevRX = rx
+	c.prevTX = tx
+	c.prevTime = time.Now()
+	c.rxRate = 0
+	c.txRate = 0
+
+	if oldIface != target {
+		log.Printf("[Agent] 网卡采集自愈：原网卡 %s 不可用，已自动切换至 %s（基线代次 #%d）", oldIface, target, c.rebindEpoch)
+	} else {
+		log.Printf("[Agent] 网卡采集自愈：已重新绑定网卡 %s", target)
+	}
+	return nil
+}
+
+// EffectiveBootID 返回带网卡切换代次的 boot_id。
+// 当自愈切换到新物理网卡后代次递增，使面板将其识别为新计数器基线而非虚假巨额流量增量。
+func (c *Collector) EffectiveBootID(baseBootID string) string {
+	c.mu.RLock()
+	epoch := c.rebindEpoch
+	c.mu.RUnlock()
+	if epoch == 0 || baseBootID == "" {
+		return baseBootID
+	}
+	return fmt.Sprintf("%s#nic%d", baseBootID, epoch)
+}
+
 // readCounter 使用常驻 FD 零分配读取计数器值
 // 若 FD 失效（网卡热插拔/容器 netns 变更），自动重新打开一次
 func (c *Collector) readCounter(f **os.File, buf *[32]byte, counter string) (int64, error) {
@@ -176,7 +281,7 @@ func (c *Collector) readCounter(f **os.File, buf *[32]byte, counter string) (int
 	if *f != nil {
 		(*f).Close()
 	}
-	newF, openErr := openSysCounter(c.iface, counter)
+	newF, openErr := c.openCounter(c.iface, counter)
 	if openErr != nil {
 		*f = nil
 		return 0, fmt.Errorf("重新打开 %s 失败: %w (原始错误: %v)", counter, openErr, err)
@@ -204,7 +309,8 @@ func (c *Collector) Init() error {
 
 	iface := c.iface
 	if iface == "" || iface == "auto" {
-		detected, err := detectInterface()
+		c.autoDetect = true
+		detected, err := c.detect()
 		if err != nil {
 			return fmt.Errorf("自动检测网卡失败: %w", err)
 		}
@@ -214,11 +320,11 @@ func (c *Collector) Init() error {
 
 	// 打开常驻 FD
 	var err error
-	c.rxFile, err = openSysCounter(iface, "rx_bytes")
+	c.rxFile, err = c.openCounter(iface, "rx_bytes")
 	if err != nil {
 		return err
 	}
-	c.txFile, err = openSysCounter(iface, "tx_bytes")
+	c.txFile, err = c.openCounter(iface, "tx_bytes")
 	if err != nil {
 		c.rxFile.Close()
 		c.rxFile = nil
@@ -228,10 +334,12 @@ func (c *Collector) Init() error {
 	// 使用零分配路径读取初始基线
 	rx, err := c.readCounterOnce(c.rxFile, &c.rxBuf)
 	if err != nil {
+		c.closeFilesLocked()
 		return fmt.Errorf("读取 rx_bytes 基线失败: %w", err)
 	}
 	tx, err := c.readCounterOnce(c.txFile, &c.txBuf)
 	if err != nil {
+		c.closeFilesLocked()
 		return fmt.Errorf("读取 tx_bytes 基线失败: %w", err)
 	}
 
@@ -243,19 +351,30 @@ func (c *Collector) Init() error {
 }
 
 // Sample 采集一次数据点：更新速率与原始计数器基准
-// 处理计数器回绕/重置场景（机器重启、网卡重建）
+// 处理计数器回绕/重置场景（机器重启、网卡重建），并在网卡消失时自动重新检测可用物理网卡
 // 使用常驻 FD + 固定缓冲，零堆分配
 func (c *Collector) Sample() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	rx, err := c.readCounter(&c.rxFile, &c.rxBuf, "rx_bytes")
-	if err != nil {
-		return err
+	rx, rxErr := c.readCounter(&c.rxFile, &c.rxBuf, "rx_bytes")
+	var tx int64
+	var txErr error
+	if rxErr == nil {
+		tx, txErr = c.readCounter(&c.txFile, &c.txBuf, "tx_bytes")
 	}
-	tx, err := c.readCounter(&c.txFile, &c.txBuf, "tx_bytes")
-	if err != nil {
-		return err
+	if rxErr != nil || txErr != nil {
+		sampleErr := rxErr
+		if sampleErr == nil {
+			sampleErr = txErr
+		}
+		// 网卡消失或无法重开时自动尝试自愈切换至当前可用物理网卡，避免无限报错导致假离线
+		if rebindErr := c.rebindInterfaceLocked(); rebindErr == nil {
+			return nil
+		}
+		c.rxRate = 0
+		c.txRate = 0
+		return sampleErr
 	}
 
 	now := time.Now()

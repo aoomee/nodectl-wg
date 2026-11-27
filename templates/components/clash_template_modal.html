@@ -761,7 +761,7 @@
 
     async function openClashModal() {
         clashModal.classList.add('active');
-        document.getElementById('builtinModulesContainer').innerHTML = '<div style="font-size:13px; color:#999;">加载中...</div>';
+        document.getElementById('builtinModulesContainer').innerHTML = '<div style="grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:8px;padding:28px 0;color:#8e8e93;font-size:12.5px;"><span class="wa-spinner"></span><span>加载规则集...</span></div>';
 
         resetEditState();
         deleteTimeoutMap = {};

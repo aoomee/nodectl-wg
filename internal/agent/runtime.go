@@ -169,15 +169,15 @@ func (rt *Runtime) Run() error {
 			}
 
 		case <-pushTicker.C:
-			// 采集一次数据
+			// 采集一次数据；即使网卡瞬时不可用也继续上报保活（速率为 0、计数器保持基线），
+			// 避免因采集失败无限跳过导致面板 15s 读超时误判永久离线。
 			if err := rt.collector.Sample(); err != nil {
-				rt.logDedup.LogOrSuppress("collector:sample", "[Agent] 采集失败: %v", err)
-				continue
+				rt.logDedup.LogOrSuppress("collector:sample", "[Agent] 采集失败（继续保持心跳）: %v", err)
 			}
 
 			rxRate, txRate, counterRX, counterTX := rt.collector.GetLiveSnapshot()
 
-			err := rt.reporter.SendLiveMessage(ctx, rxRate, txRate, counterRX, counterTX, rt.bootID)
+			err := rt.reporter.SendLiveMessage(ctx, rxRate, txRate, counterRX, counterTX, rt.collector.EffectiveBootID(rt.bootID))
 			if err != nil {
 				rt.logDedup.LogOrSuppress("reporter:live", "[Agent] 实时上报失败: %v", err)
 				rt.handleDisconnect(ctx)

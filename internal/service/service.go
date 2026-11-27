@@ -65,8 +65,8 @@ func UpdateNode(uuid string, name string, routingType int, links map[string]stri
 	node.IPV4 = ipv4
 	node.IPV6 = ipv6
 
-	// 解析 Region
-	if GlobalGeoIP != nil {
+	// 仅在未手动指定地区时通过 GeoIP 自动解析 Region
+	if !node.RegionManual && GlobalGeoIP != nil {
 		region := ""
 		if ipv4 != "" {
 			region = GlobalGeoIP.GetCountryIsoCode(ipv4)
@@ -74,8 +74,6 @@ func UpdateNode(uuid string, name string, routingType int, links map[string]stri
 		if region == "" && ipv6 != "" {
 			region = GlobalGeoIP.GetCountryIsoCode(ipv6)
 		}
-		// 如果解析到了，就更新；如果没解析到但IP变空了，可能需要清空 region？
-		// 这里策略是：只要解析出有效代码就覆盖，否则保留原样
 		if region != "" {
 			node.Region = region
 			logger.Log.Debug("服务层: 节点 GeoIP 区域自动匹配成功", "uuid", uuid, "region", region)

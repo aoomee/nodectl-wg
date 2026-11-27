@@ -618,7 +618,13 @@ async function handleNodeWGPush() {
 }
 async function pushNodeWGConfig(disable = false, retryBlocked = false) {
     if (nodeWGEditor.busy) return;
-    if (disable && !confirm('确定停用 WG 专线并恢复入口直连？')) return;
+    if (disable) {
+        const msg = '确定停用 WG 专线并恢复入口直连？';
+        const confirmed = typeof window.waConfirm === 'function'
+            ? await window.waConfirm(msg, { title: '停用 WG 专线', confirmText: '确认停用', tone: 'danger' })
+            : confirm(msg);
+        if (!confirmed) return;
+    }
     const uuid = nodeWGEditor.uuid, generation = nodeWGEditor.generation;
     const draftMode = nodeWGEditor.mode, draftPeer = nodeWGEditor.peer;
     const retryRevision = retryBlocked ? nodeWGEditor.pair?.revision : null;

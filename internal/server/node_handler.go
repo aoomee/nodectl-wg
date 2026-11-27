@@ -32,8 +32,9 @@ func apiUpdateNode(w http.ResponseWriter, r *http.Request) {
 
 	var req struct {
 		database.NodePool
-		TrafficLimitRaw        string `json:"traffic_limit_raw"`
-		TrafficResetAnchorDate string `json:"traffic_reset_anchor_date"`
+		TrafficLimitRaw        string  `json:"traffic_limit_raw"`
+		TrafficResetAnchorDate string  `json:"traffic_reset_anchor_date"`
+		RegionOverride         *string `json:"region_override"`
 		// Add backwards compatibility explicitly if needed, but since we embedded NodePool, it has IPMode and LinkIPModes
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -115,6 +116,27 @@ func apiUpdateNode(w http.ResponseWriter, r *http.Request) {
 	targetNode.IPV4 = req.IPV4
 	targetNode.IPV6 = req.IPV6
 	targetNode.IPMode = req.IPMode
+	if req.RegionOverride != nil {
+		code := strings.ToUpper(strings.TrimSpace(*req.RegionOverride))
+		if code == "" || code == "AUTO" {
+			targetNode.RegionManual = false
+			if service.GlobalGeoIP != nil {
+				detected := ""
+				if targetNode.IPV4 != "" {
+					detected = service.GlobalGeoIP.GetCountryIsoCode(targetNode.IPV4)
+				}
+				if detected == "" && targetNode.IPV6 != "" {
+					detected = service.GlobalGeoIP.GetCountryIsoCode(targetNode.IPV6)
+				}
+				if detected != "" {
+					targetNode.Region = detected
+				}
+			}
+		} else if len(code) == 2 && code[0] >= 'A' && code[0] <= 'Z' && code[1] >= 'A' && code[1] <= 'Z' {
+			targetNode.RegionManual = true
+			targetNode.Region = code
+		}
+	}
 	rawResetDay := service.NormalizeNodeTrafficResetDay(req.ResetDay)
 	targetNode.TrafficResetMode = service.NormalizeTrafficResetMode(req.TrafficResetMode, rawResetDay)
 	targetNode.ResetDay = rawResetDay
@@ -312,6 +334,9 @@ func apiUpdateNode(w http.ResponseWriter, r *http.Request) {
 	}
 	if oldNode.IPMode != targetNode.IPMode {
 		changedDetails = append(changedDetails, fmt.Sprintf("ip_mode: %d -> %d", oldNode.IPMode, targetNode.IPMode))
+	}
+	if oldNode.Region != targetNode.Region || oldNode.RegionManual != targetNode.RegionManual {
+		changedDetails = append(changedDetails, fmt.Sprintf("region: %s(manual=%t) -> %s(manual=%t)", oldNode.Region, oldNode.RegionManual, targetNode.Region, targetNode.RegionManual))
 	}
 	if oldEffectiveResetDay != newEffectiveResetDay {
 		changedDetails = append(changedDetails, fmt.Sprintf("reset_day: %d -> %d", oldEffectiveResetDay, newEffectiveResetDay))

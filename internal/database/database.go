@@ -116,6 +116,7 @@ type NodePool struct {
 	IPV4                     string            `gorm:"column:ipv4;type:varchar(15)" json:"ipv4"`
 	IPV6                     string            `gorm:"column:ipv6;type:varchar(45)" json:"ipv6"`
 	Region                   string            `gorm:"column:region" json:"region"`                                                          //存储国家信息
+	RegionManual             bool              `gorm:"column:region_manual;default:false" json:"region_manual"`                              // 是否手动指定地区旗帜（避免被 GeoIP 覆盖）
 	IPMode                   int               `gorm:"column:ip_mode;default:0" json:"ip_mode"`                                              // 0: 跟随系统, 1: 仅IPv4, 2: 仅IPv6, 3: 双栈
 	SortIndex                int               `gorm:"column:sort_index;default:0" json:"sort_index"`                                        //排序
 	Remark                   string            `gorm:"column:remark" json:"remark"`                                                          //备注

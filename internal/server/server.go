@@ -281,6 +281,9 @@ func Start(tmplFS embed.FS) {
 	mux.HandleFunc("/api/add-node", withAuthAndSecure(apiAddNode))
 	mux.HandleFunc("/api/update-node", withAuthAndSecure(apiUpdateNode))
 	mux.HandleFunc("/api/node/region", withAuthAndSecure(apiUpdateNodeRegion))
+	mux.HandleFunc("/api/node/rename", withAuthAndSecure(apiRenameNode))
+	mux.HandleFunc("/api/sub/nodes", withAuthAndSecure(apiGetSubNodes))
+	mux.HandleFunc("/api/sub/visibility", withAuthAndSecure(apiUpdateSubVisibility))
 	mux.HandleFunc("/api/delete-node", withAuthAndSecure(apiDeleteNode))
 	mux.HandleFunc("/api/reorder-nodes", withAuthAndSecure(apiReorderNodes))
 

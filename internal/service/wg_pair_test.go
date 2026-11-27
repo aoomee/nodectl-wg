@@ -827,6 +827,36 @@ func TestWGPairV2SubscriptionsExactlyOnce(t *testing.T) {
 	check(0)
 	wgSteps(t, c, p.ID, 8)
 	check(1)
+	rawActive, err := GenerateV2RaySubBase64(false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decodedActive, err := base64.StdEncoding.DecodeString(rawActive)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(decodedActive), "#Entry%20WG") {
+		t.Fatalf("expected active WG link name to include WG suffix, got: %s", string(decodedActive))
+	}
+	for _, line := range strings.Split(strings.TrimSpace(string(decodedActive)), "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), "ss://") {
+			t.Fatalf("expected WG landing SS link hidden from V2Ray subscription, got: %s", string(decodedActive))
+		}
+	}
+	if err := c.db.Model(&database.NodePool{}).Where("uuid = ?", "entry").Update("name", "HK-Relay").Error; err != nil {
+		t.Fatal(err)
+	}
+	rawRenamed, err := GenerateV2RaySubBase64(false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decodedRenamed, err := base64.StdEncoding.DecodeString(rawRenamed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(decodedRenamed), "#HK-Relay%20WG") {
+		t.Fatalf("expected renamed active WG node to update subscription fragment dynamically, got: %s", string(decodedRenamed))
+	}
 	var a database.NodePool
 	c.db.First(&a, "uuid = ?", "entry")
 	if links := c.subscriptionLinks(0); len(links) != 1 || links[0] != a.Links["reality"] {

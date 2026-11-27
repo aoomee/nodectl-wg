@@ -90,7 +90,7 @@ type Installer struct {
 // NewInstaller 创建安装器
 func NewInstaller(binaryPath string) *Installer {
 	if binaryPath == "" {
-		binaryPath = DefaultBinaryPath
+		binaryPath = filepath.Join(ResolveWorkDir(), "sing-box")
 	}
 	return &Installer{
 		binaryPath: binaryPath,

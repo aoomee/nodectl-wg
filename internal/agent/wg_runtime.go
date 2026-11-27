@@ -16,7 +16,7 @@ func (rt *Runtime) ensureWGManager() error {
 	if rt.wgManager != nil {
 		return nil
 	}
-	configPath := singbox.DefaultConfigPath
+	configPath := filepath.Join(singbox.ResolveWorkDir(), "singbox-config.json")
 	if rt.cfg != nil && rt.cfg.Singbox != nil && rt.cfg.Singbox.ConfigPath != "" {
 		configPath = rt.cfg.Singbox.ConfigPath
 	}

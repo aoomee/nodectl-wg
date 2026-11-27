@@ -21,15 +21,28 @@ const (
 	DefaultKeyPath       = "/var/lib/wirearc-agent/certs/privkey.pem"
 )
 
-// ResolveWorkDir 返回实际工作目录：新版目录不存在而旧版目录存在时自动复用旧目录，避免旧节点在线升级后重复下载 sing-box 或丢失证书。
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+// resolveWorkDirIn 在指定的新旧目录之间选择实际工作目录。
+// 仅当新版目录已包含完整运行态（sing-box）时优先新版；
+// 若旧版目录仍有 protocols.json 或 sing-box（即使新版目录曾被意外创建出半迁移文件），
+// 仍继续复用旧版目录，彻底避免协议密钥重置与目录分裂。
+func resolveWorkDirIn(defaultDir, legacyDir string) string {
+	if fileExists(filepath.Join(defaultDir, "sing-box")) {
+		return defaultDir
+	}
+	if fileExists(filepath.Join(legacyDir, "protocols.json")) || fileExists(filepath.Join(legacyDir, "sing-box")) {
+		return legacyDir
+	}
+	return defaultDir
+}
+
+// ResolveWorkDir 返回实际工作目录：兼容从旧版 nodectl-agent 就地自更新的节点，避免目录分裂或丢失原有密钥/证书。
 func ResolveWorkDir() string {
-	if _, err := os.Stat(DefaultWorkDir); err == nil {
-		return DefaultWorkDir
-	}
-	if _, err := os.Stat(LegacyWorkDir); err == nil {
-		return LegacyWorkDir
-	}
-	return DefaultWorkDir
+	return resolveWorkDirIn(DefaultWorkDir, LegacyWorkDir)
 }
 
 // ConfigManager sing-box 配置管理器
@@ -56,8 +69,10 @@ func NewConfigManager() *ConfigManager {
 	}
 }
 
-// NewConfigManagerWithPaths 使用自定义路径创建配置管理器
+// NewConfigManagerWithPaths 使用自定义路径创建配置管理器。
+// 当 protocolsPath 或 certDir 未显式指定时，始终与 configPath 保持同目录，防止配置与协议缓存分裂在不同目录。
 func NewConfigManagerWithPaths(configPath, protocolsPath, certDir string) *ConfigManager {
+	workDir := ResolveWorkDir()
 	cm := &ConfigManager{
 		configPath:    configPath,
 		protocolsPath: protocolsPath,
@@ -65,13 +80,17 @@ func NewConfigManagerWithPaths(configPath, protocolsPath, certDir string) *Confi
 		Protocols:     DefaultProtocolConfig(),
 	}
 	if cm.configPath == "" {
-		cm.configPath = DefaultConfigPath
+		cm.configPath = filepath.Join(workDir, "singbox-config.json")
+	}
+	baseDir := filepath.Dir(cm.configPath)
+	if baseDir == "" || baseDir == "." {
+		baseDir = workDir
 	}
 	if cm.protocolsPath == "" {
-		cm.protocolsPath = DefaultProtocolsPath
+		cm.protocolsPath = filepath.Join(baseDir, "protocols.json")
 	}
 	if cm.certDir == "" {
-		cm.certDir = DefaultCertDir
+		cm.certDir = filepath.Join(baseDir, "certs")
 	}
 	return cm
 }

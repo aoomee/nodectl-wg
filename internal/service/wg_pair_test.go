@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -130,7 +131,7 @@ func (f *wgFake) send(ctx context.Context, id, action string, v interface{}) (js
 }
 func newWGTest(t *testing.T) (*wgPairCoordinator, *wgFake) {
 	t.Helper()
-	db, e := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
+	db, e := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "wg_test.db")), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
 	if e != nil {
 		t.Fatal(e)
 	}

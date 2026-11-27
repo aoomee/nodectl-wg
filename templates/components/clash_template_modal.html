@@ -1,0 +1,1113 @@
+{{define "clash_template_modal.html"}}
+<style>
+    /* =======================================================
+       ✨ 布局调整参数区 (方便你手动调节窗口大小)
+       ======================================================= */
+    :root {
+        --clash-modal-max-width: 900px;
+        /* 弹窗最大宽度 */
+        --clash-modal-max-height: 85vh;
+        /* 弹窗最大高度 */
+        --clash-left-col-width: 320px;
+        /* 左侧自定义添加区的固定宽度 */
+    }
+
+    /* ================= 统一弹窗基础框架 ================= */
+    .clash-modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 15, 20, 0.36);
+        backdrop-filter: saturate(180%) blur(12px);
+        -webkit-backdrop-filter: saturate(180%) blur(12px);
+        z-index: 3000;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.28s ease;
+    }
+
+    .clash-modal-overlay.active {
+        display: flex;
+        opacity: 1;
+    }
+
+    .clash-modal-card {
+        background: #ffffff;
+        width: 100%;
+        max-width: var(--clash-modal-max-width);
+        height: var(--clash-modal-max-height);
+        border-radius: 26px;
+        box-shadow: 0 24px 56px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.04);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        animation: cnModalSpring 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    /* 统一 Header 样式 (加入静默保存指示器) */
+    .clash-header {
+        background: rgba(248, 248, 250, 0.9);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        padding: 16px 26px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .clash-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1d1d1f;
+        margin: 0;
+    }
+
+    .clash-save-indicator {
+        font-size: 12px;
+        font-weight: 600;
+        color: #34c759;
+        opacity: 0;
+        transition: opacity 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    /* 左右分栏容器 */
+    .clash-body-wrapper {
+        display: flex;
+        flex-direction: row;
+        overflow: hidden;
+        flex: 1;
+        min-height: 0;
+    }
+
+    /* ================= 左侧：添加自定义规则栏 ================= */
+    .clash-left-col {
+        width: 300px;
+        flex-shrink: 0;
+        padding: 22px 22px;
+        border-right: 1px solid rgba(0, 0, 0, 0.055);
+        background: #fafbfd;
+        overflow-y: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .clash-left-col::-webkit-scrollbar {
+        display: none;
+    }
+
+    .left-section-title {
+        font-size: 13.5px;
+        font-weight: 700;
+        color: #1d1d1f;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    /* 移动端专属手风琴 Header (PC端隐藏) */
+    .mobile-add-header {
+        display: none;
+    }
+
+    .custom-input-group {
+        margin-bottom: 14px;
+    }
+
+    .custom-input-group label {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        color: #6e6e73;
+        margin-bottom: 6px;
+    }
+
+    .custom-input {
+        width: 100%;
+        height: 42px;
+        padding: 0 14px;
+        border: 1px solid rgba(0, 0, 0, 0.09);
+        border-radius: 14px;
+        font-size: 13px;
+        outline: none;
+        transition: all 0.2s ease;
+        background: #fff;
+        box-sizing: border-box;
+    }
+
+    .custom-input:focus {
+        border-color: #007aff;
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.14);
+    }
+
+    .btn-add-custom {
+        width: 100%;
+        height: 44px;
+        background: #f0f7ff;
+        border: 1px dashed rgba(0, 122, 255, 0.45);
+        color: #007aff;
+        font-weight: 600;
+        padding: 0 14px;
+        border-radius: 14px;
+        cursor: pointer;
+        font-size: 13px;
+        transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+        margin-top: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .btn-add-custom:hover {
+        background: #e2f0ff;
+        border-color: #007aff;
+        transform: translateY(-1px);
+    }
+
+    .add-ip-link {
+        font-size: 12px;
+        color: #007aff;
+        cursor: pointer;
+        display: inline-block;
+        margin-top: 6px;
+        font-weight: 500;
+    }
+
+    .add-ip-link:hover {
+        text-decoration: underline;
+    }
+
+    /* ================= 右侧：规则展示区 ================= */
+    .clash-right-col {
+        flex: 1;
+        padding: 22px 24px;
+        background: #fff;
+        overflow-y: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .clash-right-col::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* 虚线分组容器与标题行 */
+    .module-group-box {
+        border: 1px dashed rgba(0, 0, 0, 0.14);
+        background: #f9f9fb;
+        border-radius: 16px;
+        padding: 14px 16px;
+        margin-bottom: 16px;
+    }
+
+    .module-group-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .module-group-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: #666;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    /* 优雅的悬浮提示框 (Tooltip) */
+    .info-tooltip-wrap {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        cursor: pointer;
+        margin-left: 2px;
+        outline: none;
+    }
+
+    .info-tooltip-wrap svg {
+        color: #a1a1aa;
+        transition: color 0.2s;
+    }
+
+    .info-tooltip-wrap:hover svg,
+    .info-tooltip-wrap:focus svg {
+        color: #007aff;
+    }
+
+    .tooltip-content {
+        position: absolute;
+        top: 140%;
+        left: -10px;
+        transform: translateY(-5px);
+        background: rgba(29, 29, 31, 0.9);
+        color: #fff;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 11px;
+        white-space: nowrap;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.2s;
+        pointer-events: none;
+        z-index: 100;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        line-height: 1.5;
+        text-align: left;
+    }
+
+    .tooltip-content::after {
+        content: '';
+        position: absolute;
+        bottom: 100%;
+        left: 17px;
+        margin-left: -4px;
+        border-width: 4px;
+        border-style: solid;
+        border-color: transparent transparent rgba(29, 29, 31, 0.9) transparent;
+    }
+
+    .info-tooltip-wrap:hover .tooltip-content,
+    .info-tooltip-wrap:focus .tooltip-content {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+
+    /* 精致的下拉菜单 */
+    select.custom-input {
+        appearance: none;
+        -webkit-appearance: none;
+        padding-right: 34px;
+        cursor: pointer;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236e6e73' stroke-width='2.3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        background-size: 14px 14px;
+    }
+
+    .preset-select {
+        padding: 5px 28px 5px 14px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #1d1d1f;
+        background-color: #f2f3f7;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%236e6e73' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        background-size: 13px 13px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 999px !important;
+        outline: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: inherit;
+        appearance: none;
+        -webkit-appearance: none;
+        text-align: left;
+    }
+
+    .preset-select:hover {
+        background-color: #e5e6ec;
+        border-color: rgba(0, 0, 0, 0.14);
+    }
+
+    .preset-select option {
+        text-align: center;
+    }
+
+    /* 网格布局 */
+    .clash-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+    }
+
+    .clash-custom-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    /* 模块复选框 */
+    .clash-module-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        color: #1d1d1f;
+        padding: 10px 12px;
+        background: #fff;
+        border-radius: 14px;
+        border: 1px solid rgba(0, 0, 0, 0.065);
+        transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+        user-select: none;
+        position: relative;
+    }
+
+    .clash-module-label:hover {
+        border-color: rgba(0, 122, 255, 0.32);
+    }
+
+    .clash-module-label.is-checked {
+        border-color: #007aff;
+        background: #f0f7ff;
+        box-shadow: 0 2px 8px rgba(0, 122, 255, 0.1);
+    }
+
+    .mod-icon-box {
+        width: 20px;
+        height: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-shrink: 0;
+        font-size: 16px;
+    }
+
+    .mod-icon-box img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+
+    /* 悬浮操作按钮组容器 */
+    .custom-actions {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        display: none;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .clash-module-label:hover .custom-actions {
+        display: flex;
+    }
+
+    /* 编辑与删除按钮 */
+    .btn-edit-custom {
+        background: #eef6ff;
+        border: none;
+        color: #007aff;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        cursor: pointer;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+
+    .btn-edit-custom:hover {
+        background: #dcebff;
+    }
+
+    .btn-delete-custom {
+        background: #fff2f2;
+        border: none;
+        color: #ff3b30;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        cursor: pointer;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+
+    .btn-delete-custom:hover {
+        background: #ffe0e0;
+    }
+
+    .btn-delete-custom.confirm-state {
+        background: #ff3b30;
+        color: #ffffff;
+        width: auto;
+        border-radius: 999px;
+        padding: 0 10px;
+        font-size: 11px;
+        font-weight: bold;
+        white-space: nowrap;
+    }
+
+    .btn-delete-custom.confirm-state:hover {
+        background: #d92d20;
+    }
+
+    /* 底部操作区 (已干掉保存按钮，只保留关闭) */
+    .clash-footer {
+        padding: 14px 26px;
+        border-top: 1px solid rgba(0, 0, 0, 0.06);
+        background: #fff;
+        display: flex;
+        justify-content: flex-end;
+        z-index: 10;
+    }
+
+    .btn-clash-close {
+        background: #f2f3f7;
+        border: none;
+        color: #1d1d1f;
+        height: 38px;
+        padding: 0 24px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .btn-clash-close:hover {
+        background: #e5e6ec;
+    }
+
+    /* ================= 移动端自适应与折叠抽屉 ================= */
+    @media (max-width: 768px) {
+        .clash-modal-card {
+            max-width: 95%;
+        }
+
+        .clash-body-wrapper {
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .clash-left-col {
+            width: 100%;
+            border-right: none;
+            border-bottom: 1px dashed #e5e5ea;
+            padding: 0 !important;
+            overflow: visible;
+        }
+
+        /* 移动端折叠触发器 */
+        .mobile-add-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 20px;
+            background: #fafbfc;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s;
+        }
+
+        .mobile-add-header:active {
+            background: #f0f0f5;
+        }
+
+        .mobile-add-chevron {
+            transition: transform 0.3s;
+            display: flex;
+            align-items: center;
+            color: #888;
+        }
+
+        /* 实际表单容器默认隐藏 */
+        .mobile-add-content {
+            display: none;
+            padding: 0 20px 20px 20px;
+        }
+
+        .clash-left-col.expanded .mobile-add-content {
+            display: block;
+            animation: slideDown 0.2s ease-out;
+        }
+
+        .clash-left-col.expanded .mobile-add-header {
+            border-bottom: 1px solid transparent;
+        }
+
+        .clash-left-col.expanded .mobile-add-chevron {
+            transform: rotate(180deg);
+            color: #007aff;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .desktop-only {
+            display: none !important;
+        }
+
+        .clash-right-col {
+            width: 100%;
+            padding: 20px;
+            overflow: visible;
+        }
+
+        .clash-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .clash-custom-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="clash-modal-overlay" id="clashTemplateModal">
+    <div class="clash-modal-card">
+        <div class="clash-header">
+            <div class="clash-title" style="display:flex;align-items:center;gap:8px;"><span class="ui-icon-badge purple" style="width:28px;height:28px;border-radius:9px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg></span> Clash 路由分流引擎</div>
+            <div class="clash-save-indicator" id="clashSaveIndicator">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 6L9 17l-5-5"></path>
+                </svg>
+                已保存
+            </div>
+        </div>
+
+        <div class="clash-body-wrapper">
+            <div class="clash-left-col" id="clashLeftCol">
+
+                <div class="mobile-add-header" onclick="toggleMobileAddCustom()">
+                    <div
+                        style="font-size: 14px; font-weight: 600; color: #333; display: flex; align-items: center; gap: 6px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 20h9"></path>
+                            <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+                        </svg>
+                        添加自定义规则集
+                    </div>
+                    <div class="mobile-add-chevron">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="mobile-add-content" id="mobileAddContent">
+                    <div class="left-section-title desktop-only">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 20h9"></path>
+                            <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+                        </svg>
+                        添加自定义规则集
+                    </div>
+
+                    <!-- 名称与类型同行 -->
+                    <div style="display: flex; gap: 12px; margin-bottom: 15px;">
+                        <div class="custom-input-group" style="flex: 1; margin-bottom: 0;">
+                            <label>标识名 (必填)</label>
+                            <input type="text" id="customModName" class="custom-input" placeholder="如: 私人网盘">
+                        </div>
+                        <div class="custom-input-group" style="flex: 1; margin-bottom: 0;">
+                            <label>行为类型</label>
+                            <select id="customModType" class="custom-input">
+                                <option value="">分流组</option>
+                                <option value="reject">拒绝组</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="custom-input-group">
+                        <label>图标 (可选)</label>
+                        <input type="text" id="customModIcon" class="custom-input" placeholder="支持 Emoji 或 ico URL">
+                    </div>
+
+                    <div class="custom-input-group">
+                        <label style="display: flex; align-items: center;">
+                            Domain 规则集 (.mrs)
+                            <div class="info-tooltip-wrap" tabindex="0" style="margin-left: 6px;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                </svg>
+                                <div class="tooltip-content" style="white-space: normal; width: 200px;">
+                                    三种规则集地址至少需填写一项。推荐填写 Domain + IP 组合，或填写单条 Classical 链接。
+                                </div>
+                            </div>
+                        </label>
+                        <input type="text" id="customModDomain" class="custom-input" placeholder="Domain 链接地址">
+                        <div style="display: flex; gap: 15px;">
+                            <span class="add-ip-link"
+                                onclick="document.getElementById('editCustomModIPGroup').style.display='block'; this.style.display='none';">+
+                                IP 规则集</span>
+                            <span class="add-ip-link"
+                                onclick="document.getElementById('editCustomModUrlGroup').style.display='block'; this.style.display='none';">+
+                                Classical 规则集</span>
+                        </div>
+                    </div>
+
+                    <div class="custom-input-group" id="editCustomModIPGroup" style="display: none;">
+                        <label>IP 规则集 (.mrs)</label>
+                        <input type="text" id="customModIP" class="custom-input" placeholder="IP 链接地址">
+                    </div>
+
+                    <div class="custom-input-group" id="editCustomModUrlGroup" style="display: none;">
+                        <label>Classical 规则集 (.yaml)</label>
+                        <input type="text" id="customModUrl" class="custom-input" placeholder="Classical 链接地址">
+                    </div>
+
+                    <button id="btnAddCustom" class="btn-add-custom" onclick="addCustomModule()"><span>+</span>
+                        <span>添加并应用配置</span></button>
+                </div>
+            </div>
+
+            <div class="clash-right-col">
+
+                <div class="module-group-box">
+                    <div class="module-group-header">
+                        <div class="module-group-title">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                            </svg>
+                            内置分流规则
+                            <div class="info-tooltip-wrap" tabindex="0">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                </svg>
+                                <div class="tooltip-content">mihomo核心官方内置分流规则</div>
+                            </div>
+                        </div>
+                        <select id="presetSelect" class="preset-select" onchange="applyPresetFromDropdown(this)"
+                            title="选择预设快速应用">
+                            <option value="-1">自定义配置</option>
+                        </select>
+                    </div>
+                    <div id="builtinModulesContainer" class="clash-grid"></div>
+                </div>
+
+                <div class="module-group-box">
+                    <div class="module-group-title" style="color: #007aff;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path
+                                d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+                            </path>
+                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                        </svg>
+                        我的自定义规则
+                    </div>
+                    <div id="customModulesContainer" class="clash-custom-grid"></div>
+                    <div id="customEmptyTip"
+                        style="font-size:12px; color:#999; text-align:center; padding: 10px 0; display:none;">
+                        暂无自定义规则集，添加后可用
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="clash-footer">
+            <button class="btn-clash-close" onclick="closeClashModal()">关闭</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const clashModal = document.getElementById('clashTemplateModal');
+
+    // 点击遮罩层关闭
+    clashModal.addEventListener('click', function(e) {
+        if (e.target === clashModal) closeClashModal();
+    });
+
+    // ESC 键关闭
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && clashModal.classList.contains('active')) closeClashModal();
+    });
+
+    let cacheBuiltin = [];
+    let cacheCustom = [];
+    let cachePresets = [];
+    let activeSet = new Set();
+    let editingCustomName = null;
+    let deleteTimeoutMap = {};
+
+    // 手机端折叠切换逻辑
+    function toggleMobileAddCustom() {
+        if (window.innerWidth > 768) return; // 仅手机端生效
+        document.getElementById('clashLeftCol').classList.toggle('expanded');
+    }
+
+    async function openClashModal() {
+        clashModal.classList.add('active');
+        document.getElementById('builtinModulesContainer').innerHTML = '<div style="grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:8px;padding:28px 0;color:#8e8e93;font-size:12.5px;"><span class="wa-spinner"></span><span>加载规则集...</span></div>';
+
+        resetEditState();
+        deleteTimeoutMap = {};
+
+        // 手机端初始确保折叠
+        document.getElementById('clashLeftCol').classList.remove('expanded');
+
+        try {
+            const res = await fetch('/api/clash/settings');
+            const result = await res.json();
+            if (result.status === 'success') {
+                cacheBuiltin = result.data.builtin_modules || [];
+                cacheCustom = result.data.custom_modules || [];
+                cachePresets = result.data.presets || [];
+                activeSet = new Set(result.data.active_modules || []);
+
+                renderPresetsDropdown();
+                renderModules();
+                matchCurrentStateToPreset();
+            }
+        } catch (error) { alert('加载配置失败'); }
+    }
+
+    function closeClashModal() {
+        clashModal.classList.remove('active');
+        resetEditState();
+        Object.values(deleteTimeoutMap).forEach(clearTimeout);
+        deleteTimeoutMap = {};
+    }
+
+    // ================= ✨ 核心静默保存引擎 =================
+    let clashAutoSaveTimer = null;
+    function triggerClashAutoSave(immediate = false) {
+        if (!document.getElementById('clashTemplateModal').classList.contains('active')) {
+            return;
+        }
+
+        clearTimeout(clashAutoSaveTimer);
+        const indicator = document.getElementById('clashSaveIndicator');
+        indicator.innerHTML = '<span style="color:#888;">保存中...</span>';
+        indicator.style.opacity = '1';
+
+        const delayMs = immediate ? 0 : 600;
+
+        clashAutoSaveTimer = setTimeout(async () => {
+            const selectedModules = Array.from(activeSet);
+            try {
+                const res = await fetch('/api/clash/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ modules: selectedModules })
+                });
+                if (res.ok) {
+                    indicator.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg> 已保存`;
+                    setTimeout(() => indicator.style.opacity = '0', 2000);
+                } else {
+                    indicator.innerHTML = '<span style="color:#ff3b30;">保存失败</span>';
+                }
+            } catch (error) {
+                indicator.innerHTML = '<span style="color:#ff3b30;">网络错误</span>';
+            }
+        }, delayMs);
+    }
+
+    // ========================================================
+
+    function renderPresetsDropdown() {
+        const select = document.getElementById('presetSelect');
+        let html = '<option value="-1">自定义配置</option>';
+        cachePresets.forEach((p, idx) => {
+            html += `<option value="${idx}">${p.name}</option>`;
+        });
+        select.innerHTML = html;
+        select.value = "-1";
+    }
+
+    function matchCurrentStateToPreset() {
+        const select = document.getElementById('presetSelect');
+        const allAvailableModules = [...cacheBuiltin, ...cacheCustom].map(m => m.name);
+
+        for (let i = 0; i < cachePresets.length; i++) {
+            const preset = cachePresets[i];
+            const isAll = preset.modules.includes('ALL');
+            let isMatch = false;
+
+            if (isAll) {
+                isMatch = (activeSet.size === allAvailableModules.length && allAvailableModules.length > 0);
+            } else {
+                const validPresetModules = preset.modules.filter(m => allAvailableModules.includes(m));
+                if (validPresetModules.length === activeSet.size && activeSet.size > 0) {
+                    isMatch = validPresetModules.every(m => activeSet.has(m));
+                }
+            }
+
+            if (isMatch) {
+                select.value = i.toString();
+                return;
+            }
+        }
+
+        select.value = "-1";
+    }
+
+    function applyPresetFromDropdown(selectEl) {
+        const index = selectEl.value;
+        if (index === "-1") return;
+
+        const preset = cachePresets[index];
+        const isAll = preset.modules.includes('ALL');
+        const targetSet = new Set(preset.modules);
+
+        document.querySelectorAll('.clash-module-cb').forEach(cb => {
+            if (isAll || targetSet.has(cb.value)) {
+                cb.checked = true;
+                activeSet.add(cb.value);
+            } else {
+                cb.checked = false;
+                activeSet.delete(cb.value);
+            }
+            syncLabelStyle(cb);
+        });
+
+        matchCurrentStateToPreset();
+        triggerClashAutoSave(true); // 切换预设后立即保存
+    }
+
+    function renderModules() {
+        const builtinContainer = document.getElementById('builtinModulesContainer');
+        const customContainer = document.getElementById('customModulesContainer');
+        const customEmptyTip = document.getElementById('customEmptyTip');
+
+        let builtinHtml = '';
+        cacheBuiltin.forEach(mod => { builtinHtml += buildModuleHTML(mod, false); });
+        builtinContainer.innerHTML = builtinHtml;
+
+        let customHtml = '';
+        cacheCustom.forEach(mod => { customHtml += buildModuleHTML(mod, true); });
+        customContainer.innerHTML = customHtml;
+
+        if (cacheCustom.length === 0) {
+            customEmptyTip.style.display = 'block';
+        } else {
+            customEmptyTip.style.display = 'none';
+        }
+    }
+
+    function buildModuleHTML(mod, isCustom) {
+        const isChecked = activeSet.has(mod.name) ? 'checked' : '';
+        const activeClass = isChecked ? 'is-checked' : '';
+        let iconHtml = (mod.icon && mod.icon.startsWith('http')) ? `<img src="${mod.icon}">` : (mod.icon || '📦');
+
+        let actionsHtml = isCustom ? `
+            <div class="custom-actions">
+                <button class="btn-edit-custom" onclick="editCustomModule('${mod.name}', event)" title="编辑此自定义规则">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                </button>
+                <button class="btn-delete-custom" onclick="deleteCustomModule('${mod.name}', this, event)" title="删除此自定义规则">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                </button>
+            </div>
+        ` : '';
+
+        return `
+            <label class="clash-module-label ${activeClass}">
+                <input type="checkbox" class="clash-module-cb" value="${mod.name}" ${isChecked} style="display:none;" onchange="handleModuleToggle(this)">
+                <div class="mod-icon-box">${iconHtml}</div>
+                <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${mod.name}</span>
+                ${actionsHtml}
+            </label>
+        `;
+    }
+
+    function handleModuleToggle(cb) {
+        if (cb.checked) activeSet.add(cb.value);
+        else activeSet.delete(cb.value);
+
+        syncLabelStyle(cb);
+        matchCurrentStateToPreset();
+        triggerClashAutoSave(true); // 手动点击复选框立即保存
+    }
+
+    function syncLabelStyle(cb) {
+        const label = cb.closest('.clash-module-label');
+        if (cb.checked) label.classList.add('is-checked');
+        else label.classList.remove('is-checked');
+    }
+
+    function resetEditState() {
+        editingCustomName = null;
+        document.getElementById('customModName').value = '';
+        document.getElementById('customModIcon').value = '';
+        document.getElementById('customModDomain').value = '';
+        document.getElementById('customModIP').value = '';
+        document.getElementById('customModUrl').value = '';
+        document.getElementById('customModType').value = '';
+
+        document.getElementById('editCustomModIPGroup').style.display = 'none';
+        document.getElementById('editCustomModUrlGroup').style.display = 'none';
+
+        // 恢复添加链接的按钮
+        document.querySelectorAll('.add-ip-link').forEach(link => {
+            link.style.display = 'inline-block';
+        });
+
+        const btn = document.getElementById('btnAddCustom');
+        btn.innerHTML = '<span>+</span> <span>添加并应用配置</span>';
+        btn.style.backgroundColor = '';
+        btn.classList.remove('editing'); // Reset style appropriately
+    }
+
+    function editCustomModule(name, event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const mod = cacheCustom.find(m => m.name === name);
+        if (!mod) return;
+
+        // 手机端如果在编辑时，自动展开左侧抽屉
+        if (window.innerWidth <= 768) {
+            document.getElementById('clashLeftCol').classList.add('expanded');
+        }
+
+        document.getElementById('customModName').value = mod.name || '';
+        document.getElementById('customModIcon').value = mod.icon || '';
+        document.getElementById('customModDomain').value = mod.domain_url || '';
+        document.getElementById('customModIP').value = mod.ip_url || '';
+        document.getElementById('customModUrl').value = mod.url || '';
+        document.getElementById('customModType').value = mod.type || '';
+
+        // 根据是否有值展开隐藏组
+        if (mod.ip_url) {
+            document.getElementById('editCustomModIPGroup').style.display = 'block';
+            document.querySelector('.add-ip-link[onclick*="IPGroup"]').style.display = 'none';
+        } else {
+            document.getElementById('editCustomModIPGroup').style.display = 'none';
+            document.querySelector('.add-ip-link[onclick*="IPGroup"]').style.display = 'inline-block';
+        }
+
+        if (mod.url) {
+            document.getElementById('editCustomModUrlGroup').style.display = 'block';
+            document.querySelector('.add-ip-link[onclick*="UrlGroup"]').style.display = 'none';
+        } else {
+            document.getElementById('editCustomModUrlGroup').style.display = 'none';
+            document.querySelector('.add-ip-link[onclick*="UrlGroup"]').style.display = 'inline-block';
+        }
+
+        editingCustomName = name;
+        const btn = document.getElementById('btnAddCustom');
+        btn.innerHTML = '<span>✏️</span> <span>保存修改并应用</span>';
+        btn.style.backgroundColor = '#f5a623';
+        btn.style.borderColor = '#f5a623';
+        btn.style.color = '#fff';
+    }
+
+    async function addCustomModule() {
+        const name = document.getElementById('customModName').value.trim();
+        const icon = document.getElementById('customModIcon').value.trim();
+        const domain_url = document.getElementById('customModDomain').value.trim();
+        const ip_url = document.getElementById('customModIP').value.trim();
+        const url = document.getElementById('customModUrl').value.trim();
+        const type = document.getElementById('customModType').value;
+
+        if (!name) return alert('标识名为必填项！');
+        if (!domain_url && !ip_url && !url) return alert('请至少填写一种规则集的下载地址！');
+
+        if (editingCustomName) {
+            if (name !== editingCustomName && (cacheBuiltin.find(m => m.name === name) || cacheCustom.find(m => m.name === name))) {
+                return alert('该名称已存在，请更换！');
+            }
+
+            const idx = cacheCustom.findIndex(m => m.name === editingCustomName);
+            if (idx !== -1) {
+                cacheCustom[idx] = { name, icon, domain_url, ip_url, url, type };
+            }
+
+            if (name !== editingCustomName && activeSet.has(editingCustomName)) {
+                activeSet.delete(editingCustomName);
+                activeSet.add(name);
+            } else if (!activeSet.has(name)) {
+                activeSet.add(name);
+            }
+
+        } else {
+            if (cacheBuiltin.find(m => m.name === name) || cacheCustom.find(m => m.name === name)) return alert('该名称已存在，请更换！');
+            cacheCustom.push({ name, icon, domain_url, ip_url, url, type });
+            activeSet.add(name);
+        }
+
+        await syncCustomModulesToBackend();
+        triggerClashAutoSave(true); // 添加或修改后自动保存启用状态
+
+        resetEditState();
+        renderModules();
+        matchCurrentStateToPreset();
+
+        // 手机端添加成功后自动收起左侧表单
+        if (window.innerWidth <= 768) {
+            document.getElementById('clashLeftCol').classList.remove('expanded');
+        }
+
+        const btn = document.getElementById('btnAddCustom');
+        // Reset specific inline styles set by editCustomModule back to CSS class defaults
+        btn.style.backgroundColor = '';
+        btn.style.borderColor = '';
+        btn.style.color = '';
+    }
+
+    async function deleteCustomModule(name, btnElement, event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (btnElement.classList.contains('confirm-state')) {
+            clearTimeout(deleteTimeoutMap[name]);
+            delete deleteTimeoutMap[name];
+
+            cacheCustom = cacheCustom.filter(m => m.name !== name);
+            activeSet.delete(name);
+
+            if (editingCustomName === name) resetEditState();
+
+            await syncCustomModulesToBackend();
+            triggerClashAutoSave(true); // 删除后立刻静默保存当前状态
+            renderModules();
+            matchCurrentStateToPreset();
+        } else {
+            btnElement.classList.add('confirm-state');
+            const originalSvg = btnElement.innerHTML;
+            btnElement.innerHTML = '确定删除?';
+
+            deleteTimeoutMap[name] = setTimeout(() => {
+                if (btnElement && btnElement.parentNode) {
+                    btnElement.classList.remove('confirm-state');
+                    btnElement.innerHTML = originalSvg;
+                }
+            }, 3000);
+        }
+    }
+
+    // 后端同步自定义模块定义
+    async function syncCustomModulesToBackend() {
+        await fetch('/api/clash/custom-modules/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ modules: cacheCustom })
+        });
+    }
+
+</script>
+{{end}}

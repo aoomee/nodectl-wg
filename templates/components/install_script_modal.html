@@ -1,0 +1,598 @@
+{{define "install_script_modal.html"}}
+<style>
+    .script-modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 15, 20, 0.36);
+        backdrop-filter: saturate(180%) blur(12px);
+        -webkit-backdrop-filter: saturate(180%) blur(12px);
+        z-index: 3000;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.25s ease;
+    }
+
+    .script-modal-overlay.active {
+        display: flex;
+        opacity: 1;
+    }
+
+    .script-modal-card {
+        background: #ffffff;
+        width: 100%;
+        max-width: 600px;
+        padding: 0;
+        border-radius: 26px;
+        box-shadow: 0 24px 56px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.04);
+        transform: scale(0.96);
+        transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.8);
+    }
+
+    .script-modal-overlay.active .script-modal-card {
+        transform: scale(1);
+    }
+
+    .script-header {
+        padding: 16px 24px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(248, 248, 250, 0.9);
+    }
+
+    .script-title {
+        font-size: 16px;
+        color: #1d1d1f;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .script-body {
+        padding: 22px 24px;
+        background: #ffffff;
+        overflow-y: auto;
+        max-height: calc(85vh - 140px);
+    }
+
+    /* 回调地址选择标签样式 */
+    .variant-check-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        cursor: pointer;
+        padding: 5px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #48484a;
+        background: #f2f2f7;
+        border: 1px solid transparent;
+        transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+        user-select: none;
+    }
+
+    .variant-check-item:hover {
+        background: #e8f2ff;
+        border-color: rgba(0, 122, 255, 0.25);
+        color: #007aff;
+    }
+
+    /* 代码框样式 */
+    .cmd-box {
+        background: #f9f9fb;
+        border-radius: 14px;
+        padding: 18px;
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        position: relative;
+    }
+
+    .cmd-text {
+        font-family: "SF Mono", "JetBrains Mono", Consolas, Monaco, monospace;
+        font-size: 13px;
+        line-height: 1.65;
+        color: #24292e;
+        word-break: break-all;
+        white-space: pre-wrap;
+    }
+
+    /* 浅色主题语法高亮 */
+    .hl-cmd {
+        color: #d73a49;
+        font-weight: 600;
+    }
+
+    /* 命令 bash/curl */
+    .hl-string {
+        color: #032f62;
+    }
+
+    /* 字符串 */
+    .hl-param {
+        color: #005cc5;
+    }
+
+    /* 参数 -c --report */
+    .hl-proto {
+        color: #22863a;
+    }
+
+    /* 协议名 */
+    .hl-id {
+        color: #032f62;
+        font-weight: 600;
+    }
+
+    /* Install ID */
+
+    .script-footer {
+        padding: 16px 24px;
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        background: #ffffff;
+    }
+
+    .btn-script-copy {
+        background: linear-gradient(180deg, #148eff 0%, #007aff 100%);
+        color: #fff;
+        border: none;
+        padding: 9px 22px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 3px 10px rgba(0, 122, 255, 0.25);
+        transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .btn-script-copy:hover {
+        background: linear-gradient(180deg, #007aff 0%, #0062cc 100%);
+        transform: translateY(-1px);
+    }
+
+    .btn-script-cancel {
+        background: #f2f2f7;
+        color: #1d1d1f;
+        border: none;
+        padding: 9px 22px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .btn-script-cancel:hover {
+        background: #e5e5ea;
+        color: #1d1d1f;
+        transform: translateY(-1px);
+    }
+
+    /* 回调地址说明 Tooltip（样式参考 system_settings_modal） */
+    .script-info-tooltip-wrap {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        margin-left: 4px;
+        cursor: help;
+        outline: none;
+    }
+
+    .script-info-tooltip-wrap svg {
+        color: #a1a1aa;
+        transition: color 0.2s;
+    }
+
+    .script-info-tooltip-wrap:hover svg,
+    .script-info-tooltip-wrap:focus svg {
+        color: #007aff;
+    }
+
+    .script-tooltip-content {
+        position: absolute;
+        top: 140%;
+        left: -8px;
+        width: 260px;
+        background: #111827;
+        color: #fff;
+        font-size: 12px;
+        line-height: 1.5;
+        border-radius: 8px;
+        padding: 10px 12px;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+        z-index: 20;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-4px);
+        transition: all 0.2s ease;
+        pointer-events: none;
+        white-space: normal;
+    }
+
+    .script-tooltip-content::after {
+        content: "";
+        position: absolute;
+        top: -6px;
+        left: 16px;
+        width: 10px;
+        height: 10px;
+        background: #111827;
+        transform: rotate(45deg);
+    }
+
+    .script-info-tooltip-wrap:hover .script-tooltip-content,
+    .script-info-tooltip-wrap:focus .script-tooltip-content {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+
+    /* ✨ 移动端适配：统一弹窗宽度留白与代码框内边距 */
+    @media (max-width: 768px) {
+        .script-modal-card {
+            max-width: 95%;
+            /* 强制两边留出 2.5% 的呼吸空间 */
+        }
+
+        .cmd-box {
+            padding: 12px;
+            /* 手机端适当缩减代码框的内边距，让出更多显示空间 */
+        }
+
+        .script-tooltip-content {
+            left: -20px;
+            width: 240px;
+        }
+
+        .script-tooltip-content::after {
+            left: 24px;
+        }
+    }
+</style>
+
+<div class="script-modal-overlay" id="installScriptModal">
+    <div class="script-modal-card">
+        <div class="script-header">
+            <div class="script-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" style="color: #007aff">
+                    <polyline points="4 17 10 11 4 5"></polyline>
+                    <line x1="12" y1="19" x2="20" y2="19"></line>
+                </svg>
+                部署命令生成
+            </div>
+        </div>
+
+        <div class="script-body">
+            <!-- 回调地址选择 -->
+            <div id="callbackModeWrap" style="margin-bottom: 12px">
+                <div style="
+                        font-size: 12px;
+                        font-weight: 700;
+                        color: #666;
+                        margin-bottom: 8px;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 4px;
+                    ">
+                    回调地址选择
+                    <div class="script-info-tooltip-wrap" tabindex="0">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        <div class="script-tooltip-content">
+                            面板外部地址：依赖部署的服务器网络栈。<br />
+                            Tunnel 隧道地址：拥有IPV4及IPV6双栈能力。
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap">
+                    <label class="variant-check-item" style="padding: 6px 10px">
+                        <input type="radio" name="callback_mode" value="panel" onchange="updateScriptCmd()" />
+                        <span>面板外部地址</span>
+                    </label>
+                    <label class="variant-check-item" style="padding: 6px 10px">
+                        <input type="radio" name="callback_mode" value="tunnel" onchange="updateScriptCmd()" />
+                        <span>Tunnel 隧道地址</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Panel URL 缺失提示 -->
+            <div id="panelUrlWarning" style="
+                    display: none;
+                    background: #fff3cd;
+                    color: #856404;
+                    padding: 12px 14px;
+                    border-radius: 8px;
+                    margin-bottom: 10px;
+                    font-size: 13px;
+                    border: 1px solid #ffeeba;
+                    line-height: 1.5;
+                ">
+                <b style="
+                        display: flex;
+                        align-items: center;
+                        gap: 4px;
+                        margin-bottom: 4px;
+                    ">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path
+                            d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
+                        </path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                    未设置面板外部访问地址
+                </b>
+                请前往
+                <a href="#" onclick="
+                        closeScriptModal();
+                        openSystemSettingsModal();
+                        return false;
+                    " style="
+                        color: #0056b3;
+                        font-weight: 500;
+                        text-decoration: underline;
+                    ">【系统设置】->【基础设置】</a>
+                填写面板外部访问地址。
+            </div>
+
+            <!-- Tunnel 缺失提示 -->
+            <div id="tunnelWarning" style="
+                    display: none;
+                    background: #fff3cd;
+                    color: #856404;
+                    padding: 12px 14px;
+                    border-radius: 8px;
+                    margin-bottom: 16px;
+                    font-size: 13px;
+                    border: 1px solid #ffeeba;
+                    line-height: 1.5;
+                ">
+                <b style="
+                        display: flex;
+                        align-items: center;
+                        gap: 4px;
+                        margin-bottom: 4px;
+                    ">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path
+                            d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
+                        </path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                    未设置 Tunnel 隧道地址
+                </b>
+                请前往
+                <a href="#" onclick="
+                        closeScriptModal();
+                        openCFTunnelModal();
+                        return false;
+                    " style="
+                        color: #0056b3;
+                        font-weight: 500;
+                        text-decoration: underline;
+                    ">【Cloudflare 管理】->【Tunnel 隧道】</a>
+                完成 Tunnel 配置。
+            </div>
+
+            <div class="cmd-box">
+                <div class="cmd-text" id="installCmdDisplay"></div>
+            </div>
+        </div>
+
+        <div class="script-footer">
+            <button class="btn-script-cancel" onclick="closeScriptModal()">
+                关闭
+            </button>
+            <button class="btn-script-copy" onclick="copyScriptCmd()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                一键复制
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const scriptModal = document.getElementById("installScriptModal");
+    const cmdDisplay = document.getElementById("installCmdDisplay");
+    let currentScriptNode = null;
+
+    // 点击遮罩层关闭
+    scriptModal.addEventListener('click', function(e) {
+        if (e.target === scriptModal) closeScriptModal();
+    });
+
+    // ESC 键关闭
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && scriptModal.classList.contains('active')) closeScriptModal();
+    });
+
+    // ─── 加载 Tunnel 子域名 ───
+    async function loadTunnelSubdomainFromBackend() {
+        try {
+            const resp = await fetch(
+                `/api/cf/tunnel/settings?_t=${Date.now()}`,
+                {
+                    cache: "no-store",
+                    headers: {
+                        "Cache-Control": "no-cache",
+                        Pragma: "no-cache",
+                    },
+                },
+            );
+            const json = await resp.json();
+            const subdomain =
+                json?.status === "success" && json?.data
+                    ? String(json.data.cf_tunnel_subdomain || "").trim()
+                    : "";
+            window.cftTunnelSubdomain = subdomain;
+            window.cachedTunnelSubdomain = subdomain;
+            return subdomain;
+        } catch (_) {
+            const subdomain = String(window.cftTunnelSubdomain || "").trim();
+            window.cachedTunnelSubdomain = subdomain;
+            return subdomain;
+        }
+    }
+
+    // ─── 打开弹窗 ───
+    async function openScriptModal(uuid) {
+        currentScriptNode = window.allNodesData[uuid];
+        if (!currentScriptNode) return;
+
+        if (!currentScriptNode.install_id) {
+            alert("该节点未生成 InstallID，请先编辑保存一次");
+            return;
+        }
+
+        const panelWarningEl = document.getElementById("panelUrlWarning");
+        const tunnelWarningEl = document.getElementById("tunnelWarning");
+        const callbackModeWrap = document.getElementById("callbackModeWrap");
+
+        const panelBase = (window.panelUrl || "").replace(/\/+$/, "");
+        const tunnelSubdomain = await loadTunnelSubdomainFromBackend();
+        const tunnelBase = (
+            tunnelSubdomain ? `https://${tunnelSubdomain}` : ""
+        ).replace(/\/+$/, "");
+        const hasPanel = !!panelBase;
+        const hasTunnel = !!tunnelBase;
+
+        if (callbackModeWrap) {
+            callbackModeWrap.style.display = "block";
+        }
+
+        const panelRadio = document.querySelector(
+            'input[name="callback_mode"][value="panel"]',
+        );
+        const tunnelRadio = document.querySelector(
+            'input[name="callback_mode"][value="tunnel"]',
+        );
+
+        if (hasTunnel && hasPanel) {
+            if (tunnelRadio) tunnelRadio.checked = true;
+        } else if (hasPanel) {
+            if (panelRadio) panelRadio.checked = true;
+        } else if (hasTunnel) {
+            if (tunnelRadio) tunnelRadio.checked = true;
+        } else {
+            if (panelRadio) panelRadio.checked = true;
+        }
+
+        const selectedModeAtOpen =
+            document.querySelector('input[name="callback_mode"]:checked')
+                ?.value || "panel";
+
+        if (panelWarningEl) {
+            panelWarningEl.style.display =
+                selectedModeAtOpen === "panel" && !hasPanel ? "block" : "none";
+        }
+        if (tunnelWarningEl) {
+            tunnelWarningEl.style.display =
+                selectedModeAtOpen === "tunnel" && !hasTunnel
+                    ? "block"
+                    : "none";
+        }
+
+        updateScriptCmd();
+        scriptModal.classList.add("active");
+    }
+
+    // ─── 生成命令（新版极简模式：无需指定协议） ───
+    function updateScriptCmd() {
+        if (!currentScriptNode) return;
+
+        const panelWarningEl = document.getElementById("panelUrlWarning");
+        const tunnelWarningEl = document.getElementById("tunnelWarning");
+
+        const panelBase = (window.panelUrl || "").replace(/\/+$/, "");
+        const tunnelSubdomain = window.cachedTunnelSubdomain || "";
+        const tunnelBase = (
+            tunnelSubdomain ? `https://${tunnelSubdomain}` : ""
+        ).replace(/\/+$/, "");
+
+        const hasPanel = !!panelBase;
+        const hasTunnel = !!tunnelBase;
+
+        const selectedMode =
+            document.querySelector('input[name="callback_mode"]:checked')
+                ?.value || "panel";
+
+        if (panelWarningEl) {
+            panelWarningEl.style.display =
+                selectedMode === "panel" && !hasPanel ? "block" : "none";
+        }
+        if (tunnelWarningEl) {
+            tunnelWarningEl.style.display =
+                selectedMode === "tunnel" && !hasTunnel ? "block" : "none";
+        }
+
+        const useTunnel = selectedMode === "tunnel" && hasTunnel;
+
+        const fallbackHost = panelBase || tunnelBase || window.location.origin;
+        let host = useTunnel ? tunnelBase : panelBase || fallbackHost;
+        host = host.replace(/\/+$/, "");
+
+        // 新版使用 /api/public/new-install-script 端点
+        const installScriptUrl = `${host}/api/public/new-install-script?id=${currentScriptNode.install_id}`;
+
+        // 构造命令：新版极简命令不需要协议参数
+        let cmdHtml, rawCmd;
+
+        if (useTunnel) {
+            // 使用 Tunnel 回调地址时，追加 --report-url 参数
+            cmdHtml = `<span class="hl-cmd">bash</span> <span class="hl-param">-c</span> <span class="hl-string">"$(curl -fsSL ${installScriptUrl})"</span> <span class="hl-param">--report-url</span> <span class="hl-string">${host}</span>`;
+            rawCmd = `bash -c "$(curl -fsSL ${installScriptUrl})" --report-url ${host}`;
+        } else {
+            // 基础用法：极简，无需任何额外参数
+            cmdHtml = `<span class="hl-cmd">bash</span> <span class="hl-param">-c</span> <span class="hl-string">"$(curl -fsSL ${installScriptUrl})"</span>`;
+            rawCmd = `bash -c "$(curl -fsSL ${installScriptUrl})"`;
+        }
+
+        cmdDisplay.innerHTML = cmdHtml;
+        cmdDisplay.setAttribute("data-clipboard-text", rawCmd);
+    }
+
+    function closeScriptModal() {
+        scriptModal.classList.remove("active");
+    }
+
+    function copyScriptCmd() {
+        const text = cmdDisplay.getAttribute("data-clipboard-text");
+        navigator.clipboard.writeText(text).then(() => {
+            const btn = document.querySelector(".btn-script-copy");
+            const originalHtml = btn.innerHTML;
+            btn.style.background = "#34c759";
+            btn.innerHTML = "复制成功!";
+            setTimeout(() => {
+                btn.style.background = "#007aff";
+                btn.innerHTML = originalHtml;
+            }, 1500);
+        });
+    }
+</script>
+{{end}}

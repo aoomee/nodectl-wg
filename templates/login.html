@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 · WireArc</title>
+
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none'><defs><linearGradient id='bg' x1='10' y1='4' x2='54' y2='60' gradientUnits='userSpaceOnUse'><stop offset='0%25' stop-color='%232ea8ff'/><stop offset='52%25' stop-color='%23007aff'/><stop offset='100%25' stop-color='%23003d99'/></linearGradient><radialGradient id='glow' cx='0' cy='0' r='1' gradientUnits='userSpaceOnUse' gradientTransform='translate(20 14) rotate(50) scale(36 28)'><stop offset='0%25' stop-color='%23ffffff' stop-opacity='0.45'/><stop offset='100%25' stop-color='%23ffffff' stop-opacity='0'/></radialGradient><linearGradient id='rim' x1='8' y1='4' x2='56' y2='60' gradientUnits='userSpaceOnUse'><stop offset='0%25' stop-color='%23ffffff' stop-opacity='0.85'/><stop offset='48%25' stop-color='%23a6dcff' stop-opacity='0.18'/><stop offset='100%25' stop-color='%23ffffff' stop-opacity='0.52'/></linearGradient><linearGradient id='rib' x1='16' y1='18' x2='48' y2='48' gradientUnits='userSpaceOnUse'><stop offset='0%25' stop-color='%23ffffff'/><stop offset='58%25' stop-color='%23e2f3ff'/><stop offset='100%25' stop-color='%23b5e0ff'/></linearGradient></defs><rect x='2' y='2' width='60' height='60' rx='16.5' fill='url(%23bg)'/><rect x='2' y='2' width='60' height='60' rx='16.5' fill='url(%23glow)'/><rect x='2.8' y='2.8' width='58.4' height='58.4' rx='15.7' stroke='url(%23rim)' stroke-width='1.6'/><path d='M13.2 22.8C14.4 37.2 18.4 45.6 22.8 45.6C27.6 45.6 28.2 19.2 32 19.2C35.8 19.2 36.4 45.6 41.2 45.6C45.6 45.6 49.6 37.2 50.8 22.8' stroke='%23001b4d' stroke-opacity='0.34' stroke-width='6.6' stroke-linecap='round' stroke-linejoin='round' transform='translate(0 2.2)'/><path d='M13.2 22.8C14.4 37.2 18.4 45.6 22.8 45.6C27.6 45.6 28.2 19.2 32 19.2C35.8 19.2 36.4 45.6 41.2 45.6C45.6 45.6 49.6 37.2 50.8 22.8' stroke='url(%23rib)' stroke-width='6.2' stroke-linecap='round' stroke-linejoin='round'/><path d='M13.2 22.8C14.4 37.2 18.4 45.6 22.8 45.6C27.6 45.6 28.2 19.2 32 19.2C35.8 19.2 36.4 45.6 41.2 45.6C45.6 45.6 49.6 37.2 50.8 22.8' stroke='%23ffffff' stroke-opacity='0.85' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round' transform='translate(0 -1.1)'/></svg>">
+
+    <style>
+        :root {
+            --apple-bg: #f5f5f7;
+            --apple-card: rgba(255, 255, 255, 0.92);
+            --apple-text: #1d1d1f;
+            --apple-text-sec: #86868b;
+            --apple-blue: #007aff;
+            --apple-blue-hover: #0066d6;
+            --apple-input-bg: #f5f5f7;
+            --apple-error-bg: #fff1f0;
+            --apple-error-text: #d70015;
+            --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+            background-color: var(--apple-bg);
+            background-image:
+                radial-gradient(at 20% 20%, rgba(0, 122, 255, 0.06) 0px, transparent 50%),
+                radial-gradient(at 80% 80%, rgba(52, 199, 89, 0.04) 0px, transparent 50%);
+            color: var(--apple-text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .login-card {
+            background: var(--apple-card);
+            backdrop-filter: saturate(180%) blur(24px);
+            -webkit-backdrop-filter: saturate(180%) blur(24px);
+            width: 100%;
+            max-width: 390px;
+            padding: 46px 40px;
+            border-radius: 28px;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.03);
+            text-align: center;
+            animation: cardFloatIn 0.55s var(--ease-spring) forwards;
+        }
+
+        @keyframes cardFloatIn {
+            from {
+                opacity: 0;
+                transform: translateY(16px) scale(0.97);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .brand-logo {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            filter: drop-shadow(0 12px 26px rgba(0, 96, 224, 0.28));
+            transition: transform 0.34s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .brand-logo:hover {
+            transform: scale(1.05);
+        }
+
+        .brand-logo svg {
+            width: 60px;
+            height: 60px;
+        }
+
+        .header {
+            margin-bottom: 32px;
+        }
+
+        .header h1 {
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 8px;
+            color: var(--apple-text);
+        }
+
+        .header p {
+            font-size: 14.5px;
+            color: var(--apple-text-sec);
+            font-weight: 400;
+        }
+
+        .input-group {
+            margin-bottom: 14px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 15px 18px;
+            font-size: 15.5px;
+            background-color: var(--apple-input-bg);
+            border: 1px solid rgba(0, 0, 0, 0.04);
+            border-radius: 14px;
+            color: var(--apple-text);
+            transition: all 0.25s var(--ease-spring);
+            outline: none;
+        }
+
+        .input-group input::placeholder {
+            color: #a1a1a6;
+        }
+
+        .input-group input:hover {
+            background-color: #efeff4;
+        }
+
+        .input-group input:focus {
+            background-color: #ffffff;
+            border-color: var(--apple-blue);
+            box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.14);
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            font-weight: 600;
+            background: linear-gradient(180deg, #148eff 0%, #007aff 100%);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            margin-top: 10px;
+            box-shadow: 0 4px 14px rgba(0, 122, 255, 0.25);
+            transition: all 0.25s var(--ease-spring);
+        }
+
+        .btn-submit:hover {
+            background: linear-gradient(180deg, #007aff 0%, #0062cc 100%);
+            box-shadow: 0 6px 20px rgba(0, 122, 255, 0.34);
+            transform: translateY(-1px);
+        }
+
+        .btn-submit:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+        .error-msg {
+            background-color: var(--apple-error-bg);
+            color: var(--apple-error-text);
+            border: 1px solid rgba(255, 59, 48, 0.15);
+            padding: 13px 16px;
+            border-radius: 14px;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 22px;
+            animation: shake 0.4s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-6px); }
+            40% { transform: translateX(6px); }
+            60% { transform: translateX(-4px); }
+            80% { transform: translateX(4px); }
+        }
+
+        @media (max-width: 768px) {
+            .login-card {
+                max-width: 100%;
+                padding: 38px 26px;
+                border-radius: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="brand-logo">
+            <svg viewBox="0 0 64 64" fill="none" aria-hidden="true">
+                <defs>
+                    <linearGradient id="waLoginGlassBg" x1="10" y1="4" x2="54" y2="60" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stop-color="#2ea8ff"></stop>
+                        <stop offset="52%" stop-color="#007aff"></stop>
+                        <stop offset="100%" stop-color="#003d99"></stop>
+                    </linearGradient>
+                    <radialGradient id="waLoginGlassGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(20 13) rotate(48) scale(38 28)">
+                        <stop offset="0%" stop-color="#ffffff" stop-opacity="0.46"></stop>
+                        <stop offset="55%" stop-color="#9ad8ff" stop-opacity="0.12"></stop>
+                        <stop offset="100%" stop-color="#ffffff" stop-opacity="0"></stop>
+                    </radialGradient>
+                    <radialGradient id="waLoginGlassWarm" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(55 40) rotate(110) scale(18 11)">
+                        <stop offset="0%" stop-color="#ffdcb0" stop-opacity="0.42"></stop>
+                        <stop offset="100%" stop-color="#ffdcb0" stop-opacity="0"></stop>
+                    </radialGradient>
+                    <linearGradient id="waLoginGlassRim" x1="7" y1="3" x2="57" y2="61" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stop-color="#ffffff" stop-opacity="0.88"></stop>
+                        <stop offset="38%" stop-color="#bde4ff" stop-opacity="0.22"></stop>
+                        <stop offset="72%" stop-color="#48a8ff" stop-opacity="0.14"></stop>
+                        <stop offset="100%" stop-color="#ffffff" stop-opacity="0.58"></stop>
+                    </linearGradient>
+                    <linearGradient id="waLoginRibbonFill" x1="14" y1="18" x2="50" y2="47" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stop-color="#ffffff"></stop>
+                        <stop offset="58%" stop-color="#e3f3ff"></stop>
+                        <stop offset="100%" stop-color="#b4dfff"></stop>
+                    </linearGradient>
+                    <linearGradient id="waLoginRibbonSpec" x1="16" y1="17" x2="48" y2="44" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stop-color="#ffffff" stop-opacity="0.96"></stop>
+                        <stop offset="50%" stop-color="#ffffff" stop-opacity="0.55"></stop>
+                        <stop offset="100%" stop-color="#ffffff" stop-opacity="0.18"></stop>
+                    </linearGradient>
+                    <filter id="waLoginRibbonShadow" x="-15%" y="-15%" width="130%" height="140%">
+                        <feDropShadow dx="0" dy="2.6" stdDeviation="2.2" flood-color="#00184a" flood-opacity="0.42"></feDropShadow>
+                    </filter>
+                    <clipPath id="waLoginSquircleClip">
+                        <rect x="2" y="2" width="60" height="60" rx="16.5"></rect>
+                    </clipPath>
+                </defs>
+                <g clip-path="url(#waLoginSquircleClip)">
+                    <rect x="2" y="2" width="60" height="60" rx="16.5" fill="url(#waLoginGlassBg)"></rect>
+                    <rect x="2" y="2" width="60" height="60" rx="16.5" fill="url(#waLoginGlassGlow)"></rect>
+                    <rect x="2" y="2" width="60" height="60" rx="16.5" fill="url(#waLoginGlassWarm)"></rect>
+                    <path
+                        d="M15.6 25.4C16.7 37.6 20 44.6 23.8 44.6C27.8 44.6 28.5 22.6 32 22.6C35.5 22.6 36.2 44.6 40.2 44.6C44 44.6 47.3 37.6 48.4 25.4"
+                        stroke="#ffffff"
+                        stroke-opacity="0.24"
+                        stroke-width="8.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        transform="translate(-1.6 1.4)"
+                    ></path>
+                    <g filter="url(#waLoginRibbonShadow)">
+                        <path
+                            d="M13.2 22.8C14.4 37.2 18.4 45.6 22.8 45.6C27.6 45.6 28.2 19.2 32 19.2C35.8 19.2 36.4 45.6 41.2 45.6C45.6 45.6 49.6 37.2 50.8 22.8"
+                            stroke="url(#waLoginRibbonFill)"
+                            stroke-width="6.1"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        ></path>
+                        <path
+                            d="M13.2 22.8C14.4 37.2 18.4 45.6 22.8 45.6C27.6 45.6 28.2 19.2 32 19.2C35.8 19.2 36.4 45.6 41.2 45.6C45.6 45.6 49.6 37.2 50.8 22.8"
+                            stroke="url(#waLoginRibbonSpec)"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            transform="translate(0 -1.1)"
+                        ></path>
+                    </g>
+                </g>
+                <rect x="2.75" y="2.75" width="58.5" height="58.5" rx="15.75" stroke="url(#waLoginGlassRim)" stroke-width="1.5"></rect>
+            </svg>
+        </div>
+        <div class="header">
+            <h1>WireArc</h1>
+            <p>多协议节点与双机专线中枢</p>
+        </div>
+
+        {{if .Error}}
+        <div class="error-msg">
+            {{.Error}}
+        </div>
+        {{end}}
+
+        <form method="POST" action="/login">
+            <div class="input-group">
+                <input type="text" id="username" name="username" placeholder="用户名" required autocomplete="username">
+            </div>
+            <div class="input-group">
+                <input type="password" id="password" name="password" placeholder="密码" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn-submit">继续</button>
+        </form>
+    </div>
+</body>
+</html>

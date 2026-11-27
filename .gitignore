@@ -1,0 +1,11 @@
+# Runtime & build artifacts
+data/
+bin/
+dist/
+*.exe
+
+# Local tooling & OS metadata
+.DS_Store
+.venv/
+**/__pycache__/
+**/*.pyc

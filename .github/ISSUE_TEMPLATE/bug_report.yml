@@ -1,0 +1,116 @@
+name: "BUG 反馈"
+description: "报告一个问题或异常行为"
+title: "[BUG] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢你提交 BUG 反馈！为了帮助我们快速定位和修复问题，请务必填写以下信息。
+        **请尽量提供完整的复现步骤和触发操作，这对我们排查问题至关重要。**
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+      description: 请简要描述你遇到的问题
+      placeholder: 描述你遇到的 BUG...
+    validations:
+      required: true
+
+  - type: textarea
+    id: trigger
+    attributes:
+      label: 触发操作
+      description: 请详细描述你在触发该 BUG 时执行了什么操作（例如：点击了什么按钮、输入了什么内容、调用了什么接口等）
+      placeholder: |
+        例如：
+        - 我在节点管理页面点击了"添加节点"按钮
+        - 点击保存后出现了错误
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 请提供详细的步骤，让我们能够复现这个问题
+      placeholder: |
+        1. 进入 '...' 页面
+        2. 点击 '...' 按钮
+        3. 输入 '...'
+        4. 观察到错误
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+      description: 描述你期望看到的正确行为
+      placeholder: 我期望的结果是...
+    validations:
+      required: false
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+      description: 描述实际发生的行为
+      placeholder: 实际发生的结果是...
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: WireArc 版本
+      description: 你使用的 WireArc 版本号
+      placeholder: "例如：v1.0.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: 部署环境
+      description: 你使用的 WireArc 部署方式
+      options:
+        - Docker
+        - 二进制部署
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: 操作系统
+      description: 你的服务器操作系统及版本
+      placeholder: "例如：Ubuntu 22.04 / Debian 12 / CentOS 7"
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 相关日志
+      description: 如果有相关的错误日志或终端输出，请粘贴在这里
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 截图
+      description: 如果适用，请添加截图来帮助说明你的问题
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: 补充信息
+      description: 任何其他有助于排查问题的信息
+    validations:
+      required: false

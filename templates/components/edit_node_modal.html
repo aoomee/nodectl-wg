@@ -1,0 +1,2698 @@
+{{define "edit_node_modal.html"}}
+
+<style>
+    #editNodeModal {
+        --editor-ink: #1d1d1f;
+        --editor-muted: #6e6e73;
+        --editor-border: rgba(0, 0, 0, 0.08);
+        --editor-surface: #f5f6f8;
+        --editor-paper: #ffffff;
+        --editor-accent: #007aff;
+        --editor-radius: 14px;
+        --editor-card-radius: 18px;
+        --editor-pill: 999px;
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+        color: var(--editor-ink);
+    }
+
+    /* ================= 统一弹窗基础框架 ================= */
+    .edit-modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 15, 20, 0.36);
+        backdrop-filter: saturate(180%) blur(12px);
+        -webkit-backdrop-filter: saturate(180%) blur(12px);
+        z-index: 2000;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.28s ease;
+    }
+
+    .edit-modal-overlay.active {
+        display: flex;
+        opacity: 1;
+    }
+
+    /* 窄模式 380px，展开后 800px */
+    .edit-modal-card {
+        background: #ffffff;
+        width: 100%;
+        max-width: 900px;
+        height: 85vh;
+        border-radius: 26px;
+        box-shadow: 0 24px 56px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.04);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        animation: cnModalSpring 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    .edit-modal-card.has-content {
+        max-width: 900px;
+    }
+
+    /* 优雅的流量组合框 (Input Group) 样式 */
+    .traffic-input-group {
+        display: flex;
+        flex: 1;
+        align-items: stretch;
+        min-height: 42px;
+        border: 1px solid var(--editor-border);
+        border-radius: var(--editor-radius);
+        background: #f6f7f9;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+        overflow: hidden;
+    }
+
+    .traffic-input-group:hover {
+        background: #f2f4f7;
+    }
+
+    .traffic-input-group:focus-within,
+    .traffic-input-group.wa-select-group-open {
+        border-color: #007aff;
+        background: #fff;
+        box-shadow: 0 0 0 3.5px rgba(0, 122, 255, 0.14);
+    }
+
+    .traffic-input-group input {
+        flex: 1;
+        min-width: 0;
+        padding: 9px 13px;
+        font-size: 14px;
+        font-weight: 600;
+        border: none;
+        outline: none;
+        background: transparent;
+        color: #1d1d1f;
+    }
+
+    .traffic-input-group input::placeholder {
+        color: #a1a1a6;
+        font-weight: 500;
+    }
+
+    .traffic-input-group .select-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+        align-self: stretch;
+        border-left: 1px solid rgba(0, 0, 0, 0.06);
+        background: #eef0f4;
+        transition: background-color 0.18s ease;
+        flex-shrink: 0;
+    }
+
+    .traffic-input-group .select-wrapper:hover {
+        background: #e6e9ef;
+    }
+
+    .traffic-input-group select {
+        appearance: none;
+        -webkit-appearance: none;
+        background: transparent;
+        border: none;
+        outline: none;
+        box-shadow: none;
+        padding: 0 28px 0 14px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #3a3a3c;
+        cursor: pointer;
+        height: 100%;
+        min-height: 40px;
+    }
+
+    .traffic-input-group select:hover {
+        color: #1d1d1f;
+    }
+
+    .traffic-input-group .arrow {
+        position: absolute;
+        right: 10px;
+        color: #6e6e73;
+        pointer-events: none;
+    }
+
+    /* Header */
+    .edit-header {
+        background: rgba(248, 248, 250, 0.9);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        padding: 16px 24px 16px 26px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .edit-header-right {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-left: auto;
+        max-width: 100%;
+        flex-shrink: 0;
+    }
+
+    .edit-title-area {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .edit-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1d1d1f;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+    }
+
+    .edit-save-indicator {
+        font-size: 12px;
+        font-weight: 600;
+        color: #34c759;
+        opacity: 0;
+        transition: opacity 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    /* 滚动条 */
+    .no-scrollbar {
+        overflow-y: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* 主布局 */
+    .edit-form-wrapper {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .edit-body {
+        flex: 1;
+        display: flex;
+        flex-direction: row;
+        background: #fff;
+        overflow: hidden;
+    }
+
+    /* 左侧面板 */
+    .edit-left-col {
+        width: 380px;
+        flex-shrink: 0;
+        padding: 25px;
+        border-right: 1px solid #f2f2f5;
+    }
+
+    .edit-section {
+        margin-bottom: 24px;
+    }
+
+    .section-label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: #888;
+        margin-bottom: 10px;
+    }
+
+    /* 基础输入组件与美化下拉框 */
+    .title-input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 8px 13px;
+        min-height: 40px;
+        font-size: 13.5px;
+        font-weight: 600;
+        border: 1px solid var(--editor-border);
+        border-radius: var(--editor-radius);
+        outline: none;
+        transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+        color: #1d1d1f;
+        background: #f6f7f9;
+    }
+
+    select.title-input {
+        appearance: none;
+        -webkit-appearance: none;
+        padding-right: 34px;
+        cursor: pointer;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236e6e73' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        background-size: 14px 14px;
+    }
+
+    .title-input:hover {
+        background-color: #f0f2f5;
+    }
+
+    .title-input:focus {
+        border-color: #007aff;
+        background-color: #fff;
+        box-shadow: 0 0 0 3.5px rgba(0, 122, 255, 0.14);
+    }
+
+    /* 灰色底槽与白色胶囊，选中态不依赖颜色区分。 */
+    #editNodeModal .segmented-control {
+        width: 100%;
+        box-sizing: border-box;
+        display: flex;
+        padding: 5px;
+        gap: 4px;
+        border: 0;
+        border-radius: var(--editor-pill);
+        background: #f3f3f4;
+    }
+    #editNodeModal .segment-option {
+        flex: 1;
+        min-width: 0;
+        min-height: 36px;
+        padding: 8px 0;
+        border: 0;
+        border-radius: var(--editor-pill);
+        background: transparent;
+        color: #6b6b73;
+        font: 600 13px/1.5 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+        text-align: center;
+        cursor: pointer;
+        transition: background-color .15s, box-shadow .15s;
+    }
+    #editNodeModal .segment-option:hover { color: var(--editor-ink); }
+    #editNodeModal .segment-option.active {
+        background: var(--editor-paper);
+        color: var(--editor-ink);
+        box-shadow: 0 2px 5px rgba(20, 30, 45, .07);
+    }
+
+    /* IP 输入 */
+    .ip-input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 10px 12px;
+        font-size: 13px;
+        font-weight: 500;
+        font-family: monospace;
+        min-height: 40px;
+        border: 1px solid var(--editor-border);
+        border-radius: var(--editor-radius);
+        outline: none;
+        transition: border 0.2s;
+        color: #333;
+        background: #fafbfc;
+    }
+
+    .ip-input:focus {
+        border-color: #007aff;
+        background: #fff;
+        box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.1);
+    }
+
+    .add-ip-link {
+        font-size: 12px;
+        color: #007aff;
+        cursor: pointer;
+        display: inline-block;
+        margin-top: 6px;
+        font-weight: 500;
+    }
+
+    .add-ip-link:hover {
+        text-decoration: underline;
+    }
+
+    /* 添加协议按钮 */
+    .btn-add-protocol-left {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 12px;
+        border: 1px dashed #007aff;
+        border-radius: 8px;
+        background: #f0f7ff;
+        color: #007aff;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .btn-add-protocol-left:hover {
+        background: #e0efff;
+    }
+
+    /* ================= 右侧协议配置面板 ================= */
+    .edit-right-col {
+        flex: 1;
+        min-width: 0;
+        min-height: 0;
+        padding: 25px 30px;
+        display: flex;
+        flex-direction: column;
+        background: #fff;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+        scrollbar-color: #c7cbd1 transparent;
+    }
+
+    .edit-right-col > * { flex-shrink: 0; }
+    .edit-right-col.showing-command-log > :not(#cmdLogPanel) { display: none !important; }
+    .edit-right-col.showing-command-log { overflow: hidden; }
+
+    .edit-modal-card.has-content .edit-right-col {
+        display: flex;
+    }
+
+    /* 整个右栏统一滚动，帮助区不再压缩协议列表。 */
+    #protocolListContainer {
+        flex: 0 0 auto;
+        min-height: 0;
+        overflow: visible;
+    }
+    #protocolListContainer::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* 添加协议按钮随右栏内容滚动，底部操作区保持独立。 */
+    .edit-right-col #addProtocolSection {
+        flex-shrink: 0;
+        padding-top: 12px;
+        margin: 0;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    /* 协议卡片容器 */
+    .protocol-card {
+        border: 1px solid var(--editor-border);
+        border-radius: var(--editor-card-radius);
+        background: #fff;
+        margin-bottom: 12px;
+        overflow: hidden;
+        transition: all 0.2s;
+    }
+
+    .protocol-card:hover {
+        border-color: #d1d1d6;
+    }
+
+    /* 禁用状态 */
+    .protocol-card.disabled {
+        opacity: 0.7;
+        background: #fdfdfd;
+    }
+
+    .protocol-card.disabled .proto-header {
+        background: #fcfcfc;
+    }
+
+    /* 协议头部行 */
+    .proto-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 6px 8px;
+        flex-wrap: wrap;
+        padding: 10px 12px;
+        background: #fafbfc;
+        border-bottom: 1px solid #f0f0f5;
+        transition: background 0.2s;
+    }
+
+    /* HTTP 安全模式下，只有一行，去掉底部边框 */
+    .protocol-card.locked-mode .proto-header {
+        border-bottom: none;
+        background: #fff;
+    }
+
+    .proto-title {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+    }
+
+    .proto-badge {
+        font-size: 12px;
+        font-weight: 700;
+        padding: 3px 9px;
+        border-radius: 8px;
+        border: 1px solid transparent;
+    }
+
+    .proto-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    /* 仅双栈且节点未锁定单栈时才显示单协议 IP 模式选择 */
+    #editNodeModal:not(.dual-stack-available) #editNodeIPModeSection,
+    #editNodeModal:not(.dual-stack-available) .proto-ipmode-capsule,
+    #editNodeModal.node-ip-locked .proto-ipmode-capsule {
+        display: none !important;
+    }
+
+    .proto-empty-state {
+        text-align: center;
+        color: #8e8e93;
+        padding: 28px 16px;
+        font-size: 12.5px;
+        border: 1px dashed rgba(0, 0, 0, 0.1);
+        border-radius: var(--editor-card-radius);
+        background: #fafbfd;
+        margin-bottom: 12px;
+    }
+
+    /* 协议级 IP 模式胶囊按钮组样式 */
+    .proto-ipmode-capsule {
+        display: flex;
+        align-items: center;
+        border-radius: 20px;
+        padding: 2px;
+        margin-right: 6px;
+        transition: background-color 0.3s;
+        cursor: pointer;
+    }
+
+    .proto-ipmode-capsule.expanded {
+        background: #f5f5f7;
+    }
+
+    .proto-ipmode-item {
+        border: none;
+        background: transparent;
+        font-size: 11px;
+        font-weight: 600;
+        border-radius: 16px;
+        cursor: pointer;
+        white-space: nowrap;
+        color: #86868b;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+        max-width: 0;
+        padding: 0;
+        opacity: 0;
+        overflow: hidden;
+        margin: 0;
+    }
+
+    .proto-ipmode-item.active {
+        max-width: 65px;
+        padding: 4px 10px;
+        opacity: 1;
+    }
+
+    .proto-ipmode-capsule.expanded .proto-ipmode-item {
+        max-width: 65px;
+        padding: 4px 10px;
+        opacity: 1;
+    }
+
+    .proto-ipmode-item:hover {
+        background: #e5e5ea;
+        color: #333;
+    }
+
+    .proto-ipmode-item.active[data-val="1"] {
+        background: #e0f2fe;
+        /* 仅IPv4: 蓝色系 */
+        color: #0284c7;
+    }
+
+    .proto-ipmode-item.active[data-val="2"] {
+        background: #f3e8ff;
+        /* 仅IPv6: 紫色系 */
+        color: #7e22ce;
+    }
+
+    .proto-ipmode-item.active[data-val="3"] {
+        background: #dcfce7;
+        /* 双栈: 绿色系 */
+        color: #15803d;
+    }
+
+    /* 协议端口输入框 */
+    .proto-port-input {
+        width: 72px;
+        height: 32px;
+        padding: 0 8px;
+        font-size: 12px;
+        font-weight: 600;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        border: 1px solid var(--editor-border);
+        border-radius: 10px;
+        outline: none;
+        text-align: center;
+        color: #1d1d1f;
+        background: #ffffff;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        box-sizing: border-box;
+    }
+
+    .proto-port-input:focus {
+        border-color: #007aff;
+        background: #fff;
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.14);
+    }
+
+    .proto-port-input::placeholder {
+        color: #bbb;
+        font-weight: 400;
+    }
+
+    /* 小号开关 */
+    .switch-sm {
+        position: relative;
+        width: 30px;
+        height: 16px;
+    }
+
+    .switch-sm input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider-sm {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #e5e5ea;
+        transition: .3s;
+        border-radius: 16px;
+    }
+
+    .slider-sm:before {
+        position: absolute;
+        content: "";
+        height: 12px;
+        width: 12px;
+        left: 2px;
+        bottom: 2px;
+        background-color: white;
+        transition: .3s;
+        border-radius: 50%;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+
+    input:checked+.slider-sm {
+        background-color: #34c759;
+    }
+
+    input:checked+.slider-sm:before {
+        transform: translateX(14px);
+    }
+
+    /* 删除按钮 (支持二次确认状态) */
+    .btn-icon.delete {
+        background: transparent;
+        border: none;
+        color: #8e8e93;
+        cursor: pointer;
+        padding: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 9px;
+        transition: all 0.2s;
+    }
+
+    .btn-icon.delete:hover {
+        background: #fee2e2;
+        color: #d74242;
+    }
+
+    /* 二次确认时的样式 */
+    .btn-icon.delete.confirm {
+        background: #d74242;
+        color: white;
+        width: auto;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+    }
+
+    .btn-icon.delete.confirm:hover {
+        background: #b91c1c;
+    }
+
+    .btn-icon.delete.confirm svg {
+        display: none;
+    }
+
+    /* 隐藏图标 */
+    .btn-icon.delete.confirm::after {
+        content: "确认删除?";
+        font-weight: 600;
+    }
+
+    /* 显示文字 */
+
+    /* 协议内容折叠及多行文本框 */
+    .proto-header {
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .proto-chevron {
+        transition: transform 0.2s;
+        flex-shrink: 0;
+        color: #999;
+    }
+
+    .protocol-card.expanded .proto-chevron {
+        transform: rotate(90deg);
+        color: #007aff;
+    }
+
+    .proto-body {
+        display: none;
+        padding: 12px;
+        border-top: 1px dashed #f0f0f5;
+        background: #fff;
+    }
+
+    .protocol-card.expanded .proto-body {
+        display: block;
+        animation: fadeIn 0.2s;
+    }
+
+    .link-textarea {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid #e5e5ea;
+        border-radius: var(--editor-radius);
+        padding: 8px 12px;
+        font-family: monospace;
+        font-size: 12px;
+        outline: none;
+        background: #fafbfc;
+        resize: none;
+        overflow: hidden;
+        min-height: 36px;
+        word-break: break-all;
+        color: #333;
+        transition: border 0.2s;
+        line-height: 1.5;
+    }
+
+    .link-textarea:focus {
+        border-color: #007aff;
+        background: #fff;
+        box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.1);
+    }
+
+    /* 顶部警告条 */
+    .security-warning-bar {
+        background: #fff8e6;
+        border: 1px solid #ffe4a3;
+        color: #8a5a00;
+        padding: 10px 14px;
+        border-radius: 14px;
+        font-size: 12.5px;
+        margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    .security-warning-bar .warn-text {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+    }
+    .security-warning-bar .warn-action {
+        flex-shrink: 0;
+        border: 1px solid #f0c96c;
+        background: #ffffff;
+        color: #8a5a00;
+        border-radius: 999px;
+        padding: 4px 11px;
+        font-size: 11.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.15s;
+    }
+    .security-warning-bar .warn-action:hover {
+        background: #fff3d1;
+    }
+
+    .edit-footer {
+        padding: 15px 25px;
+        border-top: 1px solid #eee;
+        background: #fff;
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        z-index: 5;
+        flex-wrap: nowrap;
+    }
+
+    .btn-footer-close {
+        background: #f5f5f7;
+        border: none;
+        color: #333;
+        padding: 9px 14px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.2s;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .btn-footer-close:hover {
+        background: #e5e5ea;
+    }
+
+    #editNodeModal :is(.node-editor-button, .btn-footer-close, .btn-add-protocol-left) {
+        box-sizing: border-box;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 40px;
+        padding: 8px 12px;
+        border: 1px solid var(--editor-border);
+        border-radius: var(--editor-pill);
+        background: var(--editor-paper);
+        color: var(--editor-ink);
+        font: 600 13px/1.5 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+        cursor: pointer;
+        transition: background-color .15s, border-color .15s;
+    }
+    #editNodeModal :is(.node-editor-button, .btn-footer-close, .btn-add-protocol-left):hover:not(:disabled) {
+        background: var(--editor-surface);
+        border-color: #b4c4d8;
+    }
+    #editNodeModal .node-editor-button-primary {
+        color: white;
+        background: var(--editor-accent);
+        border-color: var(--editor-accent);
+    }
+    #editNodeModal .node-editor-button-primary:hover:not(:disabled) { background: #0055b3; border-color: #0055b3; }
+    #editNodeModal .node-editor-button-danger { color: #b42318; border-color: #e8bcb8; }
+    #editNodeModal .node-editor-button-danger:hover:not(:disabled) { background: #fff2f0; border-color: #b42318; }
+    #editNodeModal #btnPushConfig[data-confirm="true"] { background: #8a5800; border-color: #8a5800; color: white; }
+    #editNodeModal #btnResetNodeLinks[data-confirm="true"] { background: #b42318; border-color: #b42318; color: white; }
+    #editNodeModal :is(.node-editor-button, .btn-footer-close, .btn-add-protocol-left):disabled { opacity: .5; cursor: not-allowed; }
+    #editNodeModal :is(button, summary):focus-visible {
+        outline: 2px solid var(--editor-accent);
+        outline-offset: 2px;
+    }
+    #editNodeModal :is(select, input, textarea):focus-visible {
+        outline: none;
+    }
+    #editNodeModal .traffic-input-group :is(input, select):focus,
+    #editNodeModal .traffic-input-group :is(input, select):focus-visible {
+        outline: none !important;
+        box-shadow: none !important;
+        border: none !important;
+    }
+    #editNodeModal .btn-add-protocol-left { border-style: dashed; color: var(--editor-accent); }
+    @media (prefers-reduced-motion: reduce) {
+        #editNodeModal, #editNodeModal * { animation: none !important; transition: none !important; }
+    }
+
+    /* 移动端 */
+    @media (max-width: 768px) {
+        .edit-left-col, .edit-right-col { box-sizing: border-box; min-width: 0; }
+        .edit-header {
+            padding: 12px 16px;
+        }
+        .edit-modal-card {
+            max-width: 95%;
+            height: 85vh;
+        }
+
+        .edit-modal-card.has-content {
+            max-width: 95%;
+        }
+
+        .edit-body {
+            flex-direction: column;
+            overflow-y: auto;
+            display: block;
+        }
+
+        .edit-left-col {
+            width: 100%;
+            height: auto;
+            border-right: none;
+            padding: 20px;
+            overflow: visible;
+        }
+
+        .edit-right-col {
+            width: 100%;
+            height: auto;
+            padding: 20px;
+            border-top: 1px dashed #eee;
+            overflow: visible;
+        }
+
+        #protocolListContainer {
+            flex: none;
+            overflow-y: visible;
+        }
+
+        .edit-footer {
+            padding: 12px 12px;
+            gap: 8px;
+        }
+
+        .btn-footer-close {
+            padding: 8px 10px;
+            font-size: 12px;
+        }
+        #editNodeModal .edit-footer { flex-wrap: wrap; }
+        #editNodeModal .edit-footer .btn-footer-close { flex: 1 1 auto; padding: 8px; }
+    }
+
+    /* ================= 内嵌命令日志面板（右栏） ================= */
+    #cmdLogPanel {
+        display: none;
+        flex-direction: column;
+        height: 100%;
+    }
+    #cmdLogPanel.active { display: flex; }
+    .cmd-log-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 0 12px 0;
+    }
+    .cmd-log-header .left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .cmd-log-header .status-dot {
+        width: 8px; height: 8px;
+        border-radius: 50%;
+        background: #34c759;
+        animation: cmd-pulse 1.2s infinite;
+        flex-shrink: 0;
+    }
+    .cmd-log-header .status-dot.done { animation: none; background: #34c759; }
+    .cmd-log-header .status-dot.error { animation: none; background: #ff3b30; }
+    @keyframes cmd-pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+    }
+    .cmd-log-header .title {
+        font-size: 13px;
+        font-weight: 600;
+        color: #1d1d1f;
+    }
+    .cmd-log-header .close-btn {
+        background: none; border: none; color: #999; cursor: pointer;
+        font-size: 16px; line-height: 1; padding: 2px 6px; border-radius: 6px;
+        transition: all 0.15s;
+    }
+    .cmd-log-header .close-btn:hover { background: #f0f0f0; color: #333; }
+    .cmd-log-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px 14px;
+        background: #1e1e2e;
+        border-radius: 10px;
+        font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+        font-size: 11.5px;
+        line-height: 1.7;
+        color: #a6adc8;
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+    .cmd-log-body .line { padding: 1px 0; }
+    .cmd-log-body .line.result-ok { color: #a6e3a1; font-weight: 600; }
+    .cmd-log-body .line.result-error { color: #f38ba8; font-weight: 600; }
+    .cmd-log-body .line.warn { color: #fab387; font-weight: 600; }
+    .cmd-log-body .line.error-detail { color: #f38ba8; padding: 2px 0; }
+    .cmd-log-body .line.success { color: #a6e3a1; }
+    .cmd-log-body .line.info-highlight { color: #89b4fa; }
+
+    /* ================= 添加协议紧凑选择器 ================= */
+    #protoSelectList {
+        background: #ffffff;
+        padding: 14px 16px 16px;
+        border-radius: 22px;
+        box-shadow: 0 22px 54px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.05);
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        width: 408px;
+        max-width: 92vw;
+        max-height: 76vh;
+        overflow-y: auto;
+        box-sizing: border-box;
+        animation: fadeIn 0.15s ease;
+    }
+    .proto-picker-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+    .proto-picker-title {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 13.5px;
+        font-weight: 700;
+        color: #1d1d1f;
+    }
+    .proto-picker-close {
+        width: 24px;
+        height: 24px;
+        border: none;
+        border-radius: 999px;
+        background: #f2f3f7;
+        color: #6e6e73;
+        font-size: 12px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.15s, color 0.15s;
+    }
+    .proto-picker-close:hover {
+        background: #e5e7ec;
+        color: #1d1d1f;
+    }
+    .proto-picker-group + .proto-picker-group {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    .proto-picker-group-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: #8e8e93;
+        margin-bottom: 6px;
+        padding-left: 2px;
+    }
+    .proto-picker-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+    }
+    .proto-picker-item {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        height: 32px;
+        padding: 0 8px;
+        border: 1px solid transparent;
+        border-radius: 10px;
+        background: #f5f6f8;
+        color: #1d1d1f;
+        font-size: 11.5px;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+        overflow: hidden;
+        transition: background-color 0.15s, border-color 0.15s, color 0.15s, transform 0.12s;
+    }
+    .proto-picker-item:hover:not(:disabled) {
+        background: #eaf4ff;
+        border-color: rgba(0, 122, 255, 0.25);
+        color: #007aff;
+    }
+    .proto-picker-item:active:not(:disabled) {
+        transform: scale(0.98);
+    }
+    .proto-picker-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+    .proto-picker-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    @media (max-width: 440px) {
+        .proto-picker-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+</style>
+
+<div class="edit-modal-overlay" id="editNodeModal">
+    <div class="edit-modal-card" id="editModalCard">
+
+        <div class="edit-header">
+            <div class="edit-title-area">
+                <div class="edit-title">编辑节点配置</div>
+            </div>
+            <div class="edit-header-right" id="editHeaderRight">
+                <div class="edit-save-indicator" id="editSaveIndicator">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 6L9 17l-5-5"></path>
+                    </svg>
+                    已保存
+                </div>
+            </div>
+        </div>
+
+        <div class="edit-form-wrapper">
+            <input type="hidden" id="editNodeUUID">
+
+            <div class="edit-body no-scrollbar">
+                <div class="edit-left-col no-scrollbar">
+                    <div class="edit-section"
+                        style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px;">
+                        <label class="section-label"
+                            style="margin-bottom: 0; white-space: nowrap; width: 70px;">节点名称</label>
+                        <input type="text" id="editNodeName" class="title-input" placeholder="例如：HK-CN2"
+                            oninput="triggerNodeAutoSave()" style="flex: 1;">
+                    </div>
+
+                    <div class="edit-section"
+                        style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                        <label class="section-label"
+                            style="margin-bottom: 0; white-space: nowrap; width: 70px;">地区旗帜</label>
+                        <select id="editNodeRegion" class="title-input" onchange="saveNodeRegionOverride()" style="flex: 1;">
+                            <option value="" data-flag="auto">自动识别 (GeoIP)</option>
+                            <option value="HK" data-flag="hk">香港 (HK)</option>
+                            <option value="TW" data-flag="tw">台湾 (TW)</option>
+                            <option value="MO" data-flag="mo">澳门 (MO)</option>
+                            <option value="CN" data-flag="cn">中国大陆 (CN)</option>
+                            <option value="JP" data-flag="jp">日本 (JP)</option>
+                            <option value="SG" data-flag="sg">新加坡 (SG)</option>
+                            <option value="KR" data-flag="kr">韩国 (KR)</option>
+                            <option value="US" data-flag="us">美国 (US)</option>
+                            <option value="CA" data-flag="ca">加拿大 (CA)</option>
+                            <option value="GB" data-flag="gb">英国 (GB)</option>
+                            <option value="DE" data-flag="de">德国 (DE)</option>
+                            <option value="FR" data-flag="fr">法国 (FR)</option>
+                            <option value="NL" data-flag="nl">荷兰 (NL)</option>
+                            <option value="AU" data-flag="au">澳大利亚 (AU)</option>
+                            <option value="RU" data-flag="ru">俄罗斯 (RU)</option>
+                            <option value="IN" data-flag="in">印度 (IN)</option>
+                            <option value="MY" data-flag="my">马来西亚 (MY)</option>
+                            <option value="TH" data-flag="th">泰国 (TH)</option>
+                            <option value="VN" data-flag="vn">越南 (VN)</option>
+                            <option value="PH" data-flag="ph">菲律宾 (PH)</option>
+                            <option value="ID" data-flag="id">印度尼西亚 (ID)</option>
+                            <option value="TR" data-flag="tr">土耳其 (TR)</option>
+                            <option value="AE" data-flag="ae">阿联酋 (AE)</option>
+                            <option value="CH" data-flag="ch">瑞士 (CH)</option>
+                            <option value="SE" data-flag="se">瑞典 (SE)</option>
+                            <option value="FI" data-flag="fi">芬兰 (FI)</option>
+                            <option value="NO" data-flag="no">挪威 (NO)</option>
+                            <option value="IT" data-flag="it">意大利 (IT)</option>
+                            <option value="ES" data-flag="es">西班牙 (ES)</option>
+                            <option value="PL" data-flag="pl">波兰 (PL)</option>
+                            <option value="IE" data-flag="ie">爱尔兰 (IE)</option>
+                            <option value="LU" data-flag="lu">卢森堡 (LU)</option>
+                            <option value="BR" data-flag="br">巴西 (BR)</option>
+                            <option value="AR" data-flag="ar">阿根廷 (AR)</option>
+                            <option value="ZA" data-flag="za">南非 (ZA)</option>
+                        </select>
+                    </div>
+
+                    <div class="edit-section" id="editNodeIPModeSection">
+                        <label class="section-label">IP 生成模式</label>
+                        <div class="segmented-control" id="editNodeIPModeControl" role="group" aria-label="IP 生成模式">
+                            <button type="button" class="segment-option" data-ipmode="0" onclick="selectEditNodeIPMode(0)">跟随系统</button>
+                            <button type="button" class="segment-option" data-ipmode="1" onclick="selectEditNodeIPMode(1)">仅IPv4</button>
+                            <button type="button" class="segment-option" data-ipmode="2" onclick="selectEditNodeIPMode(2)">仅IPv6</button>
+                            <button type="button" class="segment-option" data-ipmode="3" onclick="selectEditNodeIPMode(3)">双栈</button>
+                        </div>
+                        <input type="hidden" id="editNodeIPMode" value="0">
+                    </div>
+
+                    <div class="edit-section">
+                        <div style="margin-bottom: 8px;">
+                            <label class="section-label" style="margin: 0;">流量重置规则</label>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <div style="display: flex; flex-direction: column; gap: 6px;">
+                                <select id="editNodeResetMode" class="title-input" onchange="updateEditResetInputs(); triggerNodeAutoSave(true)">
+                                    <option value="fixed_day">固定日期 (每月)</option>
+                                    <option value="calendar_month">自然月 (每月1号)</option>
+                                    <option value="interval_days">按天数周期</option>
+                                    <option value="off">不自动重置</option>
+                                </select>
+                                <input type="number" id="editNodeResetDay" class="title-input" placeholder="1-31 (短月自动落在月底)" min="1" max="31" oninput="triggerNodeAutoSave()">
+                                <input type="number" id="editNodeResetIntervalDays" class="title-input" placeholder="1-365 天" min="1" max="365" oninput="triggerNodeAutoSave()" style="display:none;">
+                                <input type="date" id="editNodeResetAnchorDate" class="title-input" oninput="triggerNodeAutoSave()" style="display:none;">
+                            </div>
+
+                            <label class="section-label" style="margin: 0;">流量限额</label>
+                            <div class="traffic-input-group" style="width: 100%;">
+                                <input type="text" id="editNodeTrafficLimit" placeholder="0 B"
+                                    oninput="triggerNodeAutoSave()" onblur="normalizeEditTrafficLimitInput()">
+                                <div class="select-wrapper">
+                                    <select id="editNodeTrafficLimitType" onchange="triggerNodeAutoSave()">
+                                        <option value="total">总和</option>
+                                        <option value="max">最大</option>
+                                        <option value="min">最小</option>
+                                        <option value="up">上传</option>
+                                        <option value="down">下载</option>
+                                    </select>
+                                    <svg class="arrow" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="edit-section" id="editNodeTrafficDetails"
+                        style="display: none; background: #fafbfc; border-radius: var(--editor-card-radius); padding: 12px; border: 1px solid var(--editor-border); margin-bottom: 15px;">
+                        <div
+                            style="font-size: 13px; font-weight: 600; color: #666; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <span>流量消耗</span>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span id="editNodeAgentVersion"
+                                    style="font-size: 11px; color: #999; font-weight: normal;"></span>
+                                <button type="button" id="btnCheckAgentUpdate" onclick="confirmCheckAgentUpdate()"
+                                    style="height:26px; border:1px solid rgba(0,0,0,0.08); background:#fff; color:#1d1d1f; border-radius:999px; font-size:11.5px; font-weight:600; padding:0 10px; cursor:pointer;">检查更新</button>
+                            </div>
+                        </div>
+
+                        <div
+                            style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                            <span style="font-size: 12px; color: #555; width: 35px; font-weight: 600;">上传</span>
+                            <div
+                                style="flex: 1; height: 18px; background: #eef0f4; border-radius: 999px; margin-left: 10px; position: relative; overflow: hidden;">
+                                <div id="editNodeTrafficUpBar"
+                                    style="position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: #34c759; border-radius: 999px; transition: width 0.5s ease;">
+                                </div>
+                                <div id="editNodeTrafficUpText"
+                                    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #1d1d1f; text-shadow: 0 0 4px rgba(255,255,255,0.9); z-index: 1;">
+                                    0 B</div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <span style="font-size: 12px; color: #555; width: 35px; font-weight: 600;">下载</span>
+                            <div
+                                style="flex: 1; height: 18px; background: #eef0f4; border-radius: 999px; margin-left: 10px; position: relative; overflow: hidden;">
+                                <div id="editNodeTrafficDownBar"
+                                    style="position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: #007aff; border-radius: 999px; transition: width 0.5s ease;">
+                                </div>
+                                <div id="editNodeTrafficDownText"
+                                    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #1d1d1f; text-shadow: 0 0 4px rgba(255,255,255,0.9); z-index: 1;">
+                                    0 B</div>
+                            </div>
+                        </div>
+                        <div
+                            style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px;">
+                            <div
+                                style="background: #fff; border: 1px solid rgba(0,0,0,0.06); border-radius: 12px; padding: 8px 10px;">
+                                <div style="font-size: 11px; color: #8e8e93; margin-bottom: 4px;">上次重置时间</div>
+                                <div id="editNodeTrafficResetAt"
+                                    style="font-size: 12px; color: #1d1d1f; font-weight: 600; word-break: break-word;">未重置</div>
+                            </div>
+                            <div
+                                style="background: #fff; border: 1px solid rgba(0,0,0,0.06); border-radius: 12px; padding: 8px 10px;">
+                                <div style="font-size: 11px; color: #8e8e93; margin-bottom: 4px;">流量更新时间</div>
+                                <div id="editNodeTrafficUpdateAt"
+                                    style="font-size: 12px; color: #1d1d1f; font-weight: 600; word-break: break-word;">--</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="edit-section">
+                        <label class="section-label">路由类型</label>
+                        <div class="segmented-control" role="group" aria-label="路由类型">
+                            <button type="button" class="segment-option" data-type="1" onclick="selectEditGroup(1)">直连</button>
+                            <button type="button" class="segment-option" data-type="2" onclick="selectEditGroup(2)">落地</button>
+                            <button type="button" class="segment-option" data-type="3" onclick="selectEditGroup(3)">屏蔽</button>
+                        </div>
+                        <input type="hidden" id="editNodeUIState">
+                    </div>
+
+                    <div id="ipEditContainer"></div>
+                </div>
+
+                <div class="edit-right-col">
+                    <div id="protocolListContainer" class="no-scrollbar"></div>
+                    <div id="addProtocolSection">
+                        <button type="button" class="btn-add-protocol-left" id="btnAddProtocolBtn"
+                            onclick="showAddProtocolMenu()">
+                            <span>+</span> 添加协议
+                        </button>
+                    </div>
+                    <div id="cmdLogPanel">
+                        <div class="cmd-log-header">
+                            <div class="left">
+                                <span class="status-dot" id="cmdLogDot"></span>
+                                <span class="title" id="cmdLogTitle">执行中...</span>
+                            </div>
+                            <button class="close-btn" onclick="closeCmdLogPanel()" title="关闭日志（不影响后台执行）">✕</button>
+                        </div>
+                        <div class="cmd-log-body" id="cmdLogBody"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="edit-footer">
+                <button type="button" class="btn-footer-close" onclick="closeEditModal()">关闭</button>
+                <button type="button" class="btn-footer-close node-editor-button-danger" id="btnResetNodeLinks" onclick="handleResetLinksClick()" title="远程重置节点协议链接，将重写 sing-box 配置并重启服务">
+                    <svg id="btnResetLinksIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="1 4 1 10 7 10"></polyline>
+                        <polyline points="23 20 23 14 17 14"></polyline>
+                        <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+                    </svg>
+                    <span id="btnResetLinksText">重置链接</span>
+                </button>
+                <button type="button" class="btn-footer-close node-editor-button-primary" id="btnPushConfig" onclick="handlePushConfigClick()" title="推送当前启用的协议及端口配置给 Agent，Agent 将重新配置 sing-box">
+                    <svg id="btnPushConfigIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 2L11 13"></path>
+                        <path d="M22 2L15 22L11 13L2 9L22 2Z"></path>
+                    </svg>
+                    <span id="btnPushConfigText">推送配置</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="protoSelectOverlay"
+    style="display: none; position: fixed; top:0; left:0; width:100%; height:100%; z-index: 3100; justify-content:center; align-items:center; background:rgba(15,15,20,0.28); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);"
+    onclick="this.style.display='none'">
+    <div id="protoSelectList" onclick="event.stopPropagation()"></div>
+</div>
+
+<script id="global-protocols-data" type="application/json">
+    {{.Protocols}}
+</script>
+
+<script>
+    const GLOBAL_SUPPORTED_PROTOCOLS = JSON.parse(document.getElementById('global-protocols-data').textContent);
+
+    const editModalEl = document.getElementById('editNodeModal');
+    const editModalCard = document.getElementById('editModalCard');
+
+    // 点击遮罩层关闭
+    editModalEl.addEventListener('click', function(e) {
+        if (e.target === editModalEl) closeEditModal();
+    });
+
+    // ESC 键关闭（优先关闭协议选择器浮层，再关闭编辑弹窗）
+    document.addEventListener('keydown', function(e) {
+        if (e.key !== 'Escape') return;
+        const protoOverlay = document.getElementById('protoSelectOverlay');
+        if (protoOverlay && protoOverlay.style.display !== 'none') {
+            protoOverlay.style.display = 'none';
+            return;
+        }
+        if (editModalEl.classList.contains('active')) closeEditModal();
+    });
+
+    let originalRoutingType = 1;
+    let isInitializingEdit = false;
+
+    function parseTrafficLimitInputToBytes(raw) {
+        const text = String(raw || '').trim();
+        if (!text) return 0;
+        const m = text.match(/^\s*(\d+(?:\.\d+)?)\s*([kmgt]?b?|[kmgt])\s*$/i);
+        if (!m) return 0;
+        const num = parseFloat(m[1]);
+        if (!Number.isFinite(num) || num <= 0) return 0;
+
+        const unit = m[2].toUpperCase();
+        let mul = 1;
+        if (unit === 'B') mul = 1;
+        else if (unit === 'K' || unit === 'KB') mul = 1024;
+        else if (unit === 'M' || unit === 'MB') mul = 1024 ** 2;
+        else if (unit === 'G' || unit === 'GB') mul = 1024 ** 3;
+        else if (unit === 'T' || unit === 'TB') mul = 1024 ** 4;
+        else return 0;
+        return Math.floor(num * mul);
+    }
+
+    function formatTrafficLimitBytes(bytes) {
+        const n = Number(bytes || 0);
+        if (!Number.isFinite(n) || n <= 0) return '0 B';
+        if (n >= 1024 ** 4) return `${(n / 1024 ** 4).toFixed(2)} TB`;
+        if (n >= 1024 ** 3) return `${(n / 1024 ** 3).toFixed(2)} GB`;
+        if (n >= 1024 ** 2) return `${(n / 1024 ** 2).toFixed(2)} MB`;
+        if (n >= 1024) return `${(n / 1024).toFixed(2)} KB`;
+        return `${n.toFixed(0)} B`;
+    }
+
+    function normalizeEditTrafficLimitInput() {
+        const el = document.getElementById('editNodeTrafficLimit');
+        if (!el) return;
+        const bytes = parseTrafficLimitInputToBytes(el.value);
+        el.value = formatTrafficLimitBytes(bytes);
+    }
+
+    function formatDateForInputLocal(dateObj) {
+        const d = dateObj instanceof Date ? dateObj : new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    }
+
+    function normalizeDateInputValue(raw) {
+        const text = String(raw || '').trim();
+        if (!text) return '';
+        if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+        const parsed = new Date(text);
+        if (!Number.isNaN(parsed.getTime())) {
+            return formatDateForInputLocal(parsed);
+        }
+        return text.length >= 10 ? text.slice(0, 10) : '';
+    }
+
+    function formatDateTimeLabel(raw, fallback = '--') {
+        const text = String(raw || '').trim();
+        if (!text) return fallback;
+        const parsed = new Date(text);
+        if (Number.isNaN(parsed.getTime())) return text;
+        return new Intl.DateTimeFormat('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        }).format(parsed).replace(/\//g, '-');
+    }
+
+    function normalizeClientResetMode(mode, resetDay) {
+        const raw = String(mode || '').trim().toLowerCase();
+        if (!raw) return Number(resetDay || 0) > 0 ? 'fixed_day' : 'off';
+        if (raw === 'fixed_day') {
+            return Number(resetDay || 0) > 0 ? 'fixed_day' : 'off';
+        }
+        if (raw === 'calendar_month' || raw === 'interval_days' || raw === 'off') {
+            return raw;
+        }
+        if (raw === 'fixed' || raw === 'monthly' || raw === 'day') return Number(resetDay || 0) > 0 ? 'fixed_day' : 'off';
+        if (raw === 'calendar' || raw === 'natural_month' || raw === 'month_start') return 'calendar_month';
+        if (raw === 'interval' || raw === 'days' || raw === 'day_interval') return 'interval_days';
+        return Number(resetDay || 0) > 0 ? 'fixed_day' : 'off';
+    }
+
+    function updateEditResetInputs() {
+        const modeEl = document.getElementById('editNodeResetMode');
+        const mode = modeEl ? modeEl.value : 'fixed_day';
+        const dayInput = document.getElementById('editNodeResetDay');
+        const intervalInput = document.getElementById('editNodeResetIntervalDays');
+        const anchorInput = document.getElementById('editNodeResetAnchorDate');
+        if (dayInput) dayInput.style.display = mode === 'fixed_day' ? 'block' : 'none';
+        if (intervalInput) intervalInput.style.display = mode === 'interval_days' ? 'block' : 'none';
+        if (anchorInput) anchorInput.style.display = mode === 'interval_days' ? 'block' : 'none';
+    }
+
+    async function openEditModal(uuid) {
+        isInitializingEdit = true;
+
+        // 并行静默刷新节点数据与 WG 选项，确保弹窗在首帧即渲染完整最终状态（杜绝旧→新闪动）
+        const fetchNodesPromise = fetch('/api/get-nodes')
+            .then(r => r.json())
+            .then(result => {
+                if (result && result.status === 'success') {
+                    window.allNodesData = {};
+                    const cacheNodes = (nodes) => {
+                        if (nodes) nodes.forEach(n => (window.allNodesData[n.uuid] = n));
+                    };
+                    cacheNodes(result.data.direct_nodes);
+                    cacheNodes(result.data.land_nodes);
+                }
+            })
+            .catch(e => {
+                console.warn('静默刷新节点数据失败:', e);
+            });
+
+        const fetchWGPromise = (typeof nodeWGRequest === 'function' && uuid)
+            ? nodeWGRequest('/api/node/wg/options?uuid=' + encodeURIComponent(uuid))
+                .then(data => ({ ok: true, data }))
+                .catch(err => ({ ok: false, error: err }))
+            : Promise.resolve(null);
+
+        const [, prefetchedWG] = await Promise.all([fetchNodesPromise, fetchWGPromise]);
+
+        const node = window.allNodesData[uuid];
+        if (!node) { isInitializingEdit = false; alert('数据加载异常，请刷新'); return; }
+
+        // 1. 基础信息填充
+        if (typeof resetNodeWGEditor === 'function') resetNodeWGEditor();
+        document.getElementById('editNodeUUID').value = node.uuid;
+        document.getElementById('editNodeName').value = node.name;
+        const regionSelectEl = document.getElementById('editNodeRegion');
+        if (regionSelectEl) {
+            const currentRegion = String(node.region || '').trim().toUpperCase();
+            const autoOpt = regionSelectEl.options[0];
+            if (autoOpt) {
+                autoOpt.textContent = (!node.region_manual && currentRegion)
+                    ? `自动识别 (当前: ${currentRegion})`
+                    : '自动识别 (GeoIP)';
+            }
+            if (node.region_manual && currentRegion) {
+                if (!Array.from(regionSelectEl.options).some(o => o.value === currentRegion)) {
+                    const customOpt = document.createElement('option');
+                    customOpt.value = currentRegion;
+                    customOpt.textContent = currentRegion;
+                    regionSelectEl.appendChild(customOpt);
+                }
+                regionSelectEl.value = currentRegion;
+            } else {
+                regionSelectEl.value = '';
+            }
+        }
+        const resetDay = Number(node.reset_day || 0);
+        const resetMode = normalizeClientResetMode(node.traffic_reset_mode, resetDay);
+        document.getElementById('editNodeResetMode').value = resetMode;
+        document.getElementById('editNodeResetDay').value = resetDay > 0 ? resetDay : 1;
+        document.getElementById('editNodeResetIntervalDays').value = Number(node.traffic_reset_interval_days || 30);
+        const anchorRaw = node.traffic_reset_anchor_at || node.created_at || '';
+        const normalizedAnchor = normalizeDateInputValue(anchorRaw);
+        document.getElementById('editNodeResetAnchorDate').value = normalizedAnchor || formatDateForInputLocal(new Date());
+        updateEditResetInputs();
+
+        // [新增] 处理流量限额回显
+        const limitBytes = node.traffic_limit || 0;
+        document.getElementById('editNodeTrafficLimit').value = formatTrafficLimitBytes(limitBytes);
+        document.getElementById('editNodeTrafficLimitType').value = node.traffic_limit_type || 'total';
+
+        // [新增] 渲染详细流量统计条与更新时间
+        const upBytes = node.traffic_up || 0;
+        const downBytes = node.traffic_down || 0;
+        const totalUsed = upBytes + downBytes;
+
+        const formatBytes = (bytes) => {
+            if (!bytes) return '0 B';
+            if (bytes >= 1024 ** 4) return (bytes / (1024 ** 4)).toFixed(2) + ' TB';
+            if (bytes >= 1024 ** 3) return (bytes / (1024 ** 3)).toFixed(2) + ' GB';
+            if (bytes >= 1024 ** 2) return (bytes / (1024 ** 2)).toFixed(2) + ' MB';
+            if (bytes >= 1024) return (bytes / 1024).toFixed(2) + ' KB';
+            return bytes.toFixed(0) + ' B';
+        };
+
+        const trafficDetailsEl = document.getElementById('editNodeTrafficDetails');
+        trafficDetailsEl.style.display = 'block';
+
+        // 计算进度条百分比
+        // 计算进度条百分比 (以上传和下载总和为 100%，直观展示流量倾向)
+        let upPct = 0; let downPct = 0;
+        if (totalUsed > 0) {
+            upPct = (upBytes / totalUsed) * 100;
+            downPct = (downBytes / totalUsed) * 100;
+        }
+
+        // 直接赋值真实占比（两个条的占比加起来必定等于 100%）
+        document.getElementById('editNodeTrafficUpBar').style.width = upPct + '%';
+        document.getElementById('editNodeTrafficDownBar').style.width = downPct + '%';
+        document.getElementById('editNodeTrafficUpText').innerText = formatBytes(upBytes);
+        document.getElementById('editNodeTrafficDownText').innerText = formatBytes(downBytes);
+        document.getElementById('editNodeTrafficResetAt').innerText = formatDateTimeLabel(node.traffic_reset_at, '未重置');
+        document.getElementById('editNodeTrafficUpdateAt').innerText = formatDateTimeLabel(node.traffic_update_at, '--');
+
+        // 显示 Agent 版本
+        if (node.agent_version) {
+            document.getElementById('editNodeAgentVersion').innerText = `Agent: ${node.agent_version}`;
+        } else {
+            document.getElementById('editNodeAgentVersion').innerText = 'Agent: 未知';
+        }
+
+        // 2. 路由类型状态
+        if (!node.is_blocked) {
+            originalRoutingType = node.routing_type;
+        } else {
+            originalRoutingType = node.routing_type || 1;
+        }
+        let uiState = node.is_blocked ? 3 : node.routing_type;
+        selectEditGroup(uiState, true);
+
+        // [新增] 节点级 IP 生成模式
+        const ipMode = node.ip_mode || 0;
+        selectEditNodeIPMode(ipMode, true);
+
+        // 3. IP 信息渲染
+        renderIPInputs(node.ipv4, node.ipv6);
+
+        // 4. 协议列表渲染初始化
+        const container = document.getElementById('protocolListContainer');
+        container.innerHTML = '';
+        const disabledSet = new Set(node.disabled_links || []);
+
+        // ================= 安全模式检测 =================
+        let isLinksLocked = false;
+        if (node.links) {
+            // 后端返回的脱敏数据包含 "🔒"
+            isLinksLocked = Object.values(node.links).some(v => v && v.includes('🔒'));
+        }
+
+        if (isLinksLocked) {
+            container.innerHTML = `
+                <div class="security-warning-bar">
+                    <div class="warn-text">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                        <span><b>HTTP 保护模式：</b>链接已隐藏，可在系统设置放行反代回源</span>
+                    </div>
+                    <button type="button" class="warn-action" onclick="closeEditModal(); if(typeof openSystemSettingsModal==='function') openSystemSettingsModal();">系统设置</button>
+                </div>
+            `;
+        }
+
+        // 5. 循环渲染协议卡片
+        if (node.links && Object.keys(node.links).length > 0) {
+            // 排序：已启用的在前
+            const sortedProtos = Object.keys(node.links).sort((a, b) => {
+                const aDis = disabledSet.has(a);
+                const bDis = disabledSet.has(b);
+                if (aDis === bDis) return 0;
+                return aDis ? 1 : -1;
+            });
+
+            for (const proto of sortedProtos) {
+                const link = node.links[proto];
+                const isEnabled = !disabledSet.has(proto);
+                const protoIPMode = node.link_ip_modes && node.link_ip_modes[proto] ? node.link_ip_modes[proto] : (ipMode === 1 || ipMode === 2 ? ipMode : 3);
+                // 从 link_ports 读取节点个性化端口（创建时从 SysConfig 导入的默认端口，或用户后续修改的值）
+                const protoPort = node.link_ports && node.link_ports[proto] ? node.link_ports[proto] : 0;
+                // 核心：传入 isLinksLocked 状态
+                renderProtocolCard(proto, link, isEnabled, false, isLinksLocked, protoIPMode, protoPort);
+            }
+        } else if (!isLinksLocked) {
+            container.innerHTML += `<div class="proto-empty-state">暂无协议配置，点击下方添加协议</div>`;
+        }
+
+        updateLayoutState();
+        editModalCard.classList.add('has-content');
+        if (typeof loadNodeWGEditor === 'function') {
+            loadNodeWGEditor(uuid, prefetchedWG);
+        }
+        editModalEl.classList.add('active');
+
+        setTimeout(() => { isInitializingEdit = false; }, 100);
+    }
+
+    // 渲染多行协议卡片 (支持折叠)
+    function renderProtocolCard(proto, link, isEnabled, isNew, isLocked = false, protoIPMode = 3, protoPort = 0) {
+        const div = document.createElement('div');
+        div.className = 'protocol-card';
+        if (isNew) div.classList.add('expanded'); // 新增的协议默认展开
+        div.setAttribute('data-proto', proto);
+        if (!isEnabled) div.classList.add('disabled');
+        if (isLocked) div.classList.add('locked-mode'); // HTTP 模式专用样式类
+
+        // 开关状态
+        const checkedState = isEnabled ? 'checked' : '';
+
+        // 端口值
+        const portValue = protoPort > 0 ? protoPort : '';
+
+        // 协议徽章颜色
+        let badgeColor = '#666';
+        if (window.getProtoColor) {
+            const c = window.getProtoColor(proto);
+            badgeColor = c.text;
+        }
+
+        // 如果是锁定模式，不显示折叠箭头
+        let chevronHtml = isLocked ? '' : `<svg class="proto-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
+
+        // 构建 HTML (注意 actions 阻止冒泡，防止点击开关时触发折叠)
+        let html = `
+            <div class="proto-header" onclick="toggleProtoBody(this)">
+                <div class="proto-title">
+                    ${chevronHtml}
+                    <span class="proto-badge" style="color:${badgeColor}; border-color:${badgeColor}20; background:${badgeColor}10;">
+                        ${proto.toUpperCase()}
+                    </span>
+                </div>
+                <div class="proto-actions" onclick="event.stopPropagation()">
+                    <div class="proto-ipmode-capsule" data-proto="${proto}" onclick="toggleProtoIPModeCapsule(this, event)">
+                        <button type="button" class="proto-ipmode-item ${protoIPMode === 1 ? 'active' : ''}" data-val="1" onclick="selectProtoIPMode(this, 1, event)">仅IPv4</button>
+                        <button type="button" class="proto-ipmode-item ${protoIPMode === 2 ? 'active' : ''}" data-val="2" onclick="selectProtoIPMode(this, 2, event)">仅IPv6</button>
+                        <button type="button" class="proto-ipmode-item ${protoIPMode === 3 ? 'active' : ''}" data-val="3" onclick="selectProtoIPMode(this, 3, event)">双栈</button>
+                    </div>
+                    <input type="number" class="proto-port-input" placeholder="端口" value="${portValue}" min="1" max="65535" title="协议端口" oninput="markAsModified()" onclick="event.stopPropagation()">
+                    <label class="switch-sm">
+                        <input type="checkbox" class="proto-switch" ${checkedState} onchange="toggleProtocol(this)">
+                        <span class="slider-sm"></span>
+                    </label>
+                    <button type="button" class="btn-icon delete" onclick="removeProtocolCard(this)">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
+                </div>
+            </div>`;
+
+        // 仅在非锁定(HTTPS)模式下才渲染 Textarea，并用 proto-body 容器包裹以实现折叠
+        if (!isLocked) {
+            // ✨ 给 textarea 加上 oninput="autoResizeTextarea(this); markAsModified()"
+            html += `
+            <div class="proto-body">
+                <textarea class="link-textarea" placeholder="${proto}://..." oninput="autoResizeTextarea(this); markAsModified()" onchange="markAsModified()">${link}</textarea>
+            </div>`;
+        }
+
+        div.innerHTML = html;
+
+        const container = document.getElementById('protocolListContainer');
+        container.querySelector('.proto-empty-state')?.remove();
+        container.appendChild(div);
+        if (proto === 'reality' && typeof renderNodeWGCard === 'function') renderNodeWGCard();
+
+        if (!isLocked && isNew) {
+            const textarea = div.querySelector('.link-textarea');
+            // 使用 setTimeout 确保 DOM 已经完全渲染
+            if (textarea) setTimeout(() => autoResizeTextarea(textarea), 10);
+        }
+    }
+    // 文本框高度自适应计算函数
+    function autoResizeTextarea(el) {
+        el.style.height = '1px';
+        let offset = -4.5;
+
+        el.style.height = (el.scrollHeight + offset) + 'px';
+    }
+    // 处理面板折叠的函数
+    function toggleProtoBody(headerEl) {
+        const card = headerEl.closest('.protocol-card');
+        if (card.classList.contains('locked-mode')) return; // HTTP锁定模式禁止交互
+
+        const isExpanding = card.classList.toggle('expanded');
+
+        // ✨ 新增：如果是展开动作，立即重算一次内部输入框的高度
+        if (isExpanding) {
+            const textarea = card.querySelector('.link-textarea');
+            if (textarea) autoResizeTextarea(textarea);
+        }
+    }
+
+    // 标记修改
+    function markAsModified() {
+        triggerNodeAutoSave(false);
+    }
+
+    // 切换协议开关
+    function toggleProtocol(checkbox) {
+        const card = checkbox.closest('.protocol-card');
+        if (checkbox.checked) {
+            card.classList.remove('disabled');
+        } else {
+            card.classList.add('disabled');
+        }
+        triggerNodeAutoSave(true);
+    }
+
+    // 删除协议卡片 (双击确认逻辑)
+    function removeProtocolCard(btn) {
+        if (btn.classList.contains('confirm')) {
+            // 第二次点击：执行删除
+            const card = btn.closest('.protocol-card');
+            card.remove();
+            if (typeof renderNodeWGCard === 'function') renderNodeWGCard();
+            const container = document.getElementById('protocolListContainer');
+            if (container && container.querySelectorAll('.protocol-card').length === 0 && !container.querySelector('.security-warning-bar') && !container.querySelector('.proto-empty-state')) {
+                container.innerHTML += `<div class="proto-empty-state">暂无协议配置，点击下方添加协议</div>`;
+            }
+            updateLayoutState();
+            triggerNodeAutoSave(true);
+        } else {
+            // 第一次点击：进入确认状态
+            btn.classList.add('confirm');
+            // 2秒后自动恢复
+            setTimeout(() => {
+                if (btn) btn.classList.remove('confirm');
+            }, 2000);
+        }
+    }
+
+    function selectEditNodeIPMode(val, skipSave = false) {
+        document.getElementById('editNodeIPMode').value = val;
+        const container = document.getElementById('editNodeIPModeControl');
+        if (container) {
+            container.querySelectorAll('.segment-option').forEach(el => {
+                const selected = parseInt(el.getAttribute('data-ipmode')) === val;
+                el.classList.toggle('active', selected);
+                el.setAttribute('aria-pressed', String(selected));
+            });
+        }
+        const modal = document.getElementById('editNodeModal');
+        const lockedSingleStack = val === 1 || val === 2;
+        if (modal) modal.classList.toggle('node-ip-locked', lockedSingleStack);
+        if (lockedSingleStack) {
+            document.querySelectorAll('#protocolListContainer .proto-ipmode-capsule').forEach(capsule => {
+                capsule.classList.remove('expanded');
+                capsule.querySelectorAll('.proto-ipmode-item').forEach(btn => {
+                    btn.classList.toggle('active', parseInt(btn.getAttribute('data-val')) === val);
+                });
+            });
+        }
+        if (!skipSave) triggerNodeAutoSave(true);
+    }
+
+    function updateIPModeVisibility() {
+        const v4Input = document.getElementById('editNodeIPV4');
+        const v6Input = document.getElementById('editNodeIPV6');
+        const hasV4 = v4Input && v4Input.value.trim() !== '';
+        const hasV6 = v6Input && v6Input.value.trim() !== '';
+        const hasBoth = hasV4 && hasV6;
+
+        const modal = document.getElementById('editNodeModal');
+        if (modal) {
+            if (hasBoth) {
+                modal.classList.add('dual-stack-available');
+            } else {
+                modal.classList.remove('dual-stack-available');
+            }
+        }
+    }
+
+    function selectProtoIPMode(btn, val, event) {
+        if (event) event.stopPropagation();
+        const capsule = btn.closest('.proto-ipmode-capsule');
+
+        // 如果胶囊未被展开，此时点击内部按钮实际意图是展开（交互修正）
+        if (capsule && !capsule.classList.contains('expanded')) {
+            capsule.classList.add('expanded');
+            return;
+        }
+
+        if (capsule) {
+            capsule.querySelectorAll('.proto-ipmode-item').forEach(el => {
+                el.classList.remove('active');
+            });
+            capsule.classList.remove('expanded');
+        }
+        btn.classList.add('active');
+        triggerNodeAutoSave(true);
+    }
+
+    function toggleProtoIPModeCapsule(element, event) {
+        if (event) event.stopPropagation();
+        element.classList.toggle('expanded');
+    }
+
+    // ============ 内嵌命令日志面板（右栏） ============
+    let _cmdLogEventSource = null;
+
+    function showCmdLogPanel(title) {
+        const panel = document.getElementById('cmdLogPanel');
+        const protoList = document.getElementById('protocolListContainer');
+        const addSection = document.getElementById('addProtocolSection');
+        const body = document.getElementById('cmdLogBody');
+        const dot = document.getElementById('cmdLogDot');
+        const titleEl = document.getElementById('cmdLogTitle');
+        body.innerHTML = '';
+        dot.className = 'status-dot';
+        titleEl.textContent = title || '执行中...';
+        // 隐藏协议列表和添加按钮，显示日志面板
+        protoList.style.display = 'none';
+        if (addSection) addSection.style.display = 'none';
+        panel.classList.add('active');
+        panel.closest('.edit-right-col').classList.add('showing-command-log');
+        // 确保右栏展开
+        document.getElementById('editModalCard').classList.add('has-content');
+    }
+
+    // classifyLogLine 根据日志内容自动分类样式
+    function classifyLogLine(text) {
+        if (!text) return '';
+        // 错误/失败关键词
+        if (/❌|失败|错误|error|fail|fatal|refused|denied|占用/i.test(text)) return 'error-detail';
+        // 警告/冲突关键词
+        if (/⚠️|警告|warn|冲突|conflict|端口.*被|port.*in use|address already in use/i.test(text)) return 'warn';
+        // 成功关键词
+        if (/✅|成功|完成|ok|running|started|通过/i.test(text)) return 'success';
+        // 提示信息
+        if (/提示|hint|tip|建议|请检查|请修改/i.test(text)) return 'info-highlight';
+        return '';
+    }
+
+    function appendCmdLog(entry) {
+        const body = document.getElementById('cmdLogBody');
+        const dot = document.getElementById('cmdLogDot');
+        const titleEl = document.getElementById('cmdLogTitle');
+
+        if (entry.type === 'progress') {
+            const text = (entry.message || '').replace(/\x1b\[[0-9;]*m/g, '');
+            const line = document.createElement('div');
+            const extraClass = classifyLogLine(text);
+            line.className = 'line' + (extraClass ? ' ' + extraClass : '');
+            line.textContent = text;
+            body.appendChild(line);
+        } else if (entry.type === 'result') {
+            const line = document.createElement('div');
+            if (entry.status === 'ok') {
+                line.className = 'line result-ok';
+                line.textContent = '✅ ' + (entry.message || '执行完成');
+                dot.classList.add('done');
+                titleEl.textContent = '执行完成';
+            } else {
+                line.className = 'line result-error';
+                line.textContent = '❌ ' + (entry.message || '执行出错');
+                dot.classList.add('error');
+                titleEl.textContent = '执行出错';
+            }
+            body.appendChild(line);
+        } else if (entry.type === 'accepted') {
+            const line = document.createElement('div');
+            line.className = 'line';
+            line.textContent = '⏳ 命令已接收，等待执行...';
+            body.appendChild(line);
+        } else if (entry.type === 'error') {
+            const line = document.createElement('div');
+            line.className = 'line result-error';
+            line.textContent = '❌ ' + (entry.message || '连接错误');
+            dot.classList.add('error');
+            titleEl.textContent = '连接错误';
+            body.appendChild(line);
+        }
+
+        body.scrollTop = body.scrollHeight;
+    }
+
+    function closeCmdLogPanel() {
+        if (typeof nodeWGEditor !== 'undefined' && nodeWGEditor.ordinaryPending) {
+            nodeWGEditor.ordinaryPending = false;
+            nodeWGEditor.ordinaryFailed = true; // Closing the stream is not proof of deployment.
+        }
+        const panel = document.getElementById('cmdLogPanel');
+        const protoList = document.getElementById('protocolListContainer');
+        const addSection = document.getElementById('addProtocolSection');
+        panel.classList.remove('active');
+        panel.closest('.edit-right-col').classList.remove('showing-command-log');
+        protoList.style.display = '';
+        if (addSection) addSection.style.display = '';
+        if (_cmdLogEventSource) {
+            _cmdLogEventSource.close();
+            _cmdLogEventSource = null;
+        }
+    }
+
+    function streamCommandLog(commandID, onComplete) {
+        if (_cmdLogEventSource) {
+            _cmdLogEventSource.close();
+        }
+        const es = new EventSource('/api/node/control/stream?command_id=' + encodeURIComponent(commandID));
+        _cmdLogEventSource = es;
+
+        es.onmessage = function(e) {
+            try {
+                const entry = JSON.parse(e.data);
+                appendCmdLog(entry);
+                if (entry.type === 'result' || entry.type === 'error') {
+                    es.close();
+                    _cmdLogEventSource = null;
+                    if (onComplete) onComplete(entry.type === 'result' && entry.status === 'ok');
+                }
+            } catch (err) {
+                console.warn('SSE parse error:', err);
+            }
+        };
+
+        es.onerror = function() {
+            es.close();
+            _cmdLogEventSource = null;
+            if (onComplete) onComplete(false);
+        };
+    }
+
+    // 重置链接按钮二次确认逻辑
+    let _resetLinksConfirmTimer = null;
+    let _resetLinksInConfirm = false;
+
+    function handleResetLinksClick() {
+        const btn = document.getElementById('btnResetNodeLinks');
+        const textEl = document.getElementById('btnResetLinksText');
+        if (!btn || !textEl) return;
+
+        if (_resetLinksInConfirm) {
+            // 第二次点击：执行重置
+            _resetLinksInConfirm = false;
+            clearTimeout(_resetLinksConfirmTimer);
+            resetResetLinksBtn();
+            confirmResetNodeLinks();
+        } else {
+            // 第一次点击：进入确认状态
+            _resetLinksInConfirm = true;
+            btn.dataset.confirm = 'true';
+            textEl.textContent = '确认重置';
+            // 3秒后自动恢复
+            _resetLinksConfirmTimer = setTimeout(() => {
+                resetResetLinksBtn();
+            }, 3000);
+        }
+    }
+
+    function resetResetLinksBtn() {
+        _resetLinksInConfirm = false;
+        const btn = document.getElementById('btnResetNodeLinks');
+        const textEl = document.getElementById('btnResetLinksText');
+        if (btn) delete btn.dataset.confirm;
+        if (textEl) textEl.textContent = '重置链接';
+    }
+
+    // 远程重置节点协议（流式输出 - 内嵌右栏，调用新版 reset-protocol 接口）
+    function confirmResetNodeLinks() {
+        const uuid = document.getElementById('editNodeUUID').value;
+        const name = document.getElementById('editNodeName').value || uuid;
+        if (!uuid) return;
+
+        // 从内存数据中获取 install_id 和协议列表
+        const node = window.allNodesData && window.allNodesData[uuid];
+        if (!node || !node.install_id) {
+            alert('无法获取节点安装信息，请刷新页面后重试。');
+            return;
+        }
+
+        const protocols = node.links ? Object.keys(node.links) : [];
+        if (protocols.length === 0) {
+            alert('该节点没有已知协议信息，无法重置。');
+            return;
+        }
+
+        const btn = document.getElementById('btnResetNodeLinks');
+        if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+
+        showCmdLogPanel('重置协议');
+
+        fetch('/api/callback/reset-protocol', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                install_id: node.install_id,
+                protocols: protocols,
+                action: 'reset'
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success' && data.command_id) {
+                streamCommandLog(data.command_id, ok => { if (ok) refreshOpenNodeModalData(uuid); });
+            } else if (data.status === 'success' && data.data && data.data.command_id) {
+                streamCommandLog(data.data.command_id, ok => { if (ok) refreshOpenNodeModalData(uuid); });
+            } else {
+                appendCmdLog({ type: 'error', message: data.message || (data.data && typeof data.data === 'string' ? data.data : '命令下发失败') });
+            }
+        })
+        .catch(err => {
+            appendCmdLog({ type: 'error', message: '网络错误: ' + err.message });
+        })
+        .finally(() => {
+            if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+        });
+    }
+
+    // 远程触发 Agent 检查更新（流式输出 - 内嵌右栏）
+    async function confirmCheckAgentUpdate() {
+        const uuid = document.getElementById('editNodeUUID').value;
+        const name = document.getElementById('editNodeName').value || uuid;
+        if (!uuid) return;
+
+        const isWGActive = typeof nodeWGBlocksOrdinary === 'function' && nodeWGBlocksOrdinary();
+        const msg = isWGActive
+            ? '确定要触发「' + name + '」执行 Agent 检查更新吗？\n\n⚠️ 注意：该节点正处于 WG 双机中转中，Agent 原地重启后会触发安全阻断（TCP 通但代理暂停），升级完成后请在 WG 卡片点击「重试」恢复转发；若当前正通过该节点访问面板，建议先临时切换线路再执行。'
+            : '确定要触发「' + name + '」执行 Agent 检查更新吗？';
+        const confirmed = typeof window.waConfirm === 'function'
+            ? await window.waConfirm(msg, { title: '检查 Agent 更新', confirmText: '开始检查', tone: isWGActive ? 'warning' : 'info' })
+            : confirm(msg);
+        if (!confirmed) {
+            return;
+        }
+
+        const btn = document.getElementById('btnCheckAgentUpdate');
+        if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+
+        showCmdLogPanel('检查 Agent 更新');
+
+        fetch('/api/node/control/check-agent-update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ uuid: uuid })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success' && data.command_id) {
+                streamCommandLog(data.command_id);
+            } else {
+                appendCmdLog({ type: 'error', message: data.message || '命令下发失败' });
+            }
+        })
+        .catch(err => {
+            appendCmdLog({ type: 'error', message: '网络错误: ' + err.message });
+        })
+        .finally(() => {
+            if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+        });
+    }
+
+    // 独立保存节点地区旗帜（纯面板展示字段，WG 运行中也可即时自动保存，无需推送）
+    async function saveNodeRegionOverride() {
+        if (isInitializingEdit) return;
+        const modal = document.getElementById('editNodeModal');
+        if (!modal || !modal.classList.contains('active')) return;
+        const uuid = document.getElementById('editNodeUUID')?.value || '';
+        const regionSelectEl = document.getElementById('editNodeRegion');
+        if (!uuid || !regionSelectEl) return;
+
+        const regionOverride = regionSelectEl.value || '';
+        const indicator = document.getElementById('editSaveIndicator');
+        if (indicator) {
+            indicator.innerHTML = '<span style="color:#888;">保存中...</span>';
+            indicator.style.opacity = '1';
+        }
+
+        try {
+            const response = await fetch('/api/node/region', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ uuid, region_override: regionOverride })
+            });
+            const res = await response.json();
+            if (res.status === 'success') {
+                const nextRegion = String(res.region || '').trim().toUpperCase();
+                const nextManual = !!res.region_manual;
+                if (window.allNodesData && window.allNodesData[uuid]) {
+                    window.allNodesData[uuid].region = nextRegion;
+                    window.allNodesData[uuid].region_manual = nextManual;
+                }
+                const autoOpt = regionSelectEl.options[0];
+                if (autoOpt) {
+                    autoOpt.textContent = (!nextManual && nextRegion)
+                        ? `自动识别 (当前: ${nextRegion})`
+                        : '自动识别 (GeoIP)';
+                }
+                if (indicator) {
+                    indicator.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg> 已保存`;
+                    setTimeout(() => { indicator.style.opacity = '0'; }, 2000);
+                }
+                if (typeof loadNodesList === 'function') loadNodesList();
+                if (typeof window.trafficStatsRefresh === 'function') window.trafficStatsRefresh();
+            } else if (indicator) {
+                indicator.innerHTML = `<span style="color:#ff3b30;">保存失败: ${res.message || '未知错误'}</span>`;
+            }
+        } catch (err) {
+            if (indicator) {
+                indicator.innerHTML = '<span style="color:#ff3b30;">网络错误</span>';
+            }
+        }
+    }
+
+    // 自动保存函数 (适配 HTTPS 和 HTTP 模式)
+    let editNodeAutoSaveTimer = null;
+    let editNodeSaveRunning = 0;
+    let editNodeSaveFailed = false;
+    async function waitForNodeAutoSave() {
+        const deadline = Date.now() + 15000;
+        while (editNodeAutoSaveTimer !== null || editNodeSaveRunning > 0) {
+            if (Date.now() > deadline) throw new Error('节点配置保存尚未完成，请稍后重试');
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
+        if (editNodeSaveFailed) throw new Error('节点配置保存失败，请修正后重试');
+    }
+    function triggerNodeAutoSave(immediate = false) {
+        updateIPModeVisibility();
+
+        if (!document.getElementById('editNodeModal').classList.contains('active')) {
+            return;
+        }
+
+        if (isInitializingEdit) return;
+        if (typeof nodeWGBlocksOrdinary === 'function' && nodeWGBlocksOrdinary()) {
+            clearTimeout(editNodeAutoSaveTimer); editNodeAutoSaveTimer = null;
+            nodeWGEditor.deferredAutosave = true;
+            nodeWGMessage('普通配置已锁定：请先明确停用配对并等待清理完成，再保存和推送变更。');
+            return;
+        }
+
+        const uuid = document.getElementById('editNodeUUID').value;
+        if (!uuid) return;
+
+        clearTimeout(editNodeAutoSaveTimer);
+        const indicator = document.getElementById('editSaveIndicator');
+        indicator.innerHTML = '<span style="color:#888;">保存中...</span>';
+        indicator.style.opacity = '1';
+
+        const delayMs = immediate ? 0 : 700;
+
+        editNodeAutoSaveTimer = setTimeout(async () => {
+            editNodeAutoSaveTimer = null;
+            editNodeSaveRunning++;
+            const name = document.getElementById('editNodeName').value;
+            const regionOverride = document.getElementById('editNodeRegion') ? document.getElementById('editNodeRegion').value : '';
+            const uiState = parseInt(document.getElementById('editNodeUIState').value);
+            const resetMode = document.getElementById('editNodeResetMode').value || 'fixed_day';
+            const resetDayRaw = parseInt(document.getElementById('editNodeResetDay').value) || 0;
+            const resetIntervalDaysRaw = parseInt(document.getElementById('editNodeResetIntervalDays').value) || 30;
+            const resetAnchorDateRaw = document.getElementById('editNodeResetAnchorDate').value || '';
+            const resetDay = resetMode === 'fixed_day' ? resetDayRaw : 0;
+            const resetIntervalDays = resetMode === 'interval_days' ? resetIntervalDaysRaw : 30;
+            const resetAnchorDate = resetMode === 'interval_days' ? resetAnchorDateRaw : '';
+            const ipMode = parseInt(document.getElementById('editNodeIPMode').value) || 0;
+
+            const trafficLimitRaw = document.getElementById('editNodeTrafficLimit').value;
+            const trafficLimitType = document.getElementById('editNodeTrafficLimitType').value || 'total';
+            const trafficLimit = parseTrafficLimitInputToBytes(trafficLimitRaw);
+
+            const v4El = document.getElementById('editNodeIPV4');
+            const v6El = document.getElementById('editNodeIPV6');
+            const ipv4 = v4El ? v4El.value.trim() : "";
+            const ipv6 = v6El ? v6El.value.trim() : "";
+
+            let finalRoutingType = 1;
+            let finalIsBlocked = false;
+            if (uiState === 3) {
+                finalIsBlocked = true;
+                finalRoutingType = originalRoutingType;
+            } else {
+                finalIsBlocked = false;
+                finalRoutingType = uiState;
+            }
+
+            const links = {};
+            const disabledLinks = [];
+            const linkIPModes = {};
+            const linkPorts = {};
+
+            // 从内存中获取节点原始数据，用于保留未在卡片中显示的端口
+            const nodeOriginal = window.allNodesData && window.allNodesData[uuid];
+            const originalLinkPorts = (nodeOriginal && nodeOriginal.link_ports) ? nodeOriginal.link_ports : {};
+
+            // 先将原始端口全部拷贝，后续卡片中的值会覆盖对应协议
+            for (const [origProto, origPort] of Object.entries(originalLinkPorts)) {
+                if (origPort > 0) linkPorts[origProto] = origPort;
+            }
+
+            const listContainer = document.getElementById('protocolListContainer');
+            const cards = listContainer.querySelectorAll('.protocol-card');
+
+            cards.forEach(card => {
+                const proto = card.getAttribute('data-proto');
+                // ✨ 核心修复：更新获取输入框的 Class 名称为 .link-textarea
+                const input = card.querySelector('.link-textarea');
+                const toggle = card.querySelector('.proto-switch');
+
+                // Get proto-level IP mode
+                const capsule = card.querySelector('.proto-ipmode-capsule');
+                let pIpMode = 3; // Default dual stack
+                if (capsule) {
+                    const activeBtn = capsule.querySelector('.proto-ipmode-item.active');
+                    if (activeBtn) {
+                        pIpMode = parseInt(activeBtn.getAttribute('data-val')) || 3;
+                    }
+                }
+
+                // Get proto-level port
+                const portInput = card.querySelector('.proto-port-input');
+                let pPort = 0;
+                if (portInput && portInput.value) {
+                    pPort = parseInt(portInput.value) || 0;
+                }
+
+                // 只要开关存在，就说明协议卡片存在
+                if (toggle) { // 只要开关存在，说明卡片未被删除
+                    linkIPModes[proto] = pIpMode;
+                    // 卡片中的端口值覆盖原始值：用户输入了则用用户值，清空则保留原始默认端口
+                    if (pPort > 0) {
+                        linkPorts[proto] = pPort;
+                    }
+                    // 如果用户清空了端口输入框，不删除原始值（已在上面从 originalLinkPorts 拷贝）
+                    if (input) {
+                        // 1. 如果有输入框 (HTTPS模式 或 新添加的协议)，正常取值
+                        const linkVal = input.value.trim();
+                        if (linkVal && !linkVal.includes('🔒')) {
+                            links[proto] = linkVal;
+                        } else if (!linkVal) {
+                            // 2. [Agent适配] 允许保存空链接协议，配合 Agent 部署后自动上报填充
+                            links[proto] = "";
+                        }
+                    } else {
+                        // 3. [关键修改] HTTP模式下的旧协议没有输入框
+                        // 我们传入一个特殊标记，告诉后端保留数据库里的原值
+                        links[proto] = "__KEEP_EXISTING__";
+                    }
+
+                    if (!toggle.checked) disabledLinks.push(proto);
+                }
+            });
+
+            // linkPorts 中的端口信息永远不删除，只做修改。
+            // 即使用户删除了协议卡片（从 links 移除），link_ports 中的端口配置仍然保留，
+            // 以便该协议将来重新添加时能继续使用之前的端口。
+
+            try {
+                const response = await fetch('/api/update-node', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        uuid, name,
+                        region_override: regionOverride,
+                        routing_type: finalRoutingType,
+                        links,
+                        is_blocked: finalIsBlocked,
+                        disabled_links: disabledLinks,
+                        ipv4, ipv6,
+                        ip_mode: ipMode,
+                        link_ip_modes: linkIPModes,
+                        link_ports: linkPorts,
+                        traffic_reset_mode: resetMode,
+                        reset_day: resetDay,
+                        traffic_reset_interval_days: resetIntervalDays,
+                        traffic_reset_anchor_date: resetAnchorDate,
+                        traffic_limit: trafficLimit,
+                        traffic_limit_raw: trafficLimitRaw,
+                        traffic_limit_type: trafficLimitType
+                    })
+                });
+                const res = await response.json();
+                editNodeSaveFailed = res.status !== 'success';
+
+                if (res.status === 'success') {
+                    indicator.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg> 已保存`;
+                    setTimeout(() => indicator.style.opacity = '0', 2000);
+
+                    if (typeof loadNodesList === 'function') loadNodesList();
+                    if (typeof window.trafficStatsRefresh === 'function' && nodeOriginal && ((!!nodeOriginal.region_manual !== !!regionOverride) || (regionOverride && String(nodeOriginal.region || '').toUpperCase() !== regionOverride))) {
+                        window.trafficStatsRefresh();
+                    }
+                } else {
+                    // 🚨关键修复：读取并展示后端的 res.message 错误详情
+                    indicator.innerHTML = `<span style="color:#ff3b30;">保存失败: ${res.message || '未知错误'}</span>`;
+                }
+            } catch (err) {
+                editNodeSaveFailed = true;
+                indicator.innerHTML = '<span style="color:#ff3b30;">网络错误</span>';
+            } finally {
+                editNodeSaveRunning--;
+            }
+        }, delayMs);
+    }
+
+    // IP 渲染相关辅助函数
+    // IP 渲染相关辅助函数
+    function renderIPInputs(ipv4, ipv6) {
+        const ipContainer = document.getElementById('ipEditContainer');
+        const v4 = ipv4 || '';
+        const v6 = ipv6 || '';
+        let html = '';
+
+        // [修改点] 将 v4Html 更改为 Flex 横向布局，标签限宽，输入框居中
+        const v4Html = `
+            <div class="edit-section" id="section-ipv4" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
+                <label class="section-label" style="margin-bottom: 0; white-space: nowrap; width: 70px;">IPv4 地址</label>
+                <input type="text" id="editNodeIPV4" class="ip-input" value="${v4}" placeholder="x.x.x.x" oninput="triggerNodeAutoSave()" style="flex: 1; text-align: center;">
+            </div>`;
+
+        // [修改点] 将 v6Html 更改为 Flex 横向布局，标签限宽，输入框居中
+        const v6Html = `
+            <div class="edit-section" id="section-ipv6" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
+                <label class="section-label" style="margin-bottom: 0; white-space: nowrap; width: 70px;">IPv6 地址</label>
+                <input type="text" id="editNodeIPV6" class="ip-input" value="${v6}" placeholder="::1" oninput="triggerNodeAutoSave()" style="flex: 1; text-align: center;">
+            </div>`;
+
+        if (v4 && v6) {
+            html = v4Html + v6Html;
+        } else if ((v4 && !v6) || (!v4 && !v6)) {
+            // [逻辑未变] 保留原有的 IPv6 隐藏折叠逻辑
+            html = v4Html + `<div style="text-align:right; margin-top:-5px; margin-bottom: 15px;"><a class="add-ip-link" onclick="appendIPField('v6')">+ 补充 IPv6</a></div>`;
+        } else if (!v4 && v6) {
+            html = v6Html + `<div style="text-align:right; margin-top:-5px; margin-bottom: 15px;"><a class="add-ip-link" onclick="appendIPField('v4')">+ 补充 IPv4</a></div>`;
+        }
+        ipContainer.innerHTML = html;
+        updateIPModeVisibility();
+    }
+
+    function appendIPField(type) {
+        const ipContainer = document.getElementById('ipEditContainer');
+        const links = ipContainer.querySelectorAll('.add-ip-link');
+        links.forEach(l => l.parentElement.remove());
+
+        // [修改点] 同步更新追加的输入框样式为横向 Flex 布局
+        if (type === 'v6' && !document.getElementById('editNodeIPV6')) {
+            const v6Html = `
+                <div class="edit-section" id="section-ipv6" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; animation: fadeIn 0.3s;">
+                    <label class="section-label" style="margin-bottom: 0; white-space: nowrap; width: 70px;">IPv6 地址</label>
+                    <input type="text" id="editNodeIPV6" class="ip-input" value="" placeholder="::1" oninput="triggerNodeAutoSave()" style="flex: 1; text-align: center;">
+                </div>`;
+            ipContainer.insertAdjacentHTML('beforeend', v6Html);
+        } else if (type === 'v4' && !document.getElementById('editNodeIPV4')) {
+            const v4Html = `
+                <div class="edit-section" id="section-ipv4" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; animation: fadeIn 0.3s;">
+                    <label class="section-label" style="margin-bottom: 0; white-space: nowrap; width: 70px;">IPv4 地址</label>
+                    <input type="text" id="editNodeIPV4" class="ip-input" value="" placeholder="x.x.x.x" oninput="triggerNodeAutoSave()" style="flex: 1; text-align: center;">
+                </div>`;
+            ipContainer.insertAdjacentHTML('afterbegin', v4Html);
+        }
+    }
+
+    function closeEditModal() {
+        const protoOverlay = document.getElementById('protoSelectOverlay');
+        if (protoOverlay) protoOverlay.style.display = 'none';
+        if (typeof resetNodeWGEditor === 'function') resetNodeWGEditor();
+        clearTimeout(editNodeAutoSaveTimer); editNodeAutoSaveTimer = null;
+        clearTimeout(_pushConfigConfirmTimer); resetPushConfigBtn();
+        closeCmdLogPanel();
+        editModalEl.classList.remove('active');
+        setTimeout(() => { if (!editModalEl.classList.contains('active')) editModalCard.classList.remove('has-content'); }, 300);
+    }
+
+    function updateLayoutState() {
+        editModalCard.classList.add('has-content');
+
+        const container = document.getElementById('protocolListContainer');
+        const existingProtos = new Set();
+        container.querySelectorAll('.protocol-card').forEach(card => {
+            existingProtos.add(card.getAttribute('data-proto'));
+        });
+        const availableProtos = GLOBAL_SUPPORTED_PROTOCOLS.filter(p => p !== 'wg_relay' && !existingProtos.has(p));
+
+        if (typeof renderNodeWGCard === 'function') renderNodeWGCard();
+        const addSection = document.getElementById('addProtocolSection');
+        if (addSection) {
+            if (availableProtos.length === 0) addSection.style.display = 'none';
+            else addSection.style.display = 'block';
+        }
+    }
+
+    function selectEditGroup(val, skipSave = false) {
+        document.getElementById('editNodeUIState').value = val;
+        document.querySelectorAll('#editNodeModal .segment-option[data-type]').forEach(el => {
+            const selected = parseInt(el.getAttribute('data-type')) === val;
+            el.classList.toggle('active', selected);
+            el.setAttribute('aria-pressed', String(selected));
+        });
+        if (val === 1 || val === 2) originalRoutingType = val;
+        if (typeof renderNodeWGCard === 'function') renderNodeWGCard();
+        if (!skipSave) triggerNodeAutoSave(true);
+    }
+
+    function showAddProtocolMenu() {
+        const container = document.getElementById('protocolListContainer');
+        const listEl = document.getElementById('protoSelectList');
+        const overlay = document.getElementById('protoSelectOverlay');
+
+        const existingProtos = new Set();
+        container.querySelectorAll('.protocol-card').forEach(card => {
+            existingProtos.add(card.getAttribute('data-proto'));
+        });
+
+        const availableProtos = GLOBAL_SUPPORTED_PROTOCOLS.filter(p => p !== 'wg_relay' && !existingProtos.has(p));
+
+        if (availableProtos.length === 0) {
+            alert('所有支持的协议均已添加');
+            return;
+        }
+
+        listEl.replaceChildren();
+
+        const head = document.createElement('div');
+        head.className = 'proto-picker-head';
+        head.innerHTML = `
+            <div class="proto-picker-title">
+                <span>选择协议类型</span>
+            </div>
+            <button type="button" class="proto-picker-close" aria-label="关闭" onclick="document.getElementById('protoSelectOverlay').style.display='none'">✕</button>
+        `;
+        listEl.appendChild(head);
+
+        const baseProtos = availableProtos.filter(p => !p.includes('_'));
+        const transportProtos = availableProtos.filter(p => p.includes('_'));
+        const groups = [];
+        if (baseProtos.length > 0) groups.push({ label: '基础协议', items: baseProtos });
+        if (transportProtos.length > 0) groups.push({ label: '传输 / TLS 协议', items: transportProtos });
+
+        groups.forEach(group => {
+            const section = document.createElement('div');
+            section.className = 'proto-picker-group';
+            if (groups.length > 1) {
+                const label = document.createElement('div');
+                label.className = 'proto-picker-group-label';
+                label.textContent = group.label;
+                section.appendChild(label);
+            }
+
+            const grid = document.createElement('div');
+            grid.className = 'proto-picker-grid';
+
+            group.items.forEach(proto => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'proto-picker-item';
+                btn.title = `添加 ${proto.toUpperCase()}`;
+
+                const dotColor = (window.getProtoColor && window.getProtoColor(proto)?.text) || '#8e8e93';
+                const dot = document.createElement('span');
+                dot.className = 'proto-picker-dot';
+                dot.style.background = dotColor;
+
+                const name = document.createElement('span');
+                name.className = 'proto-picker-name';
+                name.textContent = proto.toUpperCase();
+
+                btn.append(dot, name);
+                btn.onclick = () => {
+                    insertProtocolCard(proto);
+                    overlay.style.display = 'none';
+                };
+                grid.appendChild(btn);
+            });
+
+            section.appendChild(grid);
+            listEl.appendChild(section);
+        });
+
+        overlay.style.display = 'flex';
+    }
+
+    function insertProtocolCard(proto) {
+        if (proto === 'wg_relay') return; // WG is a REALITY outbound, never a protocol.
+        // 新增协议时，从节点的 link_ports 中读取该协议的默认端口
+        const uuid = document.getElementById('editNodeUUID').value;
+        const node = window.allNodesData && window.allNodesData[uuid];
+        let defaultPort = 0;
+        if (node && node.link_ports && node.link_ports[proto]) {
+            defaultPort = node.link_ports[proto];
+        }
+        const nodeIPMode = parseInt(document.getElementById('editNodeIPMode')?.value || '0') || 0;
+        const initProtoIPMode = (nodeIPMode === 1 || nodeIPMode === 2) ? nodeIPMode : 3;
+        renderProtocolCard(proto, '', true, true, false, initProtoIPMode, defaultPort);
+        updateLayoutState();
+        triggerNodeAutoSave();
+    }
+
+    // 推送配置按钮二次确认逻辑
+    let _pushConfigConfirmTimer = null;
+    let _pushConfigInConfirm = false;
+
+    function handlePushConfigClick() {
+        const btn = document.getElementById('btnPushConfig');
+        const textEl = document.getElementById('btnPushConfigText');
+        if (!btn || !textEl) return;
+
+        if (_pushConfigInConfirm) {
+            // 第二次点击：执行推送
+            _pushConfigInConfirm = false;
+            clearTimeout(_pushConfigConfirmTimer);
+            resetPushConfigBtn();
+            pushConfigToAgent();
+        } else {
+            // 第一次点击：进入确认状态
+            _pushConfigInConfirm = true;
+            btn.dataset.confirm = 'true';
+            textEl.textContent = '确定推送';
+            // 3秒后自动恢复
+            _pushConfigConfirmTimer = setTimeout(() => {
+                resetPushConfigBtn();
+            }, 3000);
+        }
+    }
+
+    function resetPushConfigBtn() {
+        _pushConfigInConfirm = false;
+        const btn = document.getElementById('btnPushConfig');
+        const textEl = document.getElementById('btnPushConfigText');
+        if (btn) delete btn.dataset.confirm;
+        if (textEl) textEl.textContent = '推送配置';
+    }
+
+    // 推送当前启用的协议及端口配置给 Agent
+    async function pushConfigToAgent() {
+        const pushUUID = document.getElementById('editNodeUUID').value;
+        const pushGeneration = typeof nodeWGEditor !== 'undefined' ? nodeWGEditor.generation : null;
+        if (typeof handleNodeWGPush === 'function' && await handleNodeWGPush()) return;
+        if (typeof nodeWGEditor !== 'undefined' && nodeWGEditor.deferredAutosave) {
+            nodeWGEditor.deferredAutosave = false; triggerNodeAutoSave(true);
+        }
+        try { await waitForNodeAutoSave(); } catch (err) { alert(err.message); return; }
+        if (document.getElementById('editNodeUUID').value !== pushUUID || (pushGeneration !== null && pushGeneration !== nodeWGEditor.generation)) return;
+        // Recheck the fence after autosave, never bypass an active/blocked pair.
+        if (typeof handleNodeWGPush === 'function' && await handleNodeWGPush()) return;
+        const ordinarySnapshot = typeof nodeWGOrdinarySnapshot === 'function' ? nodeWGOrdinarySnapshot() : null;
+        const uuid = document.getElementById('editNodeUUID').value;
+        const name = document.getElementById('editNodeName').value || uuid;
+        if (!uuid) return;
+
+        // 收集当前启用的协议和端口
+        const enabledProtocols = [];
+        const protocolPorts = {};
+        const listContainer = document.getElementById('protocolListContainer');
+        const cards = listContainer.querySelectorAll('.protocol-card');
+
+        cards.forEach(card => {
+            const proto = card.getAttribute('data-proto');
+            const toggle = card.querySelector('.proto-switch');
+            const portInput = card.querySelector('.proto-port-input');
+
+            if (toggle && toggle.checked) {
+                enabledProtocols.push(proto);
+                if (portInput && portInput.value) {
+                    const port = parseInt(portInput.value);
+                    if (port > 0 && port <= 65535) {
+                        protocolPorts[proto] = port;
+                    }
+                }
+            }
+        });
+
+        if (enabledProtocols.length === 0) {
+            alert('没有启用的协议，无法推送配置。');
+            return;
+        }
+
+        // 🆕 前端侧端口重复预检测
+        const portToProtos = {};
+        for (const [proto, port] of Object.entries(protocolPorts)) {
+            if (!portToProtos[port]) portToProtos[port] = [];
+            portToProtos[port].push(proto);
+        }
+        const duplicates = [];
+        for (const [port, protos] of Object.entries(portToProtos)) {
+            if (protos.length > 1) {
+                duplicates.push(`端口 ${port} 被 ${protos.map(p => p.toUpperCase()).join(', ')} 共用`);
+            }
+        }
+        if (duplicates.length > 0) {
+            alert('⚠️ 检测到端口冲突，请先修改：\n\n' + duplicates.join('\n'));
+            return;
+        }
+
+        const btn = document.getElementById('btnPushConfig');
+        if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+
+        showCmdLogPanel('推送配置');
+
+        if (pushGeneration !== null) nodeWGEditor.ordinaryPending = true;
+        fetch('/api/node/control/push-config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                uuid: uuid,
+                protocols: enabledProtocols,
+                ports: protocolPorts
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (pushGeneration !== null && pushGeneration !== nodeWGEditor.generation) return;
+            const completed = async success => {
+                if (pushGeneration === null || pushGeneration !== nodeWGEditor.generation) return;
+                nodeWGEditor.ordinaryPending = false;
+                nodeWGEditor.ordinaryFailed = !success;
+                if (success) {
+                    nodeWGEditor.baseline = ordinarySnapshot;
+                    await refreshOpenNodeModalData(uuid);
+                }
+                nodeWGMessage(success ? '协议部署完成，已同步最新状态' : '部署未确认成功，请重试', success ? 'success' : 'error');
+            };
+            if (data.status === 'success' && data.command_id) {
+                streamCommandLog(data.command_id, completed);
+            } else if (data.status === 'success' && data.data && data.data.command_id) {
+                streamCommandLog(data.data.command_id, completed);
+            } else {
+                completed(false);
+                appendCmdLog({ type: 'error', message: data.message || data.data || '命令下发失败' });
+            }
+        })
+        .catch(err => {
+            if (pushGeneration !== null) {
+                if (pushGeneration !== nodeWGEditor.generation) return;
+                nodeWGEditor.ordinaryPending = false; nodeWGEditor.ordinaryFailed = true;
+            }
+            appendCmdLog({ type: 'error', message: '网络错误: ' + err.message });
+        })
+        .finally(() => {
+            if (pushGeneration !== null && pushGeneration !== nodeWGEditor.generation) return;
+            if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+        });
+    }
+
+    async function refreshOpenNodeModalData(uuid) {
+        if (!uuid || document.getElementById('editNodeUUID')?.value !== uuid) return;
+        try {
+            const resp = await fetch('/api/get-nodes', { cache: 'no-store' });
+            const result = await resp.json();
+            if (result.status !== 'success' || !result.data) return;
+            window.allNodesData = window.allNodesData || {};
+            const cacheNodes = (nodes) => {
+                if (nodes) nodes.forEach(n => (window.allNodesData[n.uuid] = n));
+            };
+            cacheNodes(result.data.direct_nodes);
+            cacheNodes(result.data.land_nodes);
+            const node = window.allNodesData[uuid];
+            if (node && document.getElementById('editNodeUUID')?.value === uuid) {
+                const links = node.links || {};
+                document.querySelectorAll('#protocolListContainer .protocol-card').forEach(card => {
+                    const proto = card.getAttribute('data-proto');
+                    const ta = card.querySelector('.link-textarea');
+                    if (ta && links[proto] && !links[proto].includes('🔒')) {
+                        ta.value = links[proto];
+                        if (card.classList.contains('expanded')) autoResizeTextarea(ta);
+                    }
+                });
+                if (typeof nodeWGEditor !== 'undefined' && typeof nodeWGOrdinarySnapshot === 'function') {
+                    nodeWGEditor.baseline = nodeWGOrdinarySnapshot();
+                }
+            }
+            if (typeof loadNodesList === 'function') loadNodesList();
+            if (typeof loadNodeWGEditor === 'function') loadNodeWGEditor(uuid);
+        } catch (e) {
+            console.warn('自动刷新节点数据失败:', e);
+        }
+    }
+</script>
+{{end}}

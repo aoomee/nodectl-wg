@@ -1,0 +1,769 @@
+{{define "custom_nodes_modal.html"}}
+<style>
+    .cn-modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 15, 20, 0.36);
+        backdrop-filter: saturate(180%) blur(12px);
+        -webkit-backdrop-filter: saturate(180%) blur(12px);
+        z-index: 3000;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .cn-modal-overlay.active {
+        display: flex;
+        opacity: 1;
+    }
+
+    .cn-modal-card {
+        background: #ffffff;
+        width: 100%;
+        max-width: 900px;
+        height: 85vh;
+        border-radius: 26px;
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.04);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        animation: cnModalSpring 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    @keyframes cnModalSpring {
+        from {
+            opacity: 0;
+            transform: translateY(10px) scale(0.97);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    .cn-header {
+        background: rgba(248, 248, 250, 0.9);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        padding: 16px 26px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .cn-title-area {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .cn-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1d1d1f;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        letter-spacing: -0.01em;
+    }
+
+    .cn-save-indicator {
+        font-size: 12px;
+        font-weight: 600;
+        color: #34c759;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background: #e8fdf0;
+        padding: 4px 10px;
+        border-radius: 999px;
+    }
+
+    .cn-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        padding: 20px 26px;
+        overflow: hidden;
+        background: #ffffff;
+    }
+
+    @media (max-width: 768px) {
+        .cn-body {
+            padding: 16px 14px;
+        }
+    }
+
+    /* 节点列表容器 */
+    .cn-items-container {
+        flex: 1;
+        overflow-y: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding-right: 4px;
+        margin-bottom: 14px;
+    }
+
+    .cn-items-container::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* ===== 折叠卡片式节点 ===== */
+    .cn-node-card {
+        background: #ffffff;
+        border: 1px solid rgba(0, 0, 0, 0.065);
+        border-radius: 16px;
+        overflow: hidden;
+        transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.015);
+    }
+
+    .cn-node-card:hover {
+        border-color: rgba(0, 122, 255, 0.28);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.045);
+    }
+
+    /* 卡片头部（折叠状态显示的内容） */
+    .cn-node-header {
+        display: flex;
+        align-items: center;
+        padding: 11px 14px;
+        gap: 10px;
+        background: #f9f9fb;
+        cursor: pointer;
+        user-select: none;
+        transition: background 0.2s ease;
+    }
+
+    .cn-node-header:hover {
+        background: #f2f2f7;
+    }
+
+    /* 折叠箭头 */
+    .cn-chevron {
+        transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), color 0.2s;
+        color: #86868b;
+        flex-shrink: 0;
+    }
+
+    .cn-node-card.expanded .cn-chevron {
+        transform: rotate(90deg);
+        color: #007aff;
+    }
+
+    /* 链接名称显示（从链接提取的协议名） */
+    .cn-link-name {
+        flex: 1;
+        min-width: 0;
+        font-size: 13px;
+        font-weight: 600;
+        color: #1d1d1f;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .cn-link-name .cn-proto-badge {
+        display: inline-block;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 2px 7px;
+        border-radius: 999px;
+        background: #e8f2ff;
+        color: #007aff;
+        margin-right: 7px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+
+    /* 路由设置按钮组 - 胶囊分段控制 */
+    .cn-routing-group {
+        flex: 0 0 auto;
+        display: flex;
+        gap: 2px;
+        padding: 2px;
+        border-radius: 999px;
+        background: #ebebf0;
+        border: none;
+    }
+
+    .cn-routing-btn {
+        padding: 4px 11px;
+        font-size: 11px;
+        font-weight: 600;
+        text-align: center;
+        cursor: pointer;
+        border: none;
+        border-radius: 999px;
+        background: transparent;
+        color: #6e6e73;
+        transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+        user-select: none;
+        white-space: nowrap;
+    }
+
+    .cn-routing-btn:hover {
+        color: #1d1d1f;
+    }
+
+    /* 与 edit_node_modal.html 路由类型颜色一致 */
+    .cn-routing-btn.active-direct {
+        background: #34c759;
+        color: #fff;
+        box-shadow: 0 2px 6px rgba(52, 199, 89, 0.3);
+    }
+
+    .cn-routing-btn.active-landing {
+        background: #f5a623;
+        color: #fff;
+        box-shadow: 0 2px 6px rgba(245, 166, 35, 0.3);
+    }
+
+    .cn-routing-btn.active-block {
+        background: #ff3b30;
+        color: #fff;
+        box-shadow: 0 2px 6px rgba(255, 59, 48, 0.3);
+    }
+
+    /* 删除按钮 */
+    .cn-item-del {
+        color: #ff3b30;
+        cursor: pointer;
+        width: 30px;
+        height: 30px;
+        padding: 0;
+        opacity: 0.7;
+        transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+        display: flex;
+        align-items: center;
+        flex: 0 0 30px;
+        justify-content: center;
+        border-radius: 50%;
+    }
+
+    .cn-node-card:hover .cn-item-del {
+        opacity: 1;
+    }
+
+    .cn-item-del:hover {
+        background: #fff0f0;
+        transform: scale(1.06);
+    }
+
+    /* ===== 折叠内容区：协议详情 ===== */
+    .cn-node-body {
+        display: none;
+        padding: 12px 16px 16px 16px;
+        border-top: 1px dashed rgba(0, 0, 0, 0.06);
+        background: #fff;
+    }
+
+    .cn-node-card.expanded .cn-node-body {
+        display: block;
+        animation: cnFadeIn 0.22s ease;
+    }
+
+    @keyframes cnFadeIn {
+        from { opacity: 0; transform: translateY(-4px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .cn-body-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: #86868b;
+        margin-bottom: 6px;
+    }
+
+    .cn-link-textarea {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 11px;
+        padding: 10px 12px;
+        font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, monospace;
+        font-size: 12px;
+        outline: none;
+        background: #f9f9fb;
+        resize: none;
+        overflow: hidden;
+        min-height: 38px;
+        word-break: break-all;
+        color: #1d1d1f;
+        transition: all 0.22s ease;
+        line-height: 1.5;
+    }
+
+    .cn-link-textarea:focus {
+        border-color: #007aff;
+        background: #fff;
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.12);
+    }
+
+    /* 底部添加行 */
+    .cn-add-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        background: #f0f7ff;
+        padding: 8px 10px;
+        border-radius: 16px;
+        border: 1px dashed rgba(0, 122, 255, 0.35);
+        flex-shrink: 0;
+    }
+
+    .cn-add-link {
+        flex: 1;
+        min-width: 0;
+        font-size: 12.5px;
+        padding: 9px 12px;
+        border: 1px solid rgba(0, 122, 255, 0.2);
+        border-radius: 12px !important;
+        background: #ffffff;
+        outline: none;
+        font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, monospace;
+        transition: all 0.2s ease;
+    }
+
+    .cn-add-link:focus {
+        border-color: #007aff;
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.14);
+    }
+
+    .cn-btn-add {
+        background: linear-gradient(180deg, #148eff 0%, #007aff 100%);
+        color: white;
+        border: none;
+        padding: 9px 18px;
+        flex-shrink: 0;
+        border-radius: 999px;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0, 122, 255, 0.25);
+        transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .cn-btn-add:hover {
+        background: linear-gradient(180deg, #007aff 0%, #0062cc 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 122, 255, 0.34);
+    }
+
+    .cn-btn-add:active {
+        transform: scale(0.96);
+    }
+
+    .cn-empty-state {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #86868b;
+        font-size: 13.5px;
+        text-align: center;
+        line-height: 1.7;
+    }
+
+    .cn-footer {
+        padding: 15px 26px;
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
+        display: flex;
+        justify-content: flex-end;
+        background: #fff;
+    }
+
+    .btn-cn-cancel {
+        background: #f2f2f7;
+        border: none;
+        color: #1d1d1f;
+        padding: 9px 26px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .btn-cn-cancel:hover {
+        background: #e5e5ea;
+        transform: translateY(-1px);
+    }
+
+    .btn-cn-cancel:active {
+        transform: scale(0.97);
+    }
+
+    /* 移动端响应式 */
+    @media (max-width: 768px) {
+        .cn-modal-card {
+            width: 95%;
+            height: 85vh;
+            border-radius: 20px;
+        }
+
+        .cn-node-header {
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .cn-link-name {
+            flex: 1 1 auto;
+            order: 0;
+        }
+
+        .cn-routing-group {
+            flex: 0 0 auto;
+        }
+
+        .cn-item-del {
+            opacity: 1;
+            flex: 0 0 30px;
+        }
+
+        .cn-add-row {
+            flex-wrap: wrap;
+        }
+
+        .cn-add-link {
+            flex: 1 1 100%;
+        }
+    }
+</style>
+
+<div class="cn-modal-overlay" id="customNodesModal">
+    <div class="cn-modal-card">
+        <div class="cn-header">
+            <div class="cn-title-area">
+                <div class="cn-title">
+                    <span class="ui-icon-badge rose" style="width:28px;height:28px;border-radius:9px;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                        </svg>
+                    </span>
+                    自定义节点
+                </div>
+            </div>
+            <div class="cn-save-indicator" id="cnSaveIndicator">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 6L9 17l-5-5"></path>
+                </svg>
+                已保存
+            </div>
+        </div>
+
+        <div class="cn-body">
+            <!-- 节点列表 -->
+            <div class="cn-items-container" id="cnItemsContainer">
+                <div class="cn-empty-state" id="cnEmptyState">
+                    暂无自定义节点<br>在下方粘贴协议链接即可添加
+                </div>
+            </div>
+
+            <!-- 底部添加行 -->
+            <div class="cn-add-row">
+                <input type="text" id="cnNewLink" class="cn-add-link" placeholder="粘贴协议链接 (vmess://, vless://, ss:// 等)" onkeydown="if(event.key==='Enter') cnAddNode()">
+                <button class="cn-btn-add" onclick="cnAddNode()">添加</button>
+            </div>
+        </div>
+
+        <div class="cn-footer">
+            <button class="btn-cn-cancel" onclick="closeCustomNodesModal()">关闭</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 点击遮罩层关闭
+    document.getElementById('customNodesModal').addEventListener('click', function(e) {
+        if (e.target === this) closeCustomNodesModal();
+    });
+
+    // ESC 键关闭
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && document.getElementById('customNodesModal').classList.contains('active')) closeCustomNodesModal();
+    });
+
+    const cnTrashSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
+    const cnChevronSvg = `<svg class="cn-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
+
+    let cnNodes = [];
+
+    // --- 从链接中提取协议名和节点名 ---
+    function cnExtractLinkInfo(link) {
+        if (!link) return { proto: '', name: '' };
+        const protoMatch = link.match(/^([a-zA-Z0-9]+):\/\//);
+        const proto = protoMatch ? protoMatch[1].toLowerCase() : '';
+
+        // 尝试从链接中提取名称（通常是 # 后面的部分或 base64 解码后的 ps 字段）
+        let name = '';
+        const hashIdx = link.lastIndexOf('#');
+        if (hashIdx !== -1) {
+            name = decodeURIComponent(link.substring(hashIdx + 1)).trim();
+        }
+
+        // 如果没有 # 后缀名，尝试从 vmess base64 中提取
+        if (!name && proto === 'vmess') {
+            try {
+                const b64 = link.replace('vmess://', '');
+                const json = JSON.parse(atob(b64));
+                name = json.ps || json.remarks || '';
+            } catch (e) { /* ignore */ }
+        }
+
+        return { proto, name: name || '未命名' };
+    }
+
+    // --- 折叠/展开 ---
+    function cnToggleCard(headerEl) {
+        const card = headerEl.closest('.cn-node-card');
+        const isExpanding = card.classList.toggle('expanded');
+
+        if (isExpanding) {
+            const textarea = card.querySelector('.cn-link-textarea');
+            if (textarea) cnAutoResizeTextarea(textarea);
+        }
+    }
+
+    // --- 文本框高度自适应 ---
+    function cnAutoResizeTextarea(el) {
+        el.style.height = '1px';
+        el.style.height = (el.scrollHeight) + 'px';
+    }
+
+    // --- 弹窗交互 ---
+    async function openCustomNodesModal() {
+        document.getElementById('customNodesModal').classList.add('active');
+        await cnLoadNodes();
+    }
+
+    function closeCustomNodesModal() {
+        document.getElementById('customNodesModal').classList.remove('active');
+    }
+
+    // --- API 交互 ---
+    async function cnLoadNodes() {
+        try {
+            const res = await fetch('/api/custom-nodes/list');
+            const result = await res.json();
+            if (result.status === 'success') {
+                cnNodes = result.nodes || [];
+                cnRenderList();
+            }
+        } catch (e) {
+            console.error("加载自定义节点失败", e);
+        }
+    }
+
+    async function cnAddNode() {
+        const linkInput = document.getElementById('cnNewLink');
+        const link = linkInput.value.trim();
+
+        if (!link) return;
+
+        try {
+            const res = await fetch('/api/custom-nodes/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ link: link, routing_type: 1 })
+            });
+            const result = await res.json();
+            if (result.status === 'success') {
+                linkInput.value = '';
+                cnShowIndicator('添加成功');
+                await cnLoadNodes();
+            } else {
+                cnShowIndicator(result.message || '添加失败', true);
+            }
+        } catch (e) {
+            cnShowIndicator('网络错误', true);
+        }
+    }
+
+    async function cnUpdateNode(id, link, routingType) {
+        try {
+            const res = await fetch('/api/custom-nodes/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, link, routing_type: routingType })
+            });
+            const result = await res.json();
+            if (result.status === 'success') {
+                cnShowIndicator('已保存');
+                // 更新本地数据
+                const node = cnNodes.find(n => n.id === id);
+                if (node) {
+                    node.link = link;
+                    node.routing_type = routingType;
+                }
+            } else {
+                cnShowIndicator(result.message || '保存失败', true);
+            }
+        } catch (e) {
+            cnShowIndicator('网络错误', true);
+        }
+    }
+
+    async function cnDeleteNode(id) {
+        try {
+            const res = await fetch('/api/custom-nodes/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id })
+            });
+            const result = await res.json();
+            if (result.status === 'success') {
+                cnShowIndicator('已删除');
+                cnNodes = cnNodes.filter(n => n.id !== id);
+                cnRenderList();
+            } else {
+                cnShowIndicator(result.message || '删除失败', true);
+            }
+        } catch (e) {
+            cnShowIndicator('网络错误', true);
+        }
+    }
+
+    // --- 自动保存防抖引擎 ---
+    let cnAutoSaveTimers = {};
+    function cnTriggerAutoSave(id) {
+        clearTimeout(cnAutoSaveTimers[id]);
+        cnAutoSaveTimers[id] = setTimeout(() => {
+            const node = cnNodes.find(n => n.id === id);
+            if (node) {
+                // 从 DOM 读取最新值
+                const linkEl = document.getElementById('cn_link_' + id);
+                if (linkEl) node.link = linkEl.value;
+                cnUpdateNode(id, node.link, node.routing_type);
+
+                // 更新头部显示的链接名称
+                const nameEl = document.getElementById('cn_name_' + id);
+                if (nameEl && linkEl) {
+                    const info = cnExtractLinkInfo(linkEl.value);
+                    const badgeHtml = info.proto ? `<span class="cn-proto-badge">${info.proto}</span>` : '';
+                    nameEl.innerHTML = badgeHtml + cnEscapeHtml(info.name);
+                }
+            }
+        }, 800);
+    }
+
+    // --- HTML 转义 ---
+    function cnEscapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    // --- 路由类型切换 ---
+    function cnSetRouting(id, routingType, event) {
+        if (event) event.stopPropagation();
+        const node = cnNodes.find(n => n.id === id);
+        if (!node || node.routing_type === routingType) return;
+        node.routing_type = routingType;
+        cnRenderRoutingButtons(id, routingType);
+        cnUpdateNode(id, node.link, routingType);
+    }
+
+    function cnRenderRoutingButtons(id, routingType) {
+        const directBtn = document.getElementById('cn_rt_direct_' + id);
+        const landingBtn = document.getElementById('cn_rt_landing_' + id);
+        const blockBtn = document.getElementById('cn_rt_block_' + id);
+
+        if (!directBtn) return;
+
+        // 清除所有 active 类
+        directBtn.className = 'cn-routing-btn';
+        landingBtn.className = 'cn-routing-btn';
+        blockBtn.className = 'cn-routing-btn';
+
+        switch (routingType) {
+            case 1:
+                directBtn.classList.add('active-direct');
+                break;
+            case 2:
+                landingBtn.classList.add('active-landing');
+                break;
+            case 0:
+                blockBtn.classList.add('active-block');
+                break;
+        }
+    }
+
+    // --- 渲染列表 ---
+    function cnRenderList() {
+        const container = document.getElementById('cnItemsContainer');
+        const emptyState = document.getElementById('cnEmptyState');
+
+        if (cnNodes.length === 0) {
+            container.innerHTML = '';
+            container.appendChild(emptyState);
+            emptyState.style.display = 'flex';
+            return;
+        }
+
+        emptyState.style.display = 'none';
+        container.innerHTML = cnNodes.map(node => {
+            const directClass = node.routing_type === 1 ? 'active-direct' : '';
+            const landingClass = node.routing_type === 2 ? 'active-landing' : '';
+            const blockClass = node.routing_type === 0 ? 'active-block' : '';
+
+            const linkInfo = cnExtractLinkInfo(node.link);
+            const badgeHtml = linkInfo.proto ? `<span class="cn-proto-badge">${linkInfo.proto}</span>` : '';
+            const displayName = cnEscapeHtml(linkInfo.name);
+
+            return `
+                <div class="cn-node-card" id="cn_row_${node.id}">
+                    <div class="cn-node-header" onclick="cnToggleCard(this)">
+                        ${cnChevronSvg}
+                        <div class="cn-link-name" id="cn_name_${node.id}" title="${(node.name || '') + ' [' + (node.protocol || '') + ']'}">
+                            ${badgeHtml}${displayName}
+                        </div>
+                        <div class="cn-routing-group" onclick="event.stopPropagation()">
+                            <button class="cn-routing-btn ${directClass}" id="cn_rt_direct_${node.id}"
+                                    onclick="cnSetRouting('${node.id}', 1, event)">直连</button>
+                            <button class="cn-routing-btn ${landingClass}" id="cn_rt_landing_${node.id}"
+                                    onclick="cnSetRouting('${node.id}', 2, event)">落地</button>
+                            <button class="cn-routing-btn ${blockClass}" id="cn_rt_block_${node.id}"
+                                    onclick="cnSetRouting('${node.id}', 0, event)">屏蔽</button>
+                        </div>
+                        <div class="cn-item-del" onclick="event.stopPropagation(); cnDeleteNode('${node.id}')" title="删除">${cnTrashSvg}</div>
+                    </div>
+                    <div class="cn-node-body">
+                        <div class="cn-body-label">协议链接</div>
+                        <textarea class="cn-link-textarea" id="cn_link_${node.id}"
+                                  oninput="cnAutoResizeTextarea(this); cnTriggerAutoSave('${node.id}')"
+                                  onclick="event.stopPropagation()">${(node.link || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.scrollTop = container.scrollHeight;
+    }
+
+    // --- 保存指示器 ---
+    function cnShowIndicator(text, isError) {
+        const indicator = document.getElementById('cnSaveIndicator');
+        if (isError) {
+            indicator.innerHTML = `<span style="color:#ff3b30;">❌ ${text}</span>`;
+        } else {
+            indicator.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg> ${text}`;
+        }
+        indicator.style.opacity = '1';
+        setTimeout(() => { indicator.style.opacity = '0'; }, 2000);
+    }
+</script>
+{{end}}

@@ -1,0 +1,780 @@
+{{define "sub_links_modal.html"}}
+<script src="/assets/vendor/qrcode-04f46c6.c541ef063278.min.js" integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU"></script>
+
+<style>
+    /* ================= 统一弹窗基础框架 ================= */
+    .sub-modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 15, 20, 0.36);
+        backdrop-filter: saturate(180%) blur(12px);
+        -webkit-backdrop-filter: saturate(180%) blur(12px);
+        z-index: 3000;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.28s ease;
+    }
+
+    .sub-modal-overlay.active {
+        display: flex;
+        opacity: 1;
+    }
+
+    /* 默认窄模式 380px，展开后 800px。高度自适应 */
+    .sub-modal-card {
+        background: #ffffff;
+        width: 100%;
+        max-width: 900px;
+        height: 85vh;
+        border-radius: 26px;
+        box-shadow: 0 24px 56px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.04);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        animation: cnModalSpring 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    .sub-modal-card.has-content {
+        max-width: 900px;
+    }
+
+    /* 统一 Header 样式 */
+    .sub-header {
+        background: rgba(248, 248, 250, 0.9);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        padding: 16px 24px 16px 26px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .sub-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1d1d1f;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+    }
+
+    /* 右上角自动保存指示器 */
+    .sub-save-indicator {
+        font-size: 12px;
+        font-weight: 600;
+        color: #34c759;
+        opacity: 0;
+        transition: opacity 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    /* 主内容区 */
+    .sub-body {
+        flex: 1;
+        display: flex;
+        flex-direction: row;
+        background: #fff;
+        overflow: hidden;
+        min-height: 0;
+    }
+
+    /* 隐藏滚动条全局类 */
+    .no-scrollbar {
+        overflow-y: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* ================= 左侧面板 (定宽防挤压) ================= */
+    .sub-left-col {
+        width: 380px;
+        flex-shrink: 0;
+        padding: 25px;
+        border-right: 1px solid transparent;
+        transition: border-color 0.3s;
+    }
+
+    .sub-modal-card.has-content .sub-left-col {
+        border-right-color: #f5f5f7;
+    }
+
+    .sub-section-label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: #888;
+        margin-bottom: 12px;
+    }
+
+    .sub-name-input {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #d1d1d6;
+        border-radius: 8px;
+        font-size: 14px;
+        color: #1d1d1f;
+        outline: none;
+        transition: border 0.2s;
+        background: #fafbfc;
+        margin-bottom: 30px;
+        font-weight: 500;
+        box-sizing: border-box;
+    }
+
+    .sub-name-input:focus {
+        border-color: #007aff;
+        background: #fff;
+        box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.1);
+    }
+
+    /* 格式选择卡片 */
+    .format-wrapper {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .sub-format-card {
+        border: 1px solid #e5e5ea;
+        border-radius: 10px;
+        background: #fff;
+        margin-bottom: 12px;
+        padding: 12px 16px;
+        user-select: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .sub-format-card:hover {
+        border-color: #d1d1d6;
+        background: #fafafa;
+    }
+
+    .sub-format-card.active {
+        border-color: #007aff;
+        background: #f0f7ff;
+    }
+
+    .sub-format-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .sub-format-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: #333;
+        transition: color 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .sub-format-card.active .sub-format-name {
+        color: #007aff;
+    }
+
+    .sub-format-desc {
+        font-size: 12px;
+        color: #888;
+        transition: color 0.2s;
+    }
+
+    .sub-format-card.active .sub-format-desc {
+        color: #5a9df8;
+    }
+
+    .sub-expand-indicator {
+        color: #ccc;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+    }
+
+    .sub-format-card:hover .sub-expand-indicator {
+        color: #86868b;
+        transform: translateX(2px);
+    }
+
+    .sub-format-card.active .sub-expand-indicator {
+        color: #007aff;
+    }
+
+    /* ================= 右侧详情面板 ================= */
+    .sub-right-col {
+        flex: 1;
+        padding: 25px 30px;
+        display: none;
+        background: #fff;
+        flex-direction: column;
+        justify-content: flex-start;
+    }
+
+    .sub-modal-card.has-content .sub-right-col {
+        display: flex;
+        animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    /* 右侧头部介绍区 */
+    .sub-right-header {
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px dashed #eee;
+    }
+
+    .sub-right-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1d1d1f;
+        margin-bottom: 8px;
+    }
+
+    .sub-right-desc {
+        font-size: 13px;
+        color: #666;
+        line-height: 1.5;
+    }
+
+    /* 二维码展示区 */
+    .qr-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .qr-box {
+        padding: 10px;
+        background: #fff;
+        border: 1px solid #e5e5ea;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* 自动变高的链接输入区域 */
+    .sub-link-textarea {
+        width: 100%;
+        min-height: 44px;
+        padding: 12px 15px;
+        border: 1px solid #d1d1d6;
+        border-radius: 8px;
+        font-family: Menlo, Monaco, "Courier New", monospace;
+        font-size: 12px;
+        line-height: 1.5;
+        color: #333;
+        background: #fafbfc;
+        resize: none;
+        outline: none;
+        margin-bottom: 20px;
+        word-break: break-all;
+        transition: border-color 0.2s;
+        box-sizing: border-box;
+        overflow: hidden;
+        /* 彻底去除内嵌滚动条 */
+    }
+
+    .sub-link-textarea:focus {
+        border-color: #007aff;
+        background: #fff;
+        box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.1);
+    }
+
+    /* 底部操作按钮组 */
+    .sub-actions-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+        margin-top: auto;
+    }
+
+    .sub-actions-grid.has-import {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .btn-sub-action {
+        width: 100%;
+        border: none;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        text-decoration: none;
+        box-sizing: border-box;
+    }
+
+    .btn-copy {
+        background: #007aff;
+        color: white;
+    }
+
+    .btn-copy:hover {
+        background: #0062cc;
+    }
+
+    .btn-copy.copied {
+        background: #34c759;
+    }
+
+    .btn-import {
+        background: #f0f7ff;
+        color: #007aff;
+        border: 1px solid #cce4ff;
+    }
+
+    .btn-import:hover {
+        background: #e0efff;
+    }
+
+    /* 统一 Footer 样式 */
+    .sub-footer {
+        padding: 15px 25px;
+        border-top: 1px solid #eee;
+        display: flex;
+        justify-content: flex-end;
+        background: #fff;
+    }
+
+    .btn-sub-cancel {
+        background: #f5f5f7;
+        border: none;
+        color: #333;
+        padding: 8px 25px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        transition: 0.2s;
+    }
+
+    .btn-sub-cancel:hover {
+        background: #e5e5ea;
+    }
+
+    /* ================= 移动端适配 ================= */
+    @media (max-width: 768px) {
+        .sub-modal-card {
+            max-width: 95%;
+            max-height: 85vh;
+        }
+
+        .sub-modal-card.has-content {
+            max-width: 95%;
+        }
+
+        .sub-body {
+            flex-direction: column;
+            overflow-y: auto;
+            display: block;
+        }
+
+        .sub-left-col {
+            width: 100%;
+            height: auto;
+            border-right: none;
+            padding: 20px;
+            overflow: visible;
+        }
+
+        .sub-format-card.active {
+            margin-bottom: 0;
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+            border-bottom: 1px dashed #cce4ff;
+        }
+
+        .sub-right-col {
+            width: 100%;
+            height: auto;
+            padding: 15px;
+            border: 1px solid #007aff;
+            border-top: none;
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+            background: #f0f7ff;
+            margin-bottom: 12px;
+        }
+
+        .sub-right-header {
+            border-bottom-color: #cce4ff;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+        }
+
+        .sub-actions-grid.has-import {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+</style>
+
+<div class="sub-modal-overlay" id="subLinksModal">
+    <div class="sub-modal-card" id="subModalCard">
+
+        <div class="sub-header">
+            <div class="sub-title"><span class="ui-icon-badge blue" style="width:28px;height:28px;border-radius:9px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></span> 订阅分发中心</div>
+            <div class="sub-save-indicator" id="subSaveIndicator">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 6L9 17l-5-5"></path>
+                </svg>
+                名称已保存
+            </div>
+        </div>
+
+        <div class="sub-body no-scrollbar">
+            <div class="sub-left-col no-scrollbar">
+                <label class="sub-section-label">📝 客户端显示的订阅名称</label>
+                <input type="text" id="inputSubName" class="sub-name-input" placeholder="例如：我的私人节点池"
+                    oninput="saveCustomSubNameDebounced()">
+
+                <label class="sub-section-label">📌 选择订阅格式</label>
+
+                <div class="format-wrapper" id="wrap_clash">
+                    <div class="sub-format-card" onclick="selectSubFormat('clash', this)">
+                        <div class="sub-format-info">
+                            <div class="sub-format-name">😼 Clash Meta</div>
+                            <div class="sub-format-desc">推荐！有强大的分流能力</div>
+                        </div>
+                        <div class="sub-expand-indicator"><svg viewBox="0 0 24 24" width="18" height="18" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg></div>
+                    </div>
+                </div>
+
+                <div class="format-wrapper" id="wrap_v2ray">
+                    <div class="sub-format-card" onclick="selectSubFormat('v2ray', this)">
+                        <div class="sub-format-info">
+                            <div class="sub-format-name">🌐 V2Ray / Base64</div>
+                            <div class="sub-format-desc">最适合手机使用的订阅格式</div>
+                        </div>
+                        <div class="sub-expand-indicator"><svg viewBox="0 0 24 24" width="18" height="18" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sub-right-col no-scrollbar" id="subRightCol">
+                <div id="subRightContent"></div>
+            </div>
+        </div>
+
+        <div class="sub-footer">
+            <button class="btn-sub-cancel" onclick="closeSubLinksModal()">关闭</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const subModal = document.getElementById('subLinksModal');
+    const subModalCard = document.getElementById('subModalCard');
+
+    // 点击遮罩层关闭
+    subModal.addEventListener('click', function(e) {
+        if (e.target === subModal) closeSubLinksModal();
+    });
+
+    // ESC 键关闭
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && subModal.classList.contains('active')) closeSubLinksModal();
+    });
+
+    let currentBaseUrl = '';
+    let currentToken = '';
+    let currentFormatKey = null;
+
+    // 预定义的链接与展示文案数据
+    const subFormatData = {
+        clash: {
+            title: "😼 Clash Meta 订阅",
+            desc: "推荐使用 <b>Clash Verge Rev</b> 或 <b>OpenClash</b>。<br>手机端可直接扫描下方二维码添加。",
+            getLink: () => `${currentBaseUrl}/sub/clash?token=${currentToken}`
+        },
+        v2ray: {
+            title: "🌐 V2Ray / 通用 Base64",
+            desc: "适用于 <b>v2rayN</b>、<b>v2rayNG</b>、<b>Shadowrocket</b> 等绝大多数基础代理工具。",
+            getLink: () => `${currentBaseUrl}/sub/v2ray?token=${currentToken}`
+        }
+    };
+
+    // 辅助函数：根据文字自适应 Textarea 的高度
+    function resizeSubLinkTextarea() {
+        const ta = document.getElementById('currentSubLinkText');
+        if (ta && ta.offsetParent !== null) {
+            ta.style.height = 'auto'; // 先归零
+            ta.style.height = (ta.scrollHeight + 2) + 'px'; // 重新设置计算高度
+        }
+    }
+
+    // 监听窗口大小变化
+    function adjustRightPanelPosition() {
+        const rightCol = document.getElementById('subRightCol');
+        const body = document.querySelector('.sub-body');
+
+        if (window.innerWidth <= 768) {
+            if (!currentFormatKey) {
+                rightCol.style.display = 'none';
+                if (rightCol.parentNode !== body) body.appendChild(rightCol);
+            } else {
+                rightCol.style.display = 'flex';
+                const wrapper = document.getElementById('wrap_' + currentFormatKey);
+                if (wrapper && rightCol.parentNode !== wrapper) {
+                    wrapper.appendChild(rightCol);
+                }
+            }
+        } else {
+            if (currentFormatKey) rightCol.style.display = 'flex';
+            if (rightCol.parentNode !== body) {
+                body.appendChild(rightCol);
+            }
+        }
+        resizeSubLinkTextarea();
+    }
+    let subLastIsMobile = window.innerWidth <= 768;
+    window.addEventListener('resize', () => {
+        const currentIsMobile = window.innerWidth <= 768;
+        if (currentIsMobile !== subLastIsMobile) {
+            subLastIsMobile = currentIsMobile;
+            adjustRightPanelPosition();
+        }
+    });
+
+    // 格式卡片点击切换逻辑
+    function selectSubFormat(formatKey, cardElement) {
+        if (currentFormatKey === formatKey) {
+            if (window.innerWidth <= 768) {
+                currentFormatKey = null;
+                cardElement.classList.remove('active');
+                subModalCard.classList.remove('has-content');
+                adjustRightPanelPosition();
+                return;
+            }
+        }
+
+        document.querySelectorAll('.sub-format-card').forEach(c => c.classList.remove('active'));
+        cardElement.classList.add('active');
+        currentFormatKey = formatKey;
+
+        renderRightPanel(formatKey);
+        adjustRightPanelPosition();
+
+        // 渲染完 DOM 后立即计算高度
+        setTimeout(resizeSubLinkTextarea, 20);
+
+        if (window.innerWidth <= 768) {
+            setTimeout(() => {
+                cardElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 50);
+        }
+    }
+
+    // 核心渲染逻辑：生成一键导入按钮和二维码
+    // 核心渲染逻辑：生成一键导入按钮和二维码
+    function renderRightPanel(formatKey) {
+        const data = subFormatData[formatKey];
+        const link = data.getLink();
+        const contentDiv = document.getElementById('subRightContent');
+        const subName = document.getElementById('inputSubName').value.trim() || 'WireArc';
+
+        let importBtnHtml = '';
+        // 默认不加 has-import 类，这样只有复制按钮时会独占一行撑满
+        let gridClass = 'sub-actions-grid';
+
+        if (formatKey === 'clash') {
+            // 只有 Clash 模式下，加上 has-import 变成左右两列，并生成导入按钮
+            gridClass = 'sub-actions-grid has-import';
+            const clashUrl = `clash://install-config?url=${encodeURIComponent(link)}&name=${encodeURIComponent(subName)}`;
+            importBtnHtml = `
+                <a href="${clashUrl}" class="btn-sub-action btn-import">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    导入 Clash
+                </a>
+            `;
+        } else if (formatKey === 'v2ray') {
+            // V2Ray 下什么都不做，importBtnHtml 保持为空，界面上只会显示一个宽的复制按钮
+        }
+
+        contentDiv.innerHTML = `
+            <div class="sub-right-header">
+                <div class="sub-right-title">${data.title}</div>
+                <div class="sub-right-desc">${data.desc}</div>
+            </div>
+            
+            <div class="qr-wrapper">
+                <div class="qr-box" id="qrCodeContainer"></div>
+            </div>
+
+            <textarea class="sub-link-textarea" id="currentSubLinkText" readonly onclick="this.select()">${link}</textarea>
+            
+            <div class="${gridClass}">
+                <button class="btn-sub-action btn-copy" id="btnCopySubLink" onclick="copyCurrentSubLink()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    复制链接
+                </button>
+                ${importBtnHtml}
+            </div>
+        `;
+
+        const qrContainer = document.getElementById('qrCodeContainer');
+        qrContainer.innerHTML = '';
+        new QRCode(qrContainer, {
+            text: link,
+            width: 140,
+            height: 140,
+            colorDark: "#1d1d1f",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.M
+        });
+    }
+
+    // 打开弹窗并默认直接展开第一项 (修复动画带来的高度错误)
+    async function openSubLinksModal() {
+        // 先为卡片加上 has-content，让弹窗初始就呈现 800px 宽度
+        subModalCard.classList.add('has-content');
+        document.getElementById('subRightCol').style.display = 'flex';
+        subModal.classList.add('active');
+        document.getElementById('subSaveIndicator').style.opacity = '0';
+
+        // 重置状态
+        currentFormatKey = null;
+        document.querySelectorAll('.sub-format-card').forEach(c => c.classList.remove('active'));
+
+        try {
+            const res = await fetch('/api/get-settings');
+            const result = await res.json();
+
+            if (result.status === 'success') {
+                const data = result.data;
+                currentToken = data.sub_token || '';
+                currentBaseUrl = data.panel_url ? data.panel_url.replace(/\/+$/, '') : window.location.origin;
+                document.getElementById('inputSubName').value = data.sub_custom_name || 'WireArc';
+
+                // 数据加载完毕，直接选中 Clash 并渲染
+                const clashCard = document.querySelector('#wrap_clash .sub-format-card');
+                selectSubFormat('clash', clashCard);
+            }
+        } catch (e) { console.error("加载配置失败", e); }
+    }
+
+    // 关闭弹窗
+    function closeSubLinksModal() {
+        subModal.classList.remove('active');
+        // 延迟移除 has-content，避免关闭淡出时触发突兀的尺寸回缩
+        setTimeout(() => {
+            subModalCard.classList.remove('has-content');
+            currentFormatKey = null;
+        }, 300);
+    }
+
+    // 自动静默保存订阅名称 (防抖)，并自动刷新右侧的参数
+    let subNameSaveTimer = null;
+    function saveCustomSubNameDebounced() {
+        if (!document.getElementById('subLinksModal').classList.contains('active')) {
+            return;
+        }
+
+        clearTimeout(subNameSaveTimer);
+        const indicator = document.getElementById('subSaveIndicator');
+        indicator.innerHTML = '<span style="color:#888;">保存中...</span>';
+        indicator.style.opacity = '1';
+
+        subNameSaveTimer = setTimeout(async () => {
+            const newName = document.getElementById('inputSubName').value.trim() || 'WireArc';
+            try {
+                const res = await fetch('/api/update-settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sub_custom_name: newName })
+                });
+                const savedResult = await res.json();
+                if (!res.ok || savedResult.status !== "success") throw new Error(savedResult.message || "保存失败");
+                if (res.ok) {
+                    indicator.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg> 名称已保存`;
+                    setTimeout(() => indicator.style.opacity = '0', 2000);
+
+                    if (currentFormatKey) {
+                        renderRightPanel(currentFormatKey);
+                        setTimeout(resizeSubLinkTextarea, 10);
+                    }
+                }
+            } catch (e) {
+                const failure = document.createElement("span");
+                failure.style.color = "#ff3b30";
+                failure.textContent = e.message || "保存失败";
+                indicator.replaceChildren(failure);
+            }
+        }, 600);
+    }
+
+    // 一键复制链接逻辑
+    function copyCurrentSubLink() {
+        const textarea = document.getElementById('currentSubLinkText');
+        const btn = document.getElementById('btnCopySubLink');
+
+        textarea.select();
+        textarea.setSelectionRange(0, 99999);
+
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(textarea.value).then(() => {
+                showCopySuccess(btn);
+            }).catch(() => fallbackCopy(btn));
+        } else {
+            fallbackCopy(btn);
+        }
+    }
+
+    function fallbackCopy(btn) {
+        try {
+            document.execCommand('copy');
+            showCopySuccess(btn);
+        } catch (err) {
+            alert('复制失败，请直接在上方框内长按手动复制链接');
+        }
+    }
+
+    function showCopySuccess(btn) {
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '复制成功!';
+        btn.classList.add('copied');
+
+        setTimeout(() => {
+            btn.innerHTML = originalHtml;
+            btn.classList.remove('copied');
+        }, 2000);
+    }
+</script>
+{{end}}

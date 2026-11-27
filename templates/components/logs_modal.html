@@ -1,0 +1,1239 @@
+{{define "logs_modal.html"}}
+<style>
+    .logv-modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 15, 20, 0.36);
+        backdrop-filter: saturate(180%) blur(12px);
+        -webkit-backdrop-filter: saturate(180%) blur(12px);
+        z-index: 3500;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.28s ease;
+    }
+
+    .logv-modal-overlay.active {
+        display: flex;
+        opacity: 1;
+    }
+
+    .logv-modal-card {
+        background: #ffffff;
+        width: 100%;
+        max-width: 900px;
+        height: 85vh;
+        border-radius: 26px;
+        box-shadow: 0 24px 56px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.04);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        animation: cnModalSpring 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    .logv-header {
+        background: rgba(248, 248, 250, 0.9);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        padding: 16px 22px 16px 26px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    .logv-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1d1d1f;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .logv-title-text-short {
+        display: none;
+    }
+
+    .logv-title-right {
+        display: inline-flex;
+        align-items: center;
+        margin-left: 6px;
+    }
+
+    .logv-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .logv-capsule {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        border-radius: 20px;
+        padding: 2px;
+        transition: background-color 0.25s ease;
+        cursor: pointer;
+    }
+
+    .logv-capsule.expanded {
+        background: #f5f5f7;
+        border: 1px solid #e5e5ea;
+    }
+
+    .logv-capsule-left {
+        flex-direction: row-reverse;
+    }
+
+    .logv-capsule-item {
+        border: none;
+        background: transparent;
+        color: #86868b;
+        cursor: pointer;
+        border-radius: 16px;
+        height: 26px;
+        min-width: 0;
+        padding: 0;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+        transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+        max-width: 0;
+        opacity: 0;
+        overflow: hidden;
+        margin: 0;
+    }
+
+    .logv-capsule-item:hover {
+        background: #e5e5ea;
+        color: #333;
+    }
+
+    .logv-capsule-item.active {
+        max-width: 88px;
+        padding: 4px 10px;
+        opacity: 1;
+    }
+
+    .logv-capsule.expanded .logv-capsule-item {
+        max-width: 88px;
+        padding: 4px 10px;
+        opacity: 1;
+    }
+
+    .logv-capsule-item.active[data-level="all"] {
+        background: #6b7280;
+        color: #fff;
+    }
+
+    .logv-capsule-item.active[data-level="debug"] {
+        background: #7c3aed;
+        color: #fff;
+    }
+
+    .logv-capsule-item.active[data-level="info"] {
+        background: #2563eb;
+        color: #fff;
+    }
+
+    .logv-capsule-item.active[data-level="warn"] {
+        background: #d97706;
+        color: #fff;
+    }
+
+    .logv-capsule-item.active[data-level="error"] {
+        background: #dc2626;
+        color: #fff;
+    }
+
+    .logv-capsule-item.active[data-limit="200"] {
+        background: #2563eb;
+        color: #fff;
+    }
+
+    .logv-capsule-item.active[data-limit="500"] {
+        background: #0891b2;
+        color: #fff;
+    }
+
+    .logv-capsule-item.active[data-limit="1000"] {
+        background: #0f766e;
+        color: #fff;
+    }
+
+    .logv-select,
+    .logv-btn {
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 999px;
+        background: #fff;
+        color: #1d1d1f;
+        height: 32px;
+        font-size: 12.5px;
+        font-weight: 600;
+        padding: 0 12px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        transition: all 0.2s ease;
+    }
+
+    .logv-clear-btn {
+        background: #fff5f5;
+        border-color: rgba(255, 59, 48, 0.18);
+        color: #d70015;
+    }
+
+    .logv-clear-btn:hover:not(:disabled) {
+        background: #ffe8e6;
+        border-color: rgba(255, 59, 48, 0.34);
+    }
+
+    .logv-clear-btn:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+    }
+
+    .logv-close {
+        width: 32px;
+        padding: 0;
+        background: #f2f3f7;
+        color: #555;
+        border-color: transparent;
+    }
+
+    .logv-close:hover {
+        background: #e5e5ea;
+        color: #1d1d1f;
+    }
+
+    .logv-live-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 99px;
+        background: #22c55e;
+        box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2);
+        animation: logvPulse 1.8s ease-in-out infinite;
+        cursor: pointer;
+        transition: background 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .logv-live-dot:hover {
+        transform: scale(1.12);
+    }
+
+    .logv-live-dot.off {
+        background: #d74242;
+        box-shadow: 0 0 0 4px rgba(215, 66, 66, 0.22);
+        animation: none;
+    }
+
+    .logv-live-text {
+        font-size: 12px;
+        color: #0f766e;
+        font-weight: 600;
+        user-select: none;
+    }
+
+    .logv-live-text.off {
+        color: #d74242;
+    }
+
+    @keyframes logvPulse {
+        0%,
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        50% {
+            transform: scale(0.85);
+            opacity: 0.7;
+        }
+    }
+
+    .logv-body {
+        flex: 1;
+        padding: 16px;
+        overflow-y: auto;
+        background: #fafbfc;
+    }
+
+    .logv-empty {
+        text-align: center;
+        color: #999;
+        margin-top: 80px;
+        font-size: 13px;
+    }
+
+    .logv-item {
+        background: #fff;
+        border: 1px solid rgba(0, 0, 0, 0.055);
+        border-radius: 12px;
+        padding: 10px 12px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+    }
+
+    .logv-item:hover {
+        border-color: rgba(0, 122, 255, 0.28);
+        background: #fbfdff;
+        box-shadow: 0 3px 10px rgba(0, 122, 255, 0.06);
+    }
+
+    .logv-item:active {
+        transform: scale(0.996);
+    }
+
+    .logv-item-arrow {
+        flex-shrink: 0;
+        color: #c7c7cc;
+        transition: color 0.16s ease, transform 0.16s ease;
+    }
+
+    .logv-item:hover .logv-item-arrow {
+        color: #007aff;
+        transform: translateX(2px);
+    }
+
+    /* 日志详情弹窗 */
+    .logd-modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 15, 20, 0.42);
+        backdrop-filter: saturate(180%) blur(10px);
+        -webkit-backdrop-filter: saturate(180%) blur(10px);
+        z-index: 3600;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        box-sizing: border-box;
+    }
+
+    .logd-modal-overlay.active {
+        display: flex;
+    }
+
+    .logd-modal-card {
+        background: #ffffff;
+        width: 100%;
+        max-width: 660px;
+        max-height: 82vh;
+        border-radius: 24px;
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.05);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        animation: cnModalSpring 0.26s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    .logd-header {
+        background: rgba(248, 248, 250, 0.92);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        padding: 15px 20px 15px 22px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .logd-header-meta {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .logd-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 18px 22px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        background: #ffffff;
+    }
+
+    .logd-section-label {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: #86868b;
+        margin-bottom: 6px;
+        letter-spacing: 0.02em;
+    }
+
+    .logd-summary-box {
+        background: #f6f7f9;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        border-radius: 14px;
+        padding: 12px 14px;
+        font-size: 13.5px;
+        line-height: 1.65;
+        color: #1d1d1f;
+        word-break: break-word;
+        white-space: pre-wrap;
+        user-select: text;
+    }
+
+    .logd-fields-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 6px;
+        background: #f9fafb;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        border-radius: 14px;
+        padding: 10px 12px;
+    }
+
+    .logd-field-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        font-size: 12.5px;
+        line-height: 1.5;
+        padding: 4px 2px;
+        border-bottom: 1px dashed rgba(0, 0, 0, 0.05);
+    }
+
+    .logd-field-row:last-child {
+        border-bottom: none;
+    }
+
+    .logd-field-key {
+        flex: 0 0 112px;
+        color: #6e6e73;
+        font-weight: 600;
+        font-family: Menlo, Monaco, Consolas, monospace;
+        font-size: 11.5px;
+        word-break: break-all;
+    }
+
+    .logd-field-val {
+        flex: 1;
+        min-width: 0;
+        color: #1d1d1f;
+        word-break: break-all;
+        white-space: pre-wrap;
+        user-select: text;
+    }
+
+    .logd-raw-box {
+        background: #16181d;
+        color: #e5e7eb;
+        border-radius: 14px;
+        padding: 12px 14px;
+        font-family: "SF Mono", Menlo, Monaco, Consolas, monospace;
+        font-size: 12px;
+        line-height: 1.65;
+        word-break: break-all;
+        white-space: pre-wrap;
+        user-select: text;
+        max-height: 220px;
+        overflow-y: auto;
+    }
+
+    .logd-footer {
+        padding: 13px 20px;
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
+        background: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+    .logd-btn-copy {
+        background: #eaf4ff;
+        color: #007aff;
+        border: 1px solid rgba(0, 122, 255, 0.16);
+        border-radius: 999px;
+        padding: 7px 16px;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.18s ease;
+    }
+
+    .logd-btn-copy:hover {
+        background: #dceeff;
+    }
+
+    .logd-btn-close {
+        background: #f2f3f7;
+        color: #1d1d1f;
+        border: none;
+        border-radius: 999px;
+        padding: 7px 18px;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.18s ease;
+    }
+
+    .logd-btn-close:hover {
+        background: #e5e6eb;
+    }
+
+    .logv-line {
+        display: flex;
+        align-items: center;
+        flex-wrap: nowrap;
+        gap: 8px;
+    }
+
+    .logv-time {
+        flex: 0 0 154px;
+        font-size: 11px;
+        color: #6b7280;
+        font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+    }
+
+    .logv-level {
+        font-size: 11px;
+        font-weight: 700;
+        border-radius: 99px;
+        padding: 2px 7px;
+        line-height: 1.4;
+    }
+
+    .logv-level.debug {
+        background: #f3e8ff;
+        color: #7c3aed;
+    }
+
+    .logv-level.info {
+        background: #e0f2fe;
+        color: #2563eb;
+    }
+
+    .logv-level.warn {
+        background: #fff8e6;
+        color: #d97706;
+    }
+
+    .logv-level.error {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+
+    .logv-op {
+        font-size: 11px;
+        color: #0f766e;
+        background: #ecfeff;
+        border: 1px solid #ccfbf1;
+        border-radius: 99px;
+        padding: 2px 8px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .logv-cn {
+        flex: 1;
+        min-width: 0;
+        font-size: 13px;
+        color: #1d1d1f;
+        line-height: 1.45;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .logv-state-on,
+    .logv-state-off {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 0 6px;
+        font-weight: 700;
+        font-size: 12px;
+        line-height: 1.5;
+        vertical-align: baseline;
+    }
+
+    .logv-state-on {
+        color: #166534;
+        background: #dcfce7;
+        border: 1px solid #bbf7d0;
+    }
+
+    .logv-state-off {
+        color: #b91c1c;
+        background: #fee2e2;
+        border: 1px solid #fecaca;
+    }
+
+    @media (max-width: 768px) {
+        .logv-modal-card {
+            max-width: 95%;
+            height: 88vh;
+        }
+
+        .logv-header {
+            padding: 12px;
+            flex-wrap: nowrap;
+            justify-content: space-between;
+            position: relative;
+            z-index: 30;
+        }
+
+        .logv-title-right {
+            margin-left: 4px;
+        }
+
+        .logv-title-text-full {
+            display: none;
+        }
+
+        .logv-title-text-short {
+            display: inline;
+        }
+
+        .logv-actions {
+            width: auto;
+            flex-wrap: nowrap;
+            margin-left: auto;
+            gap: 4px;
+        }
+
+        .logv-live-text {
+            display: none;
+        }
+
+        .logv-clear-btn {
+            width: 30px;
+            height: 30px;
+            padding: 0;
+        }
+
+        .logv-clear-btn span {
+            display: none;
+        }
+
+        .logv-capsule {
+            position: relative;
+            overflow: visible;
+            z-index: 1;
+        }
+
+        .logv-capsule.expanded {
+            background: transparent;
+            border: none;
+            z-index: 20;
+        }
+
+        .logv-capsule-item {
+            height: 22px;
+            font-size: 10px;
+        }
+
+        .logv-capsule-item.active {
+            padding: 2px 8px;
+        }
+
+        .logv-capsule.expanded .logv-capsule-item {
+            max-width: 72px;
+            padding: 2px 8px;
+            opacity: 1;
+        }
+
+        .logv-capsule.expanded .logv-capsule-item:not(.active) {
+            background: #fff;
+            border: 1px solid #e5e5ea;
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+        }
+
+        .logv-modal-overlay.logv-mobile-expand-limit #logViewerLevelFilter {
+            opacity: 0;
+            pointer-events: none;
+            width: 0;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .logv-modal-overlay.logv-mobile-expand-limit .logv-actions {
+            gap: 0;
+        }
+
+        .logv-modal-overlay.logv-mobile-expand-level .logv-title-right {
+            opacity: 0;
+            pointer-events: none;
+            width: 0;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .logv-line {
+            flex-wrap: wrap;
+            gap: 6px 8px;
+        }
+
+        .logv-time {
+            flex: 0 0 auto;
+        }
+
+        .logv-cn {
+            flex-basis: 100%;
+            white-space: normal;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .logv-item-arrow {
+            display: none;
+        }
+
+        .logd-field-row {
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .logd-field-key {
+            flex: none;
+        }
+    }
+</style>
+
+<div class="logv-modal-overlay" id="logViewerModal">
+    <div class="logv-modal-card">
+        <div class="logv-header">
+            <div class="logv-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#007aff;">
+                    <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+                    <path d="M3 7l9 6 9-6"></path>
+                </svg>
+                <span class="logv-title-text-full">最近日志中心</span>
+                <span class="logv-title-text-short">日志</span>
+                <div class="logv-title-right">
+                    <div class="logv-capsule logv-capsule-right" id="logViewerLimitCapsule">
+                        <button type="button" class="logv-capsule-item active" data-limit="200">200条</button>
+                        <button type="button" class="logv-capsule-item" data-limit="500">500条</button>
+                        <button type="button" class="logv-capsule-item" data-limit="1000">1000条</button>
+                    </div>
+                </div>
+            </div>
+            <div class="logv-actions">
+                <div class="logv-capsule logv-capsule-left" id="logViewerLevelFilter">
+                    <button type="button" class="logv-capsule-item active" data-level="all">全部</button>
+                    <button type="button" class="logv-capsule-item" data-level="debug">调试</button>
+                    <button type="button" class="logv-capsule-item" data-level="info">信息</button>
+                    <button type="button" class="logv-capsule-item" data-level="warn">警告</button>
+                    <button type="button" class="logv-capsule-item" data-level="error">错误</button>
+                </div>
+                <span class="logv-live-dot" id="logViewerLiveDot"></span>
+                <span class="logv-live-text" id="logViewerLiveText">实时更新</span>
+                <button type="button" class="logv-btn logv-clear-btn" id="logViewerClearBtn" onclick="clearRecentLogs()" title="清空日志">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>
+                    <span>清空</span>
+                </button>
+                <button class="logv-btn logv-close" onclick="closeLogViewerModal()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="logv-body" id="logViewerBody">
+            <div class="logv-empty">打开后将自动流式加载日志...</div>
+        </div>
+    </div>
+</div>
+
+<!-- 单条日志完整详情弹窗 -->
+<div class="logd-modal-overlay" id="logDetailModal" role="dialog" aria-modal="true" aria-label="日志详情">
+    <div class="logd-modal-card">
+        <div class="logd-header">
+            <div class="logd-header-meta">
+                <span class="logv-level info" id="logDetailLevel">信息</span>
+                <span class="logv-op" id="logDetailOp">系统日志</span>
+                <span class="logv-time" id="logDetailTime" style="flex:0 0 auto;">--</span>
+            </div>
+            <button type="button" class="logv-btn logv-close" onclick="closeLogDetailModal()" title="关闭详情">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+        <div class="logd-body">
+            <div>
+                <div class="logd-section-label">完整日志内容</div>
+                <div class="logd-summary-box" id="logDetailSummary">--</div>
+            </div>
+            <div id="logDetailFieldsWrap" style="display:none;">
+                <div class="logd-section-label">结构化字段</div>
+                <div class="logd-fields-grid" id="logDetailFields"></div>
+            </div>
+            <div id="logDetailRawWrap" style="display:none;">
+                <div class="logd-section-label">原始日志原文</div>
+                <div class="logd-raw-box" id="logDetailRaw"></div>
+            </div>
+        </div>
+        <div class="logd-footer">
+            <button type="button" class="logd-btn-copy" id="logDetailCopyBtn" onclick="copyLogDetailRaw()">复制完整内容</button>
+            <button type="button" class="logd-btn-close" onclick="closeLogDetailModal()">关闭</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const logViewerModalEl = document.getElementById('logViewerModal');
+    const logViewerBodyEl = document.getElementById('logViewerBody');
+    const logViewerLevelFilterEl = document.getElementById('logViewerLevelFilter');
+    const logViewerLimitCapsuleEl = document.getElementById('logViewerLimitCapsule');
+    const logViewerLiveDotEl = document.getElementById('logViewerLiveDot');
+    const logViewerLiveTextEl = document.getElementById('logViewerLiveText');
+    const logViewerLevelButtons = Array.from(logViewerLevelFilterEl.querySelectorAll('[data-level]'));
+    const logViewerLimitButtons = Array.from(logViewerLimitCapsuleEl.querySelectorAll('[data-limit]'));
+
+    let logViewerStream = null;
+    let logViewerHasData = false;
+    let logViewerAllLogs = [];
+    let logViewerFilteredLogs = [];
+    let logViewerLevelFilter = 'all';
+    let logViewerLiveEnabled = true;
+    let logViewerLimit = '200';
+    let logDetailCurrentCopyText = '';
+
+    const logDetailModalEl = document.getElementById('logDetailModal');
+
+    logViewerModalEl.addEventListener('click', function (e) {
+        if (e.target === logViewerModalEl) closeLogViewerModal();
+    });
+
+    if (logDetailModalEl) {
+        logDetailModalEl.addEventListener('click', function (e) {
+            if (e.target === logDetailModalEl) closeLogDetailModal();
+        });
+    }
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            if (logDetailModalEl && logDetailModalEl.classList.contains('active')) {
+                closeLogDetailModal();
+                return;
+            }
+            if (logViewerModalEl.classList.contains('active')) {
+                closeLogViewerModal();
+            }
+        }
+    });
+
+    function parseRawLogAttrs(raw) {
+        const text = String(raw || '').trim();
+        if (!text) return [];
+        const attrs = [];
+        const skipKeys = new Set(['time', 'level', 'msg']);
+        const regex = /([a-zA-Z0-9_.-]+)=("(?:[^"\\]|\\.)*"|\S+)/g;
+        let match;
+        while ((match = regex.exec(text)) !== null) {
+            const key = match[1];
+            if (skipKeys.has(key)) continue;
+            let val = match[2];
+            if (val.startsWith('"') && val.endsWith('"')) {
+                try {
+                    val = JSON.parse(val);
+                } catch (_) {
+                    val = val.slice(1, -1);
+                }
+            }
+            attrs.push([key, val]);
+        }
+        return attrs;
+    }
+
+    function openLogDetailModal(item) {
+        if (!item || !logDetailModalEl) return;
+        const cls = levelClass(item.level);
+        const levelEl = document.getElementById('logDetailLevel');
+        if (levelEl) {
+            levelEl.className = 'logv-level ' + cls;
+            levelEl.textContent = item.level_cn || item.level || '信息';
+        }
+        const opEl = document.getElementById('logDetailOp');
+        if (opEl) opEl.textContent = item.operation || '系统日志';
+        const timeEl = document.getElementById('logDetailTime');
+        if (timeEl) timeEl.textContent = item.time || '--';
+
+        const fullSummary = item.message_cn || item.message || '--';
+        const summaryEl = document.getElementById('logDetailSummary');
+        if (summaryEl) summaryEl.innerHTML = stylizeStateText(fullSummary);
+
+        const rawText = String(item.raw || '').trim();
+        const attrs = parseRawLogAttrs(rawText);
+        if (item.source && !attrs.some(([k]) => k === 'source')) {
+            attrs.unshift(['source', item.source]);
+        }
+
+        const fieldsWrap = document.getElementById('logDetailFieldsWrap');
+        const fieldsEl = document.getElementById('logDetailFields');
+        if (fieldsWrap && fieldsEl) {
+            if (attrs.length > 0) {
+                fieldsEl.innerHTML = attrs.map(([k, v]) => `
+                    <div class="logd-field-row">
+                        <span class="logd-field-key">${escHTML(k)}</span>
+                        <span class="logd-field-val">${escHTML(v)}</span>
+                    </div>
+                `).join('');
+                fieldsWrap.style.display = 'block';
+            } else {
+                fieldsEl.innerHTML = '';
+                fieldsWrap.style.display = 'none';
+            }
+        }
+
+        const rawWrap = document.getElementById('logDetailRawWrap');
+        const rawEl = document.getElementById('logDetailRaw');
+        if (rawWrap && rawEl) {
+            if (rawText) {
+                rawEl.textContent = rawText;
+                rawWrap.style.display = 'block';
+            } else {
+                rawEl.textContent = '';
+                rawWrap.style.display = 'none';
+            }
+        }
+
+        logDetailCurrentCopyText = rawText || `[${item.time || '--'}] [${item.level_cn || item.level || ''}] ${fullSummary}`;
+        const copyBtn = document.getElementById('logDetailCopyBtn');
+        if (copyBtn) copyBtn.textContent = '复制完整内容';
+
+        logDetailModalEl.classList.add('active');
+    }
+
+    function closeLogDetailModal() {
+        if (logDetailModalEl) logDetailModalEl.classList.remove('active');
+    }
+
+    async function copyLogDetailRaw() {
+        const btn = document.getElementById('logDetailCopyBtn');
+        if (!logDetailCurrentCopyText) return;
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(logDetailCurrentCopyText);
+            } else {
+                const ta = document.createElement('textarea');
+                ta.value = logDetailCurrentCopyText;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                ta.remove();
+            }
+            if (btn) {
+                btn.textContent = '✓ 已复制';
+                setTimeout(() => { btn.textContent = '复制完整内容'; }, 1600);
+            }
+        } catch (_) {
+            if (btn) btn.textContent = '复制失败';
+        }
+    }
+
+    logViewerBodyEl.addEventListener('click', function (e) {
+        const row = e.target && e.target.closest ? e.target.closest('.logv-item[data-log-idx]') : null;
+        if (!row) return;
+        const idx = parseInt(row.getAttribute('data-log-idx'), 10);
+        if (!Number.isNaN(idx) && logViewerFilteredLogs[idx]) {
+            openLogDetailModal(logViewerFilteredLogs[idx]);
+        }
+    });
+
+    function openLogViewerModal() {
+        logViewerModalEl.classList.add('active');
+
+        const dropdown = document.querySelector('.dropdown-content');
+        if (dropdown) {
+            dropdown.style.display = 'none';
+            setTimeout(() => { dropdown.style.display = ''; }, 100);
+        }
+
+        refreshLogViewerData();
+    }
+
+    function closeLogViewerModal() {
+        closeLogDetailModal();
+        stopRecentLogsStream();
+        collapseAllCapsules();
+        logViewerModalEl.classList.remove('active');
+    }
+
+    function escHTML(text) {
+        if (text === null || text === undefined) return '';
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function levelClass(level) {
+        const v = String(level || '').toLowerCase();
+        if (v.includes('error')) return 'error';
+        if (v.includes('warn')) return 'warn';
+        if (v.includes('debug')) return 'debug';
+        return 'info';
+    }
+
+    function stylizeStateText(raw) {
+        const safe = escHTML(raw || '--');
+        return safe
+            .replace(/开启/g, '<span class="logv-state-on">开启</span>')
+            .replace(/关闭/g, '<span class="logv-state-off">关闭</span>');
+    }
+
+    function setLogViewerLiveState(enabled) {
+        logViewerLiveEnabled = !!enabled;
+        logViewerLiveDotEl.classList.toggle('off', !logViewerLiveEnabled);
+        logViewerLiveTextEl.textContent = logViewerLiveEnabled ? '实时更新' : '停止更新';
+        logViewerLiveTextEl.classList.toggle('off', !logViewerLiveEnabled);
+    }
+
+    function setCapsuleExpanded(capsuleEl, expanded) {
+        capsuleEl.classList.toggle('expanded', !!expanded);
+        updateMobileCapsuleLayout();
+    }
+
+    function collapseAllCapsules() {
+        setCapsuleExpanded(logViewerLevelFilterEl, false);
+        setCapsuleExpanded(logViewerLimitCapsuleEl, false);
+    }
+
+    function updateMobileCapsuleLayout() {
+        logViewerModalEl.classList.remove('logv-mobile-expand-limit', 'logv-mobile-expand-level');
+
+        if (window.innerWidth > 768) {
+            return;
+        }
+
+        if (logViewerLimitCapsuleEl.classList.contains('expanded')) {
+            logViewerModalEl.classList.add('logv-mobile-expand-limit');
+            return;
+        }
+
+        if (logViewerLevelFilterEl.classList.contains('expanded')) {
+            logViewerModalEl.classList.add('logv-mobile-expand-level');
+        }
+    }
+
+    function renderRecentLogs(logs) {
+        if (!Array.isArray(logs) || !logs.length) {
+            logViewerFilteredLogs = [];
+            logViewerBodyEl.innerHTML = `<div class="logv-empty">暂无日志数据</div>`;
+            logViewerHasData = false;
+            return;
+        }
+
+        const levelFilter = String(logViewerLevelFilter || 'all').toLowerCase();
+        const filteredLogs = levelFilter === 'all'
+            ? logs
+            : logs.filter(item => levelClass(item.level) === levelFilter);
+
+        if (!filteredLogs.length) {
+            logViewerFilteredLogs = [];
+            logViewerBodyEl.innerHTML = `<div class="logv-empty">当前筛选条件下暂无日志</div>`;
+            logViewerHasData = false;
+            return;
+        }
+
+        logViewerFilteredLogs = filteredLogs;
+        logViewerBodyEl.innerHTML = filteredLogs.map((item, idx) => {
+            const cls = levelClass(item.level);
+            const levelCN = escHTML(item.level_cn || item.level || '信息');
+            const operation = escHTML(item.operation || '系统日志');
+            const rawMsg = item.message_cn || item.message || '--';
+            const msg = stylizeStateText(rawMsg);
+            const msgTitle = escHTML(rawMsg);
+            return `
+                <div class="logv-item" data-log-idx="${idx}" title="点击查看完整日志详情">
+                    <div class="logv-line">
+                        <span class="logv-time">${escHTML(item.time || '--')}</span>
+                        <span class="logv-level ${cls}">${levelCN}</span>
+                        <span class="logv-op">${operation}</span>
+                        <span class="logv-cn" title="${msgTitle}">${msg}</span>
+                        <svg class="logv-item-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        logViewerHasData = true;
+    }
+
+    async function fetchRecentLogsSnapshot() {
+        const limit = logViewerLimit || '200';
+        if (!logViewerHasData) {
+            logViewerBodyEl.innerHTML = `<div class="logv-empty"><div class="wa-loading-state"><span class="wa-spinner"></span><span>正在加载日志快照...</span></div></div>`;
+        }
+        setLogViewerLiveState(false);
+
+        try {
+            const res = await fetch(`/api/recent-logs?limit=${encodeURIComponent(limit)}`);
+            const data = await res.json();
+
+            if (!data || data.status !== 'success') {
+                const msg = (data && data.message) ? escHTML(data.message) : '日志获取失败';
+                logViewerBodyEl.innerHTML = `<div class="logv-empty" style="color:#d74242;">${msg}</div>`;
+                return;
+            }
+
+            logViewerAllLogs = Array.isArray(data.logs) ? data.logs : [];
+            renderRecentLogs(logViewerAllLogs);
+        } catch (e) {
+            logViewerBodyEl.innerHTML = `<div class="logv-empty" style="color:#d74242;">网络请求失败，请稍后重试</div>`;
+        }
+    }
+
+    function stopRecentLogsStream() {
+        if (logViewerStream) {
+            logViewerStream.close();
+            logViewerStream = null;
+        }
+    }
+
+    function startRecentLogsStream() {
+        stopRecentLogsStream();
+
+        const limit = logViewerLimit || '200';
+        if (!logViewerHasData) {
+            logViewerBodyEl.innerHTML = `<div class="logv-empty"><div class="wa-loading-state"><span class="wa-spinner"></span><span>正在连接实时日志流...</span></div></div>`;
+        }
+        setLogViewerLiveState(true);
+
+        const es = new EventSource(`/api/recent-logs/stream?limit=${encodeURIComponent(limit)}`);
+        logViewerStream = es;
+
+        es.addEventListener('logs', function (evt) {
+            try {
+                const data = JSON.parse(evt.data || '{}');
+                if (!data || data.status !== 'success') {
+                    const msg = (data && data.message) ? escHTML(data.message) : '日志流读取失败';
+                    logViewerBodyEl.innerHTML = `<div class="logv-empty" style="color:#d74242;">${msg}</div>`;
+                    return;
+                }
+                logViewerAllLogs = Array.isArray(data.logs) ? data.logs : [];
+                renderRecentLogs(logViewerAllLogs);
+            } catch (e) {
+            }
+        });
+
+        es.addEventListener('error', function () {});
+    }
+
+    function refreshLogViewerData() {
+        if (logViewerLiveEnabled) {
+            startRecentLogsStream();
+            return;
+        }
+
+        stopRecentLogsStream();
+        fetchRecentLogsSnapshot();
+    }
+
+    async function clearRecentLogs() {
+        const confirmed = typeof window.waConfirm === 'function'
+            ? await window.waConfirm('确定清空日志中心的所有历史日志吗？', { title: '清空历史日志', confirmText: '确认清空', tone: 'danger' })
+            : confirm('确定清空日志中心的所有历史日志吗？');
+        if (!confirmed) {
+            return;
+        }
+        const btn = document.getElementById('logViewerClearBtn');
+        if (btn) btn.disabled = true;
+        try {
+            const res = await fetch('/api/recent-logs/clear', { method: 'POST' });
+            const data = await res.json();
+            if (!res.ok || !data || data.status !== 'success') {
+                alert((data && data.message) ? data.message : '清空日志失败');
+                return;
+            }
+            logViewerAllLogs = [];
+            logViewerHasData = false;
+            renderRecentLogs([]);
+        } catch (e) {
+            alert('清空日志失败，请检查网络连接');
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    logViewerLiveDotEl.addEventListener('click', function () {
+        if (!logViewerModalEl.classList.contains('active')) {
+            return;
+        }
+
+        setLogViewerLiveState(!logViewerLiveEnabled);
+        logViewerHasData = false;
+        refreshLogViewerData();
+    });
+
+    logViewerLevelButtons.forEach(btn => {
+        btn.addEventListener('click', function () {
+            if (!logViewerLevelFilterEl.classList.contains('expanded')) {
+                setCapsuleExpanded(logViewerLevelFilterEl, true);
+                setCapsuleExpanded(logViewerLimitCapsuleEl, false);
+                return;
+            }
+
+            const level = String(btn.dataset.level || 'all').toLowerCase();
+            logViewerLevelFilter = level;
+
+            logViewerLevelButtons.forEach(x => x.classList.toggle('active', x === btn));
+            renderRecentLogs(logViewerAllLogs);
+            setCapsuleExpanded(logViewerLevelFilterEl, false);
+        });
+    });
+
+    logViewerLimitButtons.forEach(btn => {
+        btn.addEventListener('click', function () {
+            if (!logViewerLimitCapsuleEl.classList.contains('expanded')) {
+                setCapsuleExpanded(logViewerLimitCapsuleEl, true);
+                setCapsuleExpanded(logViewerLevelFilterEl, false);
+                return;
+            }
+
+            const nextLimit = String(btn.dataset.limit || '200');
+            const changed = logViewerLimit !== nextLimit;
+            logViewerLimit = nextLimit;
+
+            logViewerLimitButtons.forEach(x => x.classList.toggle('active', x === btn));
+            setCapsuleExpanded(logViewerLimitCapsuleEl, false);
+
+            if (changed && logViewerModalEl.classList.contains('active')) {
+                logViewerHasData = false;
+                refreshLogViewerData();
+            }
+        });
+    });
+
+    logViewerLevelFilterEl.addEventListener('click', function (e) {
+        if (!e.target.closest('[data-level]')) {
+            setCapsuleExpanded(logViewerLevelFilterEl, !logViewerLevelFilterEl.classList.contains('expanded'));
+            setCapsuleExpanded(logViewerLimitCapsuleEl, false);
+        }
+    });
+
+    logViewerLimitCapsuleEl.addEventListener('click', function (e) {
+        if (!e.target.closest('[data-limit]')) {
+            setCapsuleExpanded(logViewerLimitCapsuleEl, !logViewerLimitCapsuleEl.classList.contains('expanded'));
+            setCapsuleExpanded(logViewerLevelFilterEl, false);
+        }
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('#logViewerModal .logv-capsule')) {
+            collapseAllCapsules();
+        }
+    });
+
+    window.addEventListener('resize', updateMobileCapsuleLayout);
+
+    setLogViewerLiveState(true);
+    collapseAllCapsules();
+</script>
+{{end}}

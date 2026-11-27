@@ -1,0 +1,851 @@
+{{define "traffic_stats_panel.html"}}
+<style>
+    .traffic-stats-card {
+        margin-top: 16px;
+    }
+
+    .ts-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        .ts-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 290px;
+            gap: 12px;
+            font-weight: 700;
+            color: #1d1d1f;
+
+            .ts-left {
+                display: grid;
+                grid-template-rows: auto auto;
+                gap: 12px;
+                gap: 8px;
+                flex-wrap: wrap;
+
+                .ts-panel {
+                    border: 1px solid #ececf2;
+                    border-radius: 12px;
+                    background: #fff;
+                    padding: 10px 12px;
+                }
+
+                .ts-panel-header {}
+
+                justify-content: space-between;
+                border: 1px solid #dcdce3;
+                gap: 8px;
+                margin-bottom: 8px;
+                border-radius: 8px;
+                background: #fff;
+
+                .ts-head-left,
+                .ts-head-right {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    border-radius: 8px;
+                    background: #007aff;
+
+                    .ts-panel-title {
+                        font-size: 22px;
+                        font-weight: 700;
+                        color: #1d1d1f;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 6px;
+                    }
+
+                    .ts-switch {
+                        display: inline-flex;
+                        background: #f4f4f8;
+                        padding: 6px 12px;
+                        border: 1px solid #ececf2;
+                        padding: 2px;
+                    }
+
+                    .ts-switch button {
+                        border: none;
+                        background: transparent;
+                        color: #666;
+                        padding: 5px 10px;
+                        border-radius: 6px;
+                        font-size: 12px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        color: #86868b;
+                        margin-bottom: 8px;
+
+                        .ts-switch button.active {
+                            background: #007aff;
+                            color: #fff;
+                            box-shadow: 0 1px 6px rgba(0, 122, 255, 0.35);
+                            grid-template-columns: 1fr 1fr;
+                            gap: 12px;
+
+                            .ts-selected-node {
+                                font-size: 30px;
+                                font-weight: 800;
+                                color: #1d1d1f;
+                                display: inline-flex;
+                                align-items: center;
+                                gap: 8px;
+                                border-radius: 10px;
+                                padding: 10px;
+
+                                .ts-selected-node .dot {
+                                    width: 8px;
+                                    height: 8px;
+                                    border-radius: 50%;
+                                    background: #ff4d4f;
+                                    box-shadow: 0 0 0 3px rgba(255, 77, 79, 0.2);
+                                    font-weight: 600;
+                                    color: #1d1d1f;
+
+                                    .ts-svg {
+                                        width: 100%;
+                                        height: 250px;
+                                        display: block;
+                                        background: linear-gradient(180deg, #fbfcff 0%, #ffffff 100%);
+                                        border-radius: 8px;
+                                        border: 1px solid #f0f1f6;
+                                    }
+
+                                    .ts-legend {
+                                        margin-top: 8px;
+                                        display: flex;
+                                        justify-content: center;
+                                        gap: 12px;
+                                    }
+
+                                    color: #666;
+                                    height: 220px;
+                                    display: block;
+
+                                    .ts-dot {
+                                        width: 10px;
+                                        height: 10px;
+                                        border-radius: 50%;
+                                        display: inline-block;
+                                        margin-right: 5px;
+                                        vertical-align: middle;
+                                    }
+
+                                    .ts-right {
+                                        border: 1px solid #ececf2;
+                                        border-radius: 12px;
+                                        background: #fff;
+                                        padding: 10px;
+                                        display: flex;
+                                        flex-direction: column;
+                                        min-height: 560px;
+                                    }
+
+                                    .ts-rank-header {
+                                        display: flex;
+                                        justify-content: space-between;
+                                        align-items: center;
+                                        gap: 8px;
+                                        margin-bottom: 8px;
+                                    }
+
+                                    .ts-rank-title {
+                                        font-size: 28px;
+                                        font-weight: 800;
+                                        color: #1d1d1f;
+                                    }
+
+                                    .ts-rank-date {
+                                        border: 1px solid #ececf2;
+                                        border-radius: 8px;
+                                        padding: 4px 8px;
+                                        font-size: 11px;
+                                        color: #888;
+                                        background: #fafafe;
+                                    }
+
+                                    .ts-rank-summary {
+                                        border: 1px solid #f0f1f6;
+                                        border-radius: 10px;
+                                        padding: 8px;
+                                        margin-bottom: 8px;
+                                        background: #fcfcff;
+                                    }
+
+                                    .ts-rank-kpi {
+                                        display: grid;
+                                        grid-template-columns: 1fr 1fr 1fr;
+                                        gap: 6px;
+                                        text-align: center;
+                                    }
+
+                                    .ts-rank-kpi .k {
+                                        font-size: 11px;
+                                        color: #9a9aa5;
+                                    }
+
+                                    .ts-rank-kpi .v {
+                                        font-size: 12px;
+                                        font-weight: 700;
+                                    }
+
+                                    .ts-rank-list {
+                                        overflow: auto;
+                                        flex: 1;
+                                        padding-right: 2px;
+                                        display: flex;
+                                        flex-direction: column;
+                                        gap: 6px;
+                                    }
+
+                                    .ts-rank-item {
+                                        border: 1px solid #eef0f5;
+                                        border-radius: 10px;
+                                        padding: 8px;
+                                        cursor: pointer;
+                                        transition: all .2s;
+                                        background: #fff;
+                                    }
+
+                                    .ts-rank-item:hover {
+                                        border-color: #b6d6ff;
+                                        box-shadow: 0 2px 8px rgba(0, 122, 255, 0.08);
+                                    }
+
+                                    .ts-rank-item.active {
+                                        border-color: #7cb4ff;
+                                        background: #f5faff;
+                                    }
+
+                                    .ts-rank-top {
+                                        display: flex;
+                                        align-items: center;
+                                        justify-content: space-between;
+                                        gap: 8px;
+                                    }
+
+                                    .ts-rank-name {
+                                        font-size: 14px;
+                                        font-weight: 700;
+                                        color: #1d1d1f;
+                                        display: inline-flex;
+                                        align-items: center;
+                                        gap: 6px;
+                                    }
+
+                                    .ts-rank-total {
+                                        font-size: 12px;
+                                        font-weight: 700;
+                                        color: #666;
+                                    }
+
+                                    .ts-rank-bar {
+                                        height: 6px;
+                                        border-radius: 5px;
+                                        background: #eef1f7;
+                                        margin-top: 7px;
+                                        overflow: hidden;
+                                    }
+
+                                    .ts-rank-bar-fill {
+                                        height: 100%;
+                                        display: flex;
+                                    }
+
+                                    .ts-rank-bar-up {
+                                        background: #34c759;
+                                        height: 100%;
+                                    }
+
+                                    .ts-rank-bar-down {
+                                        background: #1e88ff;
+                                        height: 100%;
+                                    }
+
+                                    .ts-rank-meta {
+                                        margin-top: 6px;
+                                        display: flex;
+                                        justify-content: space-between;
+                                        align-items: center;
+                                        gap: 8px;
+                                        font-size: 11px;
+                                        color: #80808b;
+                                    }
+
+                                    .ts-rank-mini {
+                                        display: inline-flex;
+                                        align-items: center;
+                                        gap: 6px;
+                                    }
+
+                                    .ts-status {
+                                        margin-top: 6px;
+                                        min-height: 16px;
+                                        color: #888;
+                                        font-size: 12px;
+                                    }
+
+                                    .ts-hidden {
+                                        display: none;
+                                    }
+
+                                    @media (max-width: 1200px) {
+                                        .ts-layout {
+                                            grid-template-columns: 1fr;
+                                        }
+
+                                        .ts-right {
+                                            min-height: 400px;
+                                        }
+
+                                        .ts-panel-title,
+                                        .ts-rank-title,
+                                        .ts-selected-node {
+                                            font-size: 18px;
+                                        }
+
+                                        border-radius: 8px;
+                                    }
+</style>
+
+<div class="ts-layout">
+    <div class="ts-left">
+        <div class="ts-panel">
+            <div class="ts-panel-header">
+                <div class="ts-head-left">
+                    <div class="ts-panel-title">📊 流量分布</div>
+                    <div class="ts-switch" id="ts-dist-switch">
+                        <button type="button" data-interval="2">2小时</button>
+                        <button type="button" data-interval="1" class="active">1小时</button>
+                    </div>
+                </div>
+                <div class="ts-head-right">
+                    <div class="ts-selected-node" id="ts-selected-node">
+                        <span class="dot"></span>
+                        <span>--</span>
+                    </div>
+                </div>
+            </div>
+
+            <svg class="ts-svg" id="ts-bar-svg" viewBox="0 0 960 250" preserveAspectRatio="none"></svg>
+            <div class="ts-legend">
+                <span><i class="ts-dot" style="background:#34c759"></i>上传</span>
+                <span><i class="ts-dot" style="background:#1e88ff"></i>下载</span>
+            </div>
+        </div>
+
+        <div class="ts-panel">
+            <div class="ts-panel-header">
+                <div class="ts-head-left">
+                    <div class="ts-panel-title">📈 流量趋势</div>
+                    <div class="ts-switch" id="ts-trend-switch">
+                        <button type="button" data-mode="increment" class="active">增量</button>
+                        <button type="button" data-mode="total">总量</button>
+                    </div>
+                </div>
+                <div class="ts-head-right" style="font-size:12px; color:#8d8d98; font-weight:700;">
+                    <span id="ts-trend-today">今日: 0 B</span>
+                </div>
+            </div>
+
+            <svg class="ts-svg" id="ts-line-svg" viewBox="0 0 960 250" preserveAspectRatio="none"></svg>
+            <div class="ts-legend">
+                <span><i class="ts-dot" style="background:#34c759"></i>上传</span>
+                <span><i class="ts-dot" style="background:#1e88ff"></i>下载</span>
+                <span><i class="ts-dot" style="background:#b16bff"></i>总计</span>
+            </div>
+        </div>
+        <button class="ts-refresh-btn" onclick="trafficStatsRefresh(true)">刷新</button>
+
+        <div class="ts-right">
+            <div class="ts-rank-header">
+                <div class="ts-rank-title">📉 流量消耗</div>
+                <div class="ts-rank-date" id="ts-rank-date">--</div>
+                <span><i class="ts-dot" style="background:#f5a623"></i>下行</span>
+            </div>
+            <div class="ts-rank-summary">
+                <div class="ts-rank-kpi">
+                    <div>
+                        <div class="k">上传</div>
+                        <div class="v" id="ts-rank-total-up">0 B</div>
+                    </div>
+                    <div>
+                        <div class="k">下载</div>
+                        <div class="v" id="ts-rank-total-down">0 B</div>
+                    </div>
+                    <div>
+                        <div class="k">总计</div>
+                        <div class="v" id="ts-rank-total-all">0 B</div>
+                    </div>
+                </div>
+                <span><i class="ts-dot" style="background:#ff3b30"></i>下行曲线</span>
+
+                <div class="ts-rank-list" id="ts-rank-list"></div>
+            </div>
+        </div>
+
+        <div class="ts-status" id="ts-status">加载中...</div>
+        <select id="ts-node-select" class="ts-hidden"></select>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const state = {
+            nodeMap: {},
+            selectedNodeUUID: '',
+            barInterval: 1,
+            trendMode: 'increment',
+            barPoints: [],
+            linePoints: [],
+            rank: null,
+            nodes: [],
+            points: []
+        };
+
+        const intervalSelect = () => document.getElementById('ts-interval-select');
+        const statusEl = () => document.getElementById('ts-status');
+        const barSvg = () => document.getElementById('ts-bar-svg');
+        const selectedNodeEl = () => document.getElementById('ts-selected-node');
+        const trendRatioEl = () => document.getElementById('ts-trend-ratio');
+
+        function flagEmoji(regionCode) {
+            const code = String(regionCode || '').trim().toUpperCase();
+            if (!/^[A-Z]{2}$/.test(code)) return '🌐';
+            return String.fromCodePoint(...code.split('').map(c => 127397 + c.charCodeAt(0)));
+        }
+        const lineSvg = () => document.getElementById('ts-line-svg');
+
+        function esc(s) {
+            return String(s || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function formatNum(v) {
+            return Number(v || 0).toFixed(2);
+        }
+
+        function fmtBytes(v) {
+            const n = Number(v || 0);
+            if (n < 1024) return n.toFixed(0) + ' B';
+            if (n < 1024 * 1024) return (n / 1024).toFixed(2) + ' KB';
+            if (n < 1024 * 1024 * 1024) return (n / 1024 / 1024).toFixed(2) + ' MB';
+            if (n < 1024 * 1024 * 1024 * 1024) return (n / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+            return (n / 1024 / 1024 / 1024 / 1024).toFixed(2) + ' TB';
+        }
+
+        function updateSelectedNodeBadge() {
+            const el = selectedNodeEl();
+            if (!el) return;
+            const node = state.nodeMap[state.selectedNodeUUID] || {};
+            const region = node.region || '';
+            const name = node.name || '--';
+
+            const limit = Number(node.traffic_limit || 0);
+            const rankItems = (state.rank && Array.isArray(state.rank.items)) ? state.rank.items : [];
+            const selectedItem = rankItems.find(x => x.uuid === state.selectedNodeUUID);
+            let used = 0;
+            if (selectedItem) {
+                used = Number(selectedItem.total_bytes || 0);
+            }
+
+            let limitHTML = '';
+            if (limit > 0) {
+                const pct = Math.min(100, (used / limit) * 100).toFixed(2);
+                limitHTML = `<span style="font-size: 13px; font-weight: normal; margin-left: 8px; color: #666; letter-spacing: 0;">${fmtBytes(used)} / ${fmtBytes(limit)} (${pct}%)</span>`;
+            } else if (used > 0) {
+                limitHTML = `<span style="font-size: 13px; font-weight: normal; margin-left: 8px; color: #666; letter-spacing: 0;">已用 ${fmtBytes(used)}</span>`;
+            }
+
+            el.innerHTML = `<span class="dot"></span><span>${esc(flagEmoji(region))} ${esc(name)}</span>${limitHTML}`;
+        }
+
+        function setStatus(msg, isErr) {
+            const el = statusEl();
+            if (!el) return;
+            el.textContent = msg || '';
+            el.style.color = isErr ? '#d74242' : '#86868b';
+        }
+
+        async function loadLandingNodes() {
+            const res = await fetch('/api/traffic/landing-nodes');
+            const data = await res.json();
+            if (!data || data.status !== 'success') throw new Error((data && data.message) || '读取节点失败');
+            state.nodes = Array.isArray(data.nodes) ? data.nodes : [];
+            state.nodeMap = {};
+            state.nodes.forEach(n => {
+                state.nodeMap[n.uuid] = {
+                    uuid: n.uuid,
+                    name: n.name,
+                    region: n.region || '',
+                    traffic_limit: n.traffic_limit || 0
+                };
+            });
+
+            const select = nodeSelect();
+            if (!select) return;
+            if (!state.nodes.length) {
+                select.innerHTML = '<option value="">暂无落地节点</option>';
+                return;
+            }
+
+            select.innerHTML = state.nodes.map(n => `<option value="${esc(n.uuid)}">${esc(n.name || n.uuid)}</option>`).join('');
+        }
+
+        async function loadConsumptionRank() {
+            const res = await fetch('/api/traffic/consumption-rank?limit=50');
+            const data = await res.json();
+            if (!data || data.status !== 'success') throw new Error((data && data.message) || '读取流量排行失败');
+
+            state.rank = data.rank || null;
+            const items = (state.rank && Array.isArray(state.rank.items)) ? state.rank.items : [];
+            items.forEach(it => {
+                if (!state.nodeMap[it.uuid]) {
+                    state.nodeMap[it.uuid] = {
+                        uuid: it.uuid,
+                        name: it.name,
+                        region: it.region || '',
+                        traffic_limit: it.traffic_limit || 0
+                    };
+                } else {
+                    state.nodeMap[it.uuid].traffic_limit = it.traffic_limit || 0;
+                }
+            });
+
+            document.getElementById('ts-rank-date').textContent = (state.rank && state.rank.generated_at) || '--';
+            document.getElementById('ts-rank-total-up').textContent = fmtBytes((state.rank && state.rank.total_up) || 0);
+            document.getElementById('ts-rank-total-down').textContent = fmtBytes((state.rank && state.rank.total_down) || 0);
+            document.getElementById('ts-rank-total-all').textContent = fmtBytes((state.rank && state.rank.total_bytes) || 0);
+
+            if (!state.selectedNodeUUID) {
+                if (items.length) {
+                    state.selectedNodeUUID = items[0].uuid;
+                } else if (state.nodes.length) {
+                    state.selectedNodeUUID = state.nodes[0].uuid;
+                }
+            }
+
+            if (nodeSelect()) {
+                nodeSelect().value = state.selectedNodeUUID;
+            }
+            renderConsumptionRank();
+            updateSelectedNodeBadge();
+        }
+
+        function renderConsumptionRank() {
+            const listEl = document.getElementById('ts-rank-list');
+            if (!listEl) return;
+
+            const items = (state.rank && Array.isArray(state.rank.items)) ? state.rank.items : [];
+            if (!items.length) {
+                listEl.innerHTML = '<div style="padding:8px; color:#999; font-size:12px;">暂无流量数据</div>';
+                return;
+            }
+
+            const maxTotal = Math.max(1, ...items.map(x => Number(x.total_bytes || 0)));
+            listEl.innerHTML = items.map(item => {
+                const up = Number(item.traffic_up || 0);
+                const down = Number(item.traffic_down || 0);
+                const total = Number(item.total_bytes || 0);
+                const widthPct = Math.max(1, total / maxTotal * 100);
+                const upPct = total > 0 ? (up / total * 100) : 0;
+                const downPct = Math.max(0, 100 - upPct);
+                const active = item.uuid === state.selectedNodeUUID ? 'active' : '';
+
+                return `
+                    <div class="ts-rank-item ${active}" data-uuid="${esc(item.uuid)}">
+                        <div class="ts-rank-top">
+                            <div class="ts-rank-name">${esc(flagEmoji(item.region))} ${esc(item.name || item.uuid)} ${active ? '✅' : ''}</div>
+                            <div class="ts-rank-total">${esc(fmtBytes(total))}</div>
+                        </div>
+                        <div class="ts-rank-bar">
+                            <div class="ts-rank-bar-fill" style="width:${widthPct.toFixed(2)}%">
+                                <div class="ts-rank-bar-up" style="width:${upPct.toFixed(2)}%"></div>
+                                <div class="ts-rank-bar-down" style="width:${downPct.toFixed(2)}%"></div>
+                            </div>
+                        </div>
+                        <div class="ts-rank-meta">
+                            <div class="ts-rank-mini">↑ ${esc(formatNum(up / 1024 / 1024 / 1024))} ↓ ${esc(formatNum(down / 1024 / 1024 / 1024))} <b>${esc(item.upload_ratio || '0.00')}</b></div>
+                            <div>${esc(item.traffic_update_at || '--')}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            listEl.querySelectorAll('.ts-rank-item').forEach(el => {
+                el.addEventListener('click', async function () {
+                    const uuid = String(el.getAttribute('data-uuid') || '');
+                    if (!uuid || uuid === state.selectedNodeUUID) return;
+                    state.selectedNodeUUID = uuid;
+                    if (nodeSelect()) nodeSelect().value = uuid;
+                    updateSelectedNodeBadge();
+                    renderConsumptionRank();
+                    await loadSeriesForCurrentNode();
+                });
+            });
+        }
+
+        async function fetchSeries(nodeUUID, mode, intervalHours, hours) {
+            const q = new URLSearchParams({
+                node_uuid: nodeUUID,
+                mode: mode,
+                hours: String(hours || 24),
+                interval_hours: String(intervalHours || 1)
+            });
+
+            const res = await fetch('/api/traffic/series?' + q.toString());
+            const data = await res.json();
+            if (!data || data.status !== 'success') throw new Error((data && data.message) || '读取统计失败');
+            return (data.series && Array.isArray(data.series.points)) ? data.series.points : [];
+        }
+
+        async function loadSeriesForCurrentNode() {
+            const uuid = state.selectedNodeUUID;
+            if (!uuid) {
+                state.barPoints = [];
+                state.linePoints = [];
+                renderCharts();
+                return;
+            }
+
+            state.barPoints = await fetchSeries(uuid, 'increment', state.barInterval, 24);
+            state.linePoints = await fetchSeries(uuid, state.trendMode, 1, 24);
+
+            if (state.trendMode === 'total' && state.linePoints && state.linePoints.length > 0) {
+                const baseUp = Number(state.linePoints[0].up_bytes || 0);
+                const baseDown = Number(state.linePoints[0].down_bytes || 0);
+                const baseTotal = Number(state.linePoints[0].total_bytes || 0);
+                state.linePoints = state.linePoints.map(p => ({
+                    ...p,
+                    up_bytes: Math.max(0, Number(p.up_bytes || 0) - baseUp),
+                    down_bytes: Math.max(0, Number(p.down_bytes || 0) - baseDown),
+                    total_bytes: Math.max(0, Number(p.total_bytes || 0) - baseTotal)
+                }));
+            }
+
+            renderCharts();
+
+            const rankItems = (state.rank && Array.isArray(state.rank.items)) ? state.rank.items : [];
+            const selectedItem = rankItems.find(x => x.uuid === state.selectedNodeUUID);
+
+            const todayTotal = selectedItem ? Number(selectedItem.total_bytes || 0) : 0;
+            const todayEl = document.getElementById('ts-trend-today');
+            if (todayEl) {
+                todayEl.textContent = `今日: ${fmtBytes(todayTotal)}`;
+            }
+            const latest = state.linePoints[state.linePoints.length - 1];
+            if (!latest) {
+                setStatus('当前查询范围暂无数据', false);
+                return;
+            }
+            const up = Number(latest.up_bytes || 0);
+            const down = Number(latest.down_bytes || 0);
+            setStatus(`当前节点：上传 ${fmtBytes(up)} / 下载 ${fmtBytes(down)} / 合计 ${fmtBytes(Number(latest.total_bytes || 0))}`, false);
+        }
+
+        function renderCharts() {
+            renderDistributionChart();
+            renderTrendChart();
+        }
+
+        function renderDistributionChart() {
+            const svg = barSvg();
+            if (!svg) return;
+
+            const points = state.barPoints || [];
+            if (!points.length) {
+                svg.innerHTML = `<text x="480" y="125" text-anchor="middle" fill="#999" font-size="13">暂无数据</text>`;
+                return;
+            }
+
+            const w = 960, h = 250, left = 42, right = 10, top = 12, bottom = 32;
+            const chartW = w - left - right;
+            const chartH = h - top - bottom;
+            const maxV = Math.max(1, ...points.map(p => Number(p.total_bytes || 0)));
+            const groupW = chartW / points.length;
+            const barW = Math.max(4, Math.min(20, groupW * 0.72));
+
+            let out = '';
+            for (let i = 0; i <= 5; i++) {
+                const y = top + chartH * i / 5;
+                out += `<line x1="${left}" y1="${y.toFixed(2)}" x2="${w - right}" y2="${y.toFixed(2)}" stroke="#f0f1f6"/>`;
+            }
+            out += `<line x1="${left}" y1="${h - bottom}" x2="${w - right}" y2="${h - bottom}" stroke="#d6d6de"/>`;
+
+            points.forEach((p, i) => {
+                const up = Number(p.up_bytes || 0);
+                const down = Number(p.down_bytes || 0);
+                const total = Number(p.total_bytes || 0);
+                const x = left + i * groupW + (groupW - barW) / 2;
+                const totalH = total > 0 ? Math.max(2, chartH * (total / maxV)) : 0;
+                const upH = total > 0 ? totalH * (up / total) : 0;
+                const downH = totalH - upH;
+                const yTotal = top + chartH - totalH;
+                const yDown = yTotal;
+                const yUp = yDown + downH;
+
+                if (totalH > 0) {
+                    out += `<rect x="${x.toFixed(2)}" y="${yDown.toFixed(2)}" width="${barW.toFixed(2)}" height="${downH.toFixed(2)}" fill="#1e88ff" rx="2"/>`;
+                    out += `<rect x="${x.toFixed(2)}" y="${yUp.toFixed(2)}" width="${barW.toFixed(2)}" height="${upH.toFixed(2)}" fill="#34c759" rx="2"/>`;
+                }
+
+                if (i % Math.max(1, Math.floor(points.length / 10)) === 0) {
+                    out += `<text x="${(left + i * groupW + groupW / 2).toFixed(2)}" y="${h - 12}" text-anchor="middle" fill="#7b7b88" font-size="10">${esc(p.label || '')}</text>`;
+                }
+            });
+
+            out += `<text x="6" y="${top + 10}" fill="#9a9aa5" font-size="10">${esc(fmtBytes(maxV))}</text>`;
+            svg.innerHTML = out;
+        }
+
+        function renderTrendChart() {
+            const svg = lineSvg();
+            if (!svg) return;
+
+            const points = state.linePoints || [];
+            if (!points.length) {
+                svg.innerHTML = `<text x="480" y="125" text-anchor="middle" fill="#999" font-size="13">暂无数据</text>`;
+                return;
+            }
+
+            const w = 960, h = 250, left = 42, right = 10, top = 12, bottom = 32;
+            const chartW = w - left - right;
+            const chartH = h - top - bottom;
+            const maxV = Math.max(1, ...points.map(p => Number(p.total_bytes || 0)));
+
+            function xy(i, v) {
+                const x = left + (points.length <= 1 ? chartW / 2 : (chartW * i / (points.length - 1)));
+                const y = top + chartH - chartH * (v / maxV);
+                return [x, y];
+            }
+
+            let upPath = '';
+            let downPath = '';
+            let totalPath = '';
+            let dots = '';
+
+            points.forEach((p, i) => {
+                const up = Number(p.up_bytes || 0);
+                const down = Number(p.down_bytes || 0);
+                const total = Number(p.total_bytes || 0);
+                const [ux, uy] = xy(i, up);
+                const [dx, dy] = xy(i, down);
+                const [tx, ty] = xy(i, total);
+
+                upPath += (i === 0 ? `M ${ux} ${uy}` : ` L ${ux} ${uy}`);
+                downPath += (i === 0 ? `M ${dx} ${dy}` : ` L ${dx} ${dy}`);
+                totalPath += (i === 0 ? `M ${tx} ${ty}` : ` L ${tx} ${ty}`);
+
+                if (points.length <= 36) {
+                    dots += `<circle cx="${ux}" cy="${uy}" r="1.7" fill="#34c759"/>`;
+                    dots += `<circle cx="${dx}" cy="${dy}" r="1.7" fill="#1e88ff"/>`;
+                }
+
+                if (i % Math.max(1, Math.floor(points.length / 10)) === 0) {
+                    dots += `<text x="${ux}" y="${h - 12}" text-anchor="middle" fill="#7b7b88" font-size="10">${esc(p.label || '')}</text>`;
+                }
+            });
+
+            let areaPath = totalPath;
+            if (points.length > 0) {
+                const [lx] = xy(points.length - 1, Number(points[points.length - 1].total_bytes || 0));
+                const [fx] = xy(0, Number(points[0].total_bytes || 0));
+                areaPath += ` L ${lx} ${h - bottom} L ${fx} ${h - bottom} Z`;
+            }
+
+            svg.innerHTML = `
+                <line x1="${left}" y1="${h - bottom}" x2="${w - right}" y2="${h - bottom}" stroke="#d6d6de"/>
+                <path d="${areaPath}" fill="rgba(177,107,255,0.10)" stroke="none"/>
+                <path d="${upPath}" fill="none" stroke="#34c759" stroke-width="1.8"/>
+                <path d="${downPath}" fill="none" stroke="#1e88ff" stroke-width="1.8"/>
+                <path d="${totalPath}" fill="none" stroke="#b16bff" stroke-width="1.8" stroke-dasharray="4 3"/>
+                ${dots}
+                <text x="8" y="${top + 10}" fill="#9a9aa5" font-size="10">${esc(fmtBytes(maxV))}</text>
+            `;
+        }
+
+        window.trafficStatsRefresh = async function (manual) {
+            try {
+                setStatus(manual ? '正在刷新统计数据...' : '正在加载统计数据...', false);
+                await loadConsumptionRank();
+                await loadSeriesForCurrentNode();
+            } catch (e) {
+                setStatus((e && e.message) ? e.message : '流量统计加载失败', true);
+                state.barPoints = [];
+                state.linePoints = [];
+                renderCharts();
+            }
+        };
+
+        function bindEvents() {
+            document.querySelectorAll('#ts-dist-switch button').forEach(btn => {
+                btn.addEventListener('click', async function () {
+                    const next = Number(btn.getAttribute('data-interval') || 1);
+                    if (next === state.barInterval) return;
+                    state.barInterval = next;
+                    document.querySelectorAll('#ts-dist-switch button').forEach(x => x.classList.toggle('active', x === btn));
+                    await loadSeriesForCurrentNode();
+                });
+            });
+
+            document.querySelectorAll('#ts-trend-switch button').forEach(btn => {
+                btn.addEventListener('click', async function () {
+                    const mode = String(btn.getAttribute('data-mode') || 'increment');
+                    if (mode === state.trendMode) return;
+                    state.trendMode = mode;
+                    document.querySelectorAll('#ts-trend-switch button').forEach(x => x.classList.toggle('active', x === btn));
+                    await loadSeriesForCurrentNode();
+                });
+            });
+
+            const select = nodeSelect();
+            if (select) {
+                select.addEventListener('change', async function () {
+                    state.selectedNodeUUID = select.value || '';
+                    updateSelectedNodeBadge();
+                    renderConsumptionRank();
+                    await loadSeriesForCurrentNode();
+                });
+            }
+
+            const rankDate = document.getElementById('ts-rank-date');
+            if (rankDate && rankDate.textContent === '--') {
+                rankDate.textContent = new Date().toISOString().slice(0, 10).replace(/-/g, '/');
+            }
+        }
+
+        function ensureSelectedNode() {
+            if (state.selectedNodeUUID && state.nodeMap[state.selectedNodeUUID]) {
+                return;
+            }
+            const items = (state.rank && Array.isArray(state.rank.items)) ? state.rank.items : [];
+            if (items.length) {
+                state.selectedNodeUUID = items[0].uuid;
+            } else if (state.nodes.length) {
+                state.selectedNodeUUID = state.nodes[0].uuid;
+            } else {
+                state.selectedNodeUUID = '';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async function () {
+            try {
+                await loadLandingNodes();
+                await loadConsumptionRank();
+                ensureSelectedNode();
+                if (nodeSelect()) nodeSelect().value = state.selectedNodeUUID;
+                updateSelectedNodeBadge();
+                bindEvents();
+                await loadSeriesForCurrentNode();
+                setStatus('流量统计已加载', false);
+            } catch (e) {
+                setStatus((e && e.message) ? e.message : '初始化流量统计失败', true);
+            }
+        });
+    })();
+</script>
+{{end}}

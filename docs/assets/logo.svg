@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="10" y1="4" x2="54" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#2ea8ff"/>
+      <stop offset="52%" stop-color="#007aff"/>
+      <stop offset="100%" stop-color="#003d99"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(20 14) rotate(50) scale(36 28)">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="rim" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.85"/>
+      <stop offset="48%" stop-color="#a6dcff" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.52"/>
+    </linearGradient>
+    <linearGradient id="rib" x1="16" y1="18" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="58%" stop-color="#e2f3ff"/>
+      <stop offset="100%" stop-color="#b5e0ff"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="16.5" fill="url(#bg)"/>
+  <rect x="2" y="2" width="60" height="60" rx="16.5" fill="url(#glow)"/>
+  <rect x="2.8" y="2.8" width="58.4" height="58.4" rx="15.7" stroke="url(#rim)" stroke-width="1.6"/>
+  <path d="M13.2 22.8C14.4 37.2 18.4 45.6 22.8 45.6C27.6 45.6 28.2 19.2 32 19.2C35.8 19.2 36.4 45.6 41.2 45.6C45.6 45.6 49.6 37.2 50.8 22.8" stroke="#001b4d" stroke-opacity="0.34" stroke-width="6.6" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 2.2)"/>
+  <path d="M13.2 22.8C14.4 37.2 18.4 45.6 22.8 45.6C27.6 45.6 28.2 19.2 32 19.2C35.8 19.2 36.4 45.6 41.2 45.6C45.6 45.6 49.6 37.2 50.8 22.8" stroke="url(#rib)" stroke-width="6.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M13.2 22.8C14.4 37.2 18.4 45.6 22.8 45.6C27.6 45.6 28.2 19.2 32 19.2C35.8 19.2 36.4 45.6 41.2 45.6C45.6 45.6 49.6 37.2 50.8 22.8" stroke="#ffffff" stroke-opacity="0.85" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 -1.1)"/>
+</svg>

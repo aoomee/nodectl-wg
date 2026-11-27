@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  TZ: Asia/Shanghai
+
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nginx iproute2 wireguard-tools
+          npm install --no-save --package-lock=false --ignore-scripts playwright@1.62.1
+          npx playwright install --with-deps chromium
+      - run: go test ./...
+        env:
+          WIREARC_TEST_NGINX: /usr/sbin/nginx
+      - name: Linux kernel WireGuard integration
+        run: sudo unshare -n env "PATH=$PATH" WIREARC_TEST_KERNEL_WG=1 "$(which go)" test -v -run TestRealLinuxKernelWireGuard ./internal/agent/wgrelay
+      - run: go vet ./...
+      - run: go test -race ./internal/database ./internal/requestmeta ./internal/service ./internal/agent/wgrelay ./internal/server
+        env:
+          WIREARC_TEST_NGINX: /usr/sbin/nginx
+      - name: Browser interaction regressions
+        run: |
+          export CHROME_PATH="$(node -e 'process.stdout.write(require("playwright").chromium.executablePath())')"
+          node tests/node-wg-ui.cjs
+          node tests/traffic-calendar-ui.cjs
+          node tests/browser-assets-ui.cjs
+          node tests/password-ui.cjs
+          node tests/settings-ui.cjs
+      - run: bash -n scripts/smoke-docker.sh
+
+  docker:
+    name: Docker (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    env:
+      ARCH: ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build with Compose
+        run: docker compose -f compose.yaml -f compose.build.yaml build
+      - name: Verify source-built image
+        run: bash scripts/smoke-docker.sh wirearc:local
+      - name: Build release packaging from native binary
+        run: |
+          mkdir -p bin
+          container=$(docker create wirearc:local)
+          trap 'docker rm -v "$container" >/dev/null' EXIT
+          docker cp "$container:/app/wirearc" "bin/wirearc-linux-$ARCH"
+          docker build --build-arg "TARGETARCH=$ARCH" -f .github/Dockerfile -t wirearc:release-smoke .
+      - name: Verify release image
+        run: bash scripts/smoke-docker.sh wirearc:release-smoke

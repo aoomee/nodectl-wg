@@ -1,0 +1,3231 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>{{.Title}}</title>
+
+        <link
+            rel="icon"
+            type="image/svg+xml"
+            href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none'><defs><linearGradient id='bg' x1='10' y1='4' x2='54' y2='60' gradientUnits='userSpaceOnUse'><stop offset='0%25' stop-color='%232ea8ff'/><stop offset='52%25' stop-color='%23007aff'/><stop offset='100%25' stop-color='%23003d99'/></linearGradient><radialGradient id='glow' cx='0' cy='0' r='1' gradientUnits='userSpaceOnUse' gradientTransform='translate(20 14) rotate(50) scale(36 28)'><stop offset='0%25' stop-color='%23ffffff' stop-opacity='0.45'/><stop offset='100%25' stop-color='%23ffffff' stop-opacity='0'/></radialGradient><linearGradient id='rim' x1='8' y1='4' x2='56' y2='60' gradientUnits='userSpaceOnUse'><stop offset='0%25' stop-color='%23ffffff' stop-opacity='0.85'/><stop offset='48%25' stop-color='%23a6dcff' stop-opacity='0.18'/><stop offset='100%25' stop-color='%23ffffff' stop-opacity='0.52'/></linearGradient><linearGradient id='rib' x1='16' y1='18' x2='48' y2='48' gradientUnits='userSpaceOnUse'><stop offset='0%25' stop-color='%23ffffff'/><stop offset='58%25' stop-color='%23e2f3ff'/><stop offset='100%25' stop-color='%23b5e0ff'/></linearGradient></defs><rect x='2' y='2' width='60' height='60' rx='16.5' fill='url(%23bg)'/><rect x='2' y='2' width='60' height='60' rx='16.5' fill='url(%23glow)'/><rect x='2.8' y='2.8' width='58.4' height='58.4' rx='15.7' stroke='url(%23rim)' stroke-width='1.6'/><path d='M13.2 22.8C14.4 37.2 18.4 45.6 22.8 45.6C27.6 45.6 28.2 19.2 32 19.2C35.8 19.2 36.4 45.6 41.2 45.6C45.6 45.6 49.6 37.2 50.8 22.8' stroke='%23001b4d' stroke-opacity='0.34' stroke-width='6.6' stroke-linecap='round' stroke-linejoin='round' transform='translate(0 2.2)'/><path d='M13.2 22.8C14.4 37.2 18.4 45.6 22.8 45.6C27.6 45.6 28.2 19.2 32 19.2C35.8 19.2 36.4 45.6 41.2 45.6C45.6 45.6 49.6 37.2 50.8 22.8' stroke='url(%23rib)' stroke-width='6.2' stroke-linecap='round' stroke-linejoin='round'/><path d='M13.2 22.8C14.4 37.2 18.4 45.6 22.8 45.6C27.6 45.6 28.2 19.2 32 19.2C35.8 19.2 36.4 45.6 41.2 45.6C45.6 45.6 49.6 37.2 50.8 22.8' stroke='%23ffffff' stroke-opacity='0.85' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round' transform='translate(0 -1.1)'/></svg>"
+        />
+
+        <link rel="preconnect" href="https://flagcdn.com" crossorigin />
+        <link rel="dns-prefetch" href="https://flagcdn.com" />
+
+        <script src="/assets/vendor/sortable-1.15.7.bf4241bc73fe.min.js" integrity="sha384-DgmC6Xe2bSN2WjTDXzWYbUbxyhNP+NNkGDR/g78pCXV7E7rcVTGxVg0uIVCUUcBc" defer></script>
+        <style>
+            /* =========================================================
+           1. 全局变量与基础样式 (Global & Reset - Ultra Rounded & Clean)
+           ========================================================= */
+            :root {
+                --bg: #f4f5f7;
+                --text: #1d1d1f;
+                --text-sec: #86868b;
+                --card-bg: #ffffff;
+                --primary: #007aff;
+                --primary-hover: #0066d6;
+                --success: #34c759;
+                --warning: #f5a623;
+                --danger: #ff3b30;
+                --radius-2xl: 28px;
+                --radius-xl: 22px;
+                --radius-lg: 18px;
+                --radius-md: 14px;
+                --shadow-card: 0 8px 30px rgba(0, 0, 0, 0.035), 0 1px 3px rgba(0, 0, 0, 0.02);
+                --shadow-card-hover: 0 16px 40px rgba(0, 0, 0, 0.055), 0 2px 8px rgba(0, 0, 0, 0.03);
+                --shadow-item: 0 2px 10px rgba(0, 0, 0, 0.02);
+                --shadow-item-hover: 0 10px 24px rgba(0, 0, 0, 0.06);
+                --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+                --ease-spell: cubic-bezier(0.34, 1.56, 0.64, 1);
+                --ease-granola: cubic-bezier(0.32, 0.72, 0, 1);
+                --ease-smooth: cubic-bezier(0.25, 0.8, 0.25, 1);
+            }
+
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+                -webkit-tap-highlight-color: transparent;
+            }
+
+            body {
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+                background: var(--bg);
+                background-image:
+                    radial-gradient(at 10% 0%, rgba(0, 122, 255, 0.04) 0px, transparent 48%),
+                    radial-gradient(at 90% 0%, rgba(52, 199, 89, 0.03) 0px, transparent 48%);
+                background-repeat: no-repeat;
+                color: var(--text);
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+            }
+
+            /* 全局统一极简加载转圈与平滑入场，框架先稳态占位，内容未就绪时转圈展示 */
+            .wa-spinner {
+                display: inline-block;
+                width: 18px;
+                height: 18px;
+                border-radius: 50%;
+                border: 2.2px solid rgba(0, 122, 255, 0.16);
+                border-top-color: #007aff;
+                animation: waSpin 0.72s linear infinite;
+                flex-shrink: 0;
+            }
+            .wa-spinner.lg {
+                width: 22px;
+                height: 22px;
+                border-width: 2.4px;
+            }
+            .wa-loading-state {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+                min-height: 56px;
+                color: #8e8e93;
+                font-size: 12.5px;
+                font-weight: 500;
+                user-select: none;
+            }
+            @keyframes waSpin {
+                to { transform: rotate(360deg); }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .wa-spinner { animation-duration: 1.8s; }
+            }
+
+            /* 通用圓润小图标底座 */
+            .ui-icon-badge {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 28px;
+                height: 28px;
+                border-radius: 9px;
+                flex-shrink: 0;
+                transition: transform 0.25s var(--ease-spring);
+            }
+            .ui-icon-badge.blue { background: #eaf4ff; color: #007aff; }
+            .ui-icon-badge.purple { background: #f2ebff; color: #7c3aed; }
+            .ui-icon-badge.green { background: #e8fdf0; color: #28a745; }
+            .ui-icon-badge.orange { background: #fff4e5; color: #f59e0b; }
+            .ui-icon-badge.cyan { background: #e6f9fb; color: #0891b2; }
+            .ui-icon-badge.indigo { background: #eef2ff; color: #4f46e5; }
+            .ui-icon-badge.rose { background: #fff0f3; color: #e11d48; }
+
+            /* =========================================================
+           2. 顶部导航栏 (Top Navbar)
+           ========================================================= */
+            .top-navbar {
+                height: 64px;
+                background: rgba(255, 255, 255, 0.85);
+                backdrop-filter: saturate(180%) blur(24px);
+                -webkit-backdrop-filter: saturate(180%) blur(24px);
+                border-bottom: 1px solid rgba(0, 0, 0, 0.045);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                position: sticky;
+                top: 0;
+                z-index: 1000;
+            }
+
+            .top-navbar-inner {
+                width: 100%;
+                max-width: 1480px;
+                padding: 0 36px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+
+            .nav-brand {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                font-size: 19px;
+                font-weight: 700;
+                color: var(--text);
+                text-decoration: none;
+                letter-spacing: -0.02em;
+                transition: transform 0.25s var(--ease-spring), opacity 0.2s ease;
+            }
+
+            .nav-brand:hover {
+                opacity: 0.92;
+            }
+
+            .nav-brand svg {
+                width: 30px;
+                height: 30px;
+                filter: drop-shadow(0 4px 10px rgba(0, 96, 224, 0.28));
+                transition: transform 0.34s var(--ease-spell);
+            }
+
+            .nav-brand:hover svg {
+                transform: scale(1.06);
+            }
+
+            .nav-brand .wa-logo-ribbon {
+                transform-box: fill-box;
+                transform-origin: center;
+                transition: transform 0.36s var(--ease-spell);
+            }
+
+            .nav-brand:hover .wa-logo-ribbon {
+                transform: scale(1.04) translateY(-0.4px);
+            }
+
+            /* 当前安装版本，仅展示，不执行更新检查。 */
+            .top-version-badge {
+                margin-left: 12px;
+                padding: 5px 12px;
+                background: #f0f1f5;
+                color: #6e6e73;
+                border-radius: 999px;
+                font-size: 12px;
+                font-weight: 600;
+                font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, monospace;
+                display: inline-flex;
+                align-items: center;
+            }
+
+            /* =========================================================
+           3. 用户下拉菜单组件 (User Dropdown Menu)
+           ========================================================= */
+            .user-menu {
+                position: relative;
+                display: inline-block;
+            }
+
+            .nav-right-actions {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .mail-log-btn {
+                width: 38px;
+                height: 38px;
+                border-radius: 50%;
+                border: none;
+                background: #f0f1f5;
+                color: #48484a;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: all 0.25s var(--ease-spring);
+            }
+
+            .mail-log-btn:hover {
+                background: #eaf4ff;
+                color: var(--primary);
+                transform: translateY(-1px);
+            }
+
+            .mail-log-btn:active {
+                transform: scale(0.94);
+            }
+
+            .user-btn {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                background: #f0f1f5;
+                border: none;
+                cursor: pointer;
+                padding: 6px 14px 6px 8px;
+                border-radius: 999px;
+                transition: all 0.25s var(--ease-spring);
+            }
+
+            .user-btn-avatar {
+                width: 26px;
+                height: 26px;
+                border-radius: 50%;
+                background: #ffffff;
+                color: #007aff;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+            }
+
+            .user-btn:hover {
+                background: #e4e5eb;
+                transform: translateY(-1px);
+            }
+
+            .user-btn:active {
+                transform: scale(0.97);
+            }
+
+            .username {
+                font-size: 13.5px;
+                font-weight: 600;
+                color: var(--text);
+            }
+
+            .chevron {
+                width: 14px;
+                height: 14px;
+                color: var(--text-sec);
+                transition: transform 0.3s var(--ease-spring);
+            }
+
+            .user-menu:hover .chevron {
+                transform: rotate(180deg);
+            }
+
+            /* 实心高质感下拉菜单：杜绝背景按钮文字透出 */
+            .dropdown-content {
+                display: none;
+                position: absolute;
+                right: 0;
+                top: calc(100% + 10px);
+                background: #ffffff;
+                min-width: 176px;
+                box-shadow:
+                    0 16px 40px rgba(0, 0, 0, 0.12),
+                    0 2px 8px rgba(0, 0, 0, 0.05);
+                border-radius: 20px;
+                border: 1px solid rgba(0, 0, 0, 0.06);
+                z-index: 1200;
+                flex-direction: column;
+                padding: 8px;
+                animation: fadeInDown 0.22s var(--ease-spring) forwards;
+            }
+
+            .dropdown-content::before {
+                content: "";
+                position: absolute;
+                top: -12px;
+                left: 0;
+                width: 100%;
+                height: 12px;
+            }
+
+            .user-menu:hover .dropdown-content {
+                display: flex;
+            }
+
+            .dropdown-item {
+                padding: 9px 12px;
+                text-decoration: none;
+                color: var(--text);
+                font-size: 13.5px;
+                font-weight: 600;
+                transition: all 0.2s var(--ease-smooth);
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                border-radius: 13px;
+                cursor: pointer;
+                border: none;
+                background: transparent;
+                text-align: left;
+                width: 100%;
+            }
+
+            .dropdown-item-icon {
+                width: 28px;
+                height: 28px;
+                border-radius: 9px;
+                background: #f2f3f7;
+                color: #48484a;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                transition: all 0.2s var(--ease-spring);
+            }
+
+            .dropdown-item-icon svg {
+                width: 15px;
+                height: 15px;
+            }
+
+            .dropdown-item:hover {
+                background: #f4f5f8;
+            }
+
+            .dropdown-item:hover .dropdown-item-icon {
+                background: #eaf4ff;
+                color: #007aff;
+                transform: scale(1.05);
+            }
+
+            .logout-item {
+                color: #ff3b30;
+                margin-top: 6px;
+                position: relative;
+            }
+
+            .logout-item .dropdown-item-icon {
+                background: #fff0f0;
+                color: #ff3b30;
+            }
+
+            .logout-item::before {
+                content: "";
+                position: absolute;
+                top: -3px;
+                left: 10px;
+                right: 10px;
+                height: 1px;
+                background: rgba(0, 0, 0, 0.05);
+            }
+
+            .logout-item:hover {
+                background: #fff0f0;
+                color: #d70015;
+            }
+
+            .logout-item:hover .dropdown-item-icon {
+                background: #ffe0e0;
+                color: #d70015;
+            }
+
+            @keyframes fadeInDown {
+                from {
+                    opacity: 0;
+                    transform: translateY(-8px) scale(0.96);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: translateY(0) scale(1);
+                }
+            }
+
+            @keyframes softFadeUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            /* =========================================================
+           4. 主内容布局与卡片通用样式 (Main Content & Cards)
+           ========================================================= */
+            .main-content {
+                flex: 1;
+                padding: 20px 32px 32px;
+                width: 100%;
+                max-width: 1480px;
+                margin: 0 auto;
+            }
+
+            .top-section-grid {
+                display: grid;
+                grid-template-columns: 4fr 6fr;
+                gap: 18px;
+                margin-bottom: 18px;
+            }
+
+            .sub-card {
+                background: var(--card-bg);
+                border-radius: 26px;
+                padding: 18px 20px;
+                box-shadow: var(--shadow-card);
+                border: 1px solid rgba(0, 0, 0, 0.04);
+                height: 100%;
+                min-height: auto;
+                box-sizing: border-box;
+                display: flex;
+                flex-direction: column;
+                transition: box-shadow 0.35s var(--ease-smooth), transform 0.35s var(--ease-smooth), border-color 0.3s ease;
+            }
+
+            .sub-card:hover {
+                box-shadow: var(--shadow-card-hover);
+                border-color: rgba(0, 0, 0, 0.06);
+            }
+
+            .card-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 14px;
+                padding-bottom: 12px;
+                border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            }
+
+            .card-header-left {
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 8px 10px;
+                min-width: 0;
+            }
+
+            .card-title {
+                font-size: 15.5px;
+                font-weight: 700;
+                color: var(--text);
+                display: flex;
+                align-items: center;
+                gap: 9px;
+                letter-spacing: -0.01em;
+                white-space: nowrap;
+            }
+
+            /* =========================================================
+           5. 左侧面板：统计数据展示 (Stats Display)
+           ========================================================= */
+            .stats-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 10px;
+                margin-bottom: 0;
+                text-align: center;
+            }
+
+            .stat-item {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                height: 92px;
+                box-sizing: border-box;
+                background: #f7f8fa;
+                border-radius: 18px;
+                padding: 10px 8px;
+                border: 1px solid rgba(0, 0, 0, 0.04);
+                transition: all 0.28s var(--ease-spring);
+            }
+
+            .stat-item:hover {
+                background: #ffffff;
+                box-shadow: 0 8px 20px rgba(0, 0, 0, 0.045);
+                transform: translateY(-2px);
+            }
+
+            .stat-num {
+                font-size: 28px;
+                font-weight: 700;
+                line-height: 1.15;
+                letter-spacing: -0.02em;
+                font-variant-numeric: tabular-nums;
+                transition: transform 0.25s var(--ease-spring), opacity 0.2s;
+            }
+
+            .stat-label {
+                font-size: 12px;
+                font-weight: 600;
+                color: var(--text-sec);
+                margin-top: 5px;
+            }
+
+            .text-blue {
+                color: #007aff;
+            }
+
+            .text-green {
+                color: #34c759;
+            }
+
+            .text-yellow {
+                color: #f59e0b;
+            }
+
+            .text-red {
+                color: #ff3b30;
+            }
+
+            /* =========================================================
+           6. 右侧面板：快捷操作按钮 (Action Buttons)
+           ========================================================= */
+            .btn-custom-common {
+                height: 34px;
+                font-size: 13px;
+                padding: 0 16px;
+                color: white;
+                border-radius: 999px;
+                border: none;
+                cursor: pointer;
+                font-weight: 600;
+                transition: all 0.25s var(--ease-spring);
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                white-space: nowrap;
+                text-decoration: none;
+                letter-spacing: 0.01em;
+                gap: 6px;
+                flex-shrink: 0;
+            }
+
+            .btn-custom-common:active {
+                transform: scale(0.96);
+            }
+
+            .btn-color-purple {
+                background-color: #6c5ce7;
+                box-shadow: 0 3px 10px rgba(108, 92, 231, 0.24);
+            }
+
+            .btn-color-purple:hover {
+                background-color: #5a4bcf;
+                box-shadow: 0 6px 16px rgba(108, 92, 231, 0.34);
+                transform: translateY(-1px);
+            }
+
+            .btn-color-blue {
+                background: linear-gradient(180deg, #1a90ff 0%, #007aff 100%);
+                box-shadow: 0 3px 10px rgba(0, 122, 255, 0.22);
+            }
+
+            .btn-color-blue:hover {
+                background: linear-gradient(180deg, #007aff 0%, #0062cc 100%);
+                box-shadow: 0 6px 16px rgba(0, 122, 255, 0.32);
+                transform: translateY(-1px);
+            }
+
+            /* 次级柔和浅蓝按钮，让右上角操作组层次分明不刺眼 */
+            .btn-color-soft {
+                background: #eef6ff;
+                color: #007aff;
+                box-shadow: none;
+            }
+
+            .btn-color-soft:hover {
+                background: #dcebff;
+                color: #0062cc;
+                transform: translateY(-1px);
+            }
+
+            .rule-actions {
+                display: grid;
+                grid-template-columns: repeat(6, minmax(0, 1fr));
+                gap: 10px;
+                flex: 1;
+                align-items: start;
+                align-content: start;
+            }
+
+            .btn-edit-rule {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                height: 92px;
+                box-sizing: border-box;
+                border: 1px solid rgba(0, 0, 0, 0.04);
+                border-radius: 18px;
+                background: #f7f8fa;
+                cursor: pointer;
+                transition: all 0.28s var(--ease-spring);
+                text-decoration: none;
+                color: #3a3a3c;
+                position: relative;
+                overflow: hidden;
+                padding: 8px 6px;
+            }
+
+            .btn-edit-rule:hover {
+                border-color: rgba(0, 122, 255, 0.28);
+                background: #ffffff;
+                color: var(--primary);
+                transform: translateY(-2px);
+                box-shadow: 0 10px 24px rgba(0, 122, 255, 0.08);
+            }
+
+            .btn-edit-rule:active {
+                transform: translateY(-1px) scale(0.97);
+            }
+
+            .rule-icon-box {
+                width: 38px;
+                height: 38px;
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-bottom: 7px;
+                transition: transform 0.28s var(--ease-spring);
+            }
+
+            .rule-icon-box svg {
+                width: 19px;
+                height: 19px;
+            }
+
+            .btn-edit-rule:hover .rule-icon-box {
+                transform: scale(1.1);
+            }
+
+            .rule-name {
+                font-size: 12.5px;
+                font-weight: 600;
+                text-align: center;
+                line-height: 1.3;
+                letter-spacing: -0.01em;
+            }
+
+            /* =========================================================
+           7. 内部双栏面板布局 (Node Columns - 节点列表管理区)
+           ========================================================= */
+            #node-manager-card {
+                padding: 18px 20px;
+                min-height: auto;
+            }
+
+            .node-columns-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
+                flex: 1;
+            }
+
+            .node-column-panel {
+                background: #f7f8fa;
+                border-radius: 22px;
+                padding: 14px 16px;
+                display: flex;
+                flex-direction: column;
+                min-height: 120px;
+                border: 1px solid rgba(0, 0, 0, 0.04);
+                transition: background 0.3s ease, border-color 0.3s ease;
+            }
+
+            .node-column-panel.theme-green {
+                background: linear-gradient(180deg, rgba(52, 199, 89, 0.035) 0%, #f7f8fa 110px);
+                border: 1px solid rgba(52, 199, 89, 0.2);
+            }
+
+            .node-column-panel.theme-yellow {
+                background: linear-gradient(180deg, rgba(245, 166, 35, 0.04) 0%, #f7f8fa 110px);
+                border: 1px solid rgba(245, 166, 35, 0.22);
+            }
+
+            .column-header {
+                margin-bottom: 10px;
+                padding-bottom: 10px;
+            }
+
+            .theme-green .column-header {
+                border-bottom: 1px solid rgba(52, 199, 89, 0.16);
+            }
+
+            .theme-yellow .column-header {
+                border-bottom: 1px solid rgba(245, 166, 35, 0.18);
+            }
+
+            .node-list-container {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                overflow-y: auto;
+                padding: 2px 0;
+                max-height: 460px;
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+            }
+
+            .node-list-container::-webkit-scrollbar {
+                display: none;
+            }
+
+            /* =========================================================
+           8. 底部版权信息 (Footer)
+           ========================================================= */
+            .main-footer {
+                text-align: center;
+                padding: 16px 30px 32px 30px;
+                color: var(--text-sec);
+                font-size: 13px;
+                font-weight: 500;
+                margin-top: auto;
+                letter-spacing: 0.01em;
+            }
+
+            /* =========================================================
+           9. 移动端适配响应式 (Mobile Media Queries)
+           ========================================================= */
+            @media (max-width: 1180px) {
+                .top-section-grid {
+                    grid-template-columns: 1fr;
+                }
+                .rule-actions {
+                    grid-template-columns: repeat(3, 1fr);
+                }
+            }
+
+            @media (max-width: 768px) {
+                .top-section-grid {
+                    grid-template-columns: 1fr;
+                    gap: 16px;
+                    margin-bottom: 16px;
+                }
+
+                .top-navbar {
+                    height: 56px;
+                }
+
+                .top-navbar-inner {
+                    padding: 0 16px;
+                }
+
+                .nav-right-actions {
+                    gap: 8px;
+                }
+
+                .user-menu {
+                    margin-left: 0;
+                }
+
+                .user-btn {
+                    gap: 6px;
+                    padding: 5px 12px 5px 6px;
+                }
+
+                .mail-log-btn {
+                    width: 34px;
+                    height: 34px;
+                }
+
+                .stats-grid {
+                    gap: 8px;
+                }
+
+                .stat-item {
+                    height: auto;
+                    padding: 12px 4px;
+                    border-radius: 16px;
+                }
+
+                .stat-num {
+                    font-size: 24px;
+                }
+
+                .rule-actions {
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 10px;
+                }
+
+                .main-content {
+                    padding: 16px 14px 28px;
+                }
+
+                .sub-card {
+                    padding: 20px 18px;
+                    border-radius: 24px;
+                    min-height: auto;
+                }
+
+                .rule-name {
+                    font-size: 11.5px;
+                }
+
+                .rule-icon-box {
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 11px;
+                    margin-bottom: 6px;
+                }
+
+                .btn-edit-rule {
+                    height: 82px;
+                    min-width: 0;
+                    border-radius: 16px;
+                }
+
+                .node-columns-grid {
+                    grid-template-columns: 1fr;
+                    gap: 16px;
+                }
+
+                #node-manager-card {
+                    background: transparent;
+                    border: none;
+                    box-shadow: none;
+                    padding: 0;
+                }
+
+                #node-manager-card > .card-header {
+                    background: white;
+                    border-radius: 20px;
+                    padding: 12px 15px;
+                    border: 1px solid rgba(0, 0, 0, 0.05);
+                    box-shadow: var(--shadow-card);
+                    margin-bottom: 15px;
+                    justify-content: flex-end;
+                }
+
+                #node-manager-card > .card-header .card-title {
+                    display: none;
+                }
+
+                .node-column-panel {
+                    min-height: auto !important;
+                    background: white !important;
+                    border: 1px solid rgba(0, 0, 0, 0.05) !important;
+                    border-radius: 24px;
+                    box-shadow: var(--shadow-card);
+                    display: flex;
+                    flex-direction: column;
+                    padding: 18px;
+                }
+
+                .node-list-container {
+                    min-height: 80px;
+                    max-height: 380px;
+                    overflow-y: auto;
+                    -webkit-overflow-scrolling: touch;
+                    scrollbar-width: none;
+                    -ms-overflow-style: none;
+                }
+
+                .node-list-container::-webkit-scrollbar {
+                    display: none;
+                }
+            }
+
+            /* =========================================================
+           10. 节点列表项样式 (Node Item - 紧凑单行大圆角)
+           ========================================================= */
+            .node-item {
+                position: relative;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                background: #ffffff;
+                border: 1px solid rgba(0, 0, 0, 0.05);
+                border-radius: 16px;
+                padding: 9px 12px 9px 14px;
+                box-shadow: var(--shadow-item);
+                transition: all 0.24s var(--ease-spring);
+                flex-shrink: 0;
+            }
+
+            .node-item:hover {
+                box-shadow: var(--shadow-item-hover);
+                border-color: rgba(0, 122, 255, 0.25);
+                transform: translateY(-1px);
+            }
+
+            .node-row-main {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 10px;
+                width: 100%;
+                min-width: 0;
+            }
+
+            .node-row-left {
+                display: flex;
+                align-items: center;
+                flex: 1;
+                min-width: 0;
+            }
+
+            .node-info {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 5px 8px;
+                flex: 1;
+                min-width: 0;
+            }
+
+            .node-name-wrapper {
+                display: inline-flex;
+                align-items: center;
+                flex-shrink: 0;
+            }
+
+            .node-name {
+                font-size: 14px;
+                font-weight: 600;
+                color: var(--text);
+                letter-spacing: -0.01em;
+            }
+
+            /* 标签栏样式 */
+            .node-tags {
+                display: inline-flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 5px;
+                margin-top: 0;
+            }
+
+            .proto-tag {
+                font-size: 10.5px;
+                font-weight: 700;
+                padding: 2px 8px;
+                border-radius: 999px;
+                text-transform: uppercase;
+                line-height: 1.4;
+                letter-spacing: 0.02em;
+            }
+
+            .node-status-dot {
+                width: 7.5px;
+                height: 7.5px;
+                border-radius: 50%;
+                background: #34c759;
+                box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.16);
+                transition: all 0.25s ease;
+                flex-shrink: 0;
+            }
+
+            .node-item.is-blocked {
+                border: 1px dashed rgba(255, 59, 48, 0.45);
+                background: #fff8f8;
+                opacity: 0.82;
+            }
+
+            .node-item.is-blocked .node-name {
+                color: #d74242;
+                text-decoration: line-through;
+            }
+
+            /* 拖拽手柄样式 */
+            .drag-handle {
+                cursor: grab;
+                color: #c7c7cc;
+                padding: 4px 8px 4px 0;
+                display: flex;
+                align-items: center;
+                flex-shrink: 0;
+                transition: color 0.2s ease, transform 0.2s ease;
+            }
+
+            .drag-handle:hover {
+                color: #636366;
+            }
+
+            .drag-handle:active {
+                cursor: grabbing;
+                transform: scale(0.95);
+            }
+
+            .sortable-ghost {
+                opacity: 0.45;
+                background: #f0f7ff;
+                border: 1px dashed #007aff;
+                border-radius: 16px;
+            }
+
+            /* 协议统计标签栏样式（内嵌在节点总览标题行，消除右侧卡片底部留白） */
+            .proto-stats-bar {
+                display: inline-flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 6px;
+                margin: 0;
+                padding: 0;
+                border-top: none;
+            }
+
+            .proto-badge {
+                background: #f4f5f8;
+                border-radius: 999px;
+                padding: 3px 4px 3px 9px;
+                font-size: 11px;
+                color: #48484a;
+                font-weight: 600;
+                display: inline-flex;
+                align-items: center;
+                border: 1px solid rgba(0, 0, 0, 0.03);
+                transition: all 0.22s var(--ease-spring);
+                cursor: default;
+            }
+
+            .proto-badge:hover {
+                background: #e9ebf0;
+                transform: translateY(-1px);
+            }
+
+            .proto-count {
+                background-color: #ffffff;
+                color: var(--text);
+                font-weight: 700;
+                font-size: 10.5px;
+                padding: 0 6px;
+                border-radius: 999px;
+                margin-left: 5px;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+                min-width: 17px;
+                text-align: center;
+                height: 16px;
+                line-height: 16px;
+            }
+
+            /* =========================================================
+           11. 操作按钮组响应式间距控制 (Action Buttons)
+           ========================================================= */
+            .node-actions-group {
+                display: flex;
+                align-items: center;
+                flex-shrink: 0;
+                gap: 5px;
+            }
+
+            .node-action-btn {
+                background: #f4f5f8;
+                border: none;
+                cursor: pointer;
+                width: 30px;
+                height: 30px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s var(--ease-spring);
+            }
+
+            .node-action-btn:hover {
+                background: #eaf4ff;
+                transform: translateY(-1px);
+            }
+
+            .node-action-btn[title="删除节点"]:hover {
+                background: #fff0f0;
+            }
+
+            .node-action-btn:active {
+                transform: scale(0.94);
+            }
+
+            @media (max-width: 768px) {
+                .node-info {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 5px;
+                }
+
+                .node-actions-group {
+                    gap: 4px;
+                }
+
+                .node-action-btn {
+                    width: 28px;
+                    height: 28px;
+                }
+            }
+        </style>
+    </head>
+
+    <body>
+        <script id="wa-bootstrap-script">
+            window.__WA_BOOTSTRAP__ = {{if .BootstrapJSON}}{{.BootstrapJSON}}{{else}}null{{end}};
+        </script>
+        <div
+            id="security-banner"
+            style="
+                display: none;
+                background: #fff8e6;
+                color: #92600a;
+                padding: 12px 24px;
+                border-bottom: 1px solid rgba(245, 166, 35, 0.25);
+                align-items: center;
+                justify-content: space-between;
+                font-size: 13.5px;
+            "
+        >
+            <div style="display: flex; align-items: center; gap: 10px">
+                <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <path
+                        d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+                    ></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                <span
+                    ><b>安全警告：</b> 检测到您正在使用非加密 HTTP
+                    连接。为保护数据安全，协议管理功能已受限。请尽快配置 HTTPS
+                    证书。</span
+                >
+            </div>
+            <button
+                onclick="dismissSecurityBanner()"
+                style="
+                    background: transparent;
+                    border: none;
+                    color: #92600a;
+                    cursor: pointer;
+                    font-size: 20px;
+                    line-height: 1;
+                    padding: 4px;
+                    border-radius: 6px;
+                "
+            >
+                &times;
+            </button>
+        </div>
+        <nav class="top-navbar">
+            <div class="top-navbar-inner">
+                <div style="display: flex; align-items: center">
+                    <a href="/" class="nav-brand">
+                        <svg viewBox="0 0 64 64" fill="none" aria-hidden="true">
+                            <defs>
+                                <linearGradient id="waNavGlassBg" x1="10" y1="4" x2="54" y2="60" gradientUnits="userSpaceOnUse">
+                                    <stop offset="0%" stop-color="#2ea8ff"></stop>
+                                    <stop offset="52%" stop-color="#007aff"></stop>
+                                    <stop offset="100%" stop-color="#003d99"></stop>
+                                </linearGradient>
+                                <radialGradient id="waNavGlassGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(20 13) rotate(48) scale(38 28)">
+                                    <stop offset="0%" stop-color="#ffffff" stop-opacity="0.46"></stop>
+                                    <stop offset="55%" stop-color="#9ad8ff" stop-opacity="0.12"></stop>
+                                    <stop offset="100%" stop-color="#ffffff" stop-opacity="0"></stop>
+                                </radialGradient>
+                                <radialGradient id="waNavGlassWarm" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(55 40) rotate(110) scale(18 11)">
+                                    <stop offset="0%" stop-color="#ffdcb0" stop-opacity="0.42"></stop>
+                                    <stop offset="100%" stop-color="#ffdcb0" stop-opacity="0"></stop>
+                                </radialGradient>
+                                <linearGradient id="waNavGlassRim" x1="7" y1="3" x2="57" y2="61" gradientUnits="userSpaceOnUse">
+                                    <stop offset="0%" stop-color="#ffffff" stop-opacity="0.88"></stop>
+                                    <stop offset="38%" stop-color="#bde4ff" stop-opacity="0.22"></stop>
+                                    <stop offset="72%" stop-color="#48a8ff" stop-opacity="0.14"></stop>
+                                    <stop offset="100%" stop-color="#ffffff" stop-opacity="0.58"></stop>
+                                </linearGradient>
+                                <linearGradient id="waNavRibbonFill" x1="14" y1="18" x2="50" y2="47" gradientUnits="userSpaceOnUse">
+                                    <stop offset="0%" stop-color="#ffffff"></stop>
+                                    <stop offset="58%" stop-color="#e3f3ff"></stop>
+                                    <stop offset="100%" stop-color="#b4dfff"></stop>
+                                </linearGradient>
+                                <linearGradient id="waNavRibbonSpec" x1="16" y1="17" x2="48" y2="44" gradientUnits="userSpaceOnUse">
+                                    <stop offset="0%" stop-color="#ffffff" stop-opacity="0.96"></stop>
+                                    <stop offset="50%" stop-color="#ffffff" stop-opacity="0.55"></stop>
+                                    <stop offset="100%" stop-color="#ffffff" stop-opacity="0.18"></stop>
+                                </linearGradient>
+                                <filter id="waNavRibbonShadow" x="-15%" y="-15%" width="130%" height="140%">
+                                    <feDropShadow dx="0" dy="2.6" stdDeviation="2.2" flood-color="#00184a" flood-opacity="0.42"></feDropShadow>
+                                </filter>
+                                <clipPath id="waNavSquircleClip">
+                                    <rect x="2" y="2" width="60" height="60" rx="16.5"></rect>
+                                </clipPath>
+                            </defs>
+                            <g clip-path="url(#waNavSquircleClip)">
+                                <rect x="2" y="2" width="60" height="60" rx="16.5" fill="url(#waNavGlassBg)"></rect>
+                                <rect x="2" y="2" width="60" height="60" rx="16.5" fill="url(#waNavGlassGlow)"></rect>
+                                <rect x="2" y="2" width="60" height="60" rx="16.5" fill="url(#waNavGlassWarm)"></rect>
+                                <!-- 分层液态玻璃景深背板 -->
+                                <path
+                                    d="M15.6 25.4C16.7 37.6 20 44.6 23.8 44.6C27.8 44.6 28.5 22.6 32 22.6C35.5 22.6 36.2 44.6 40.2 44.6C44 44.6 47.3 37.6 48.4 25.4"
+                                    stroke="#ffffff"
+                                    stroke-opacity="0.24"
+                                    stroke-width="8.5"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    transform="translate(-1.6 1.4)"
+                                ></path>
+                                <!-- 主体磨砂液态玻璃 W 丝带 -->
+                                <g class="wa-logo-ribbon" filter="url(#waNavRibbonShadow)">
+                                    <path
+                                        d="M13.2 22.8C14.4 37.2 18.4 45.6 22.8 45.6C27.6 45.6 28.2 19.2 32 19.2C35.8 19.2 36.4 45.6 41.2 45.6C45.6 45.6 49.6 37.2 50.8 22.8"
+                                        stroke="url(#waNavRibbonFill)"
+                                        stroke-width="6.1"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                    ></path>
+                                    <path
+                                        d="M13.2 22.8C14.4 37.2 18.4 45.6 22.8 45.6C27.6 45.6 28.2 19.2 32 19.2C35.8 19.2 36.4 45.6 41.2 45.6C45.6 45.6 49.6 37.2 50.8 22.8"
+                                        stroke="url(#waNavRibbonSpec)"
+                                        stroke-width="2"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        transform="translate(0 -1.1)"
+                                    ></path>
+                                </g>
+                            </g>
+                            <!-- 精密倒角液态玻璃高光边框 -->
+                            <rect x="2.75" y="2.75" width="58.5" height="58.5" rx="15.75" stroke="url(#waNavGlassRim)" stroke-width="1.5"></rect>
+                        </svg>
+                        WireArc
+                    </a>
+
+                    <span class="top-version-badge" title="当前安装版本">{{.Version}}</span>
+                </div>
+                <div class="nav-right-actions">
+                    <button
+                        class="mail-log-btn wa-spell-mail"
+                        id="mailLogBtn"
+                        title="查看最近日志"
+                        onclick="openLogViewerModal()"
+                    >
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            style="width: 19px; height: 19px; overflow: visible"
+                        >
+                            <!-- 内部日志卡片：悬停/打开时如 ChatGPT 工具箱般从信封内弹性探出 -->
+                            <g class="wa-mail-sheet">
+                                <rect x="6.5" y="4.5" width="11" height="8" rx="1.6" fill="#ffffff" stroke="currentColor" stroke-width="1.6"></rect>
+                                <line x1="9" y1="7.5" x2="15" y2="7.5" stroke="currentColor" stroke-width="1.5"></line>
+                            </g>
+                            <!-- 外层信封底座：稳固不动 -->
+                            <rect class="wa-mail-body" x="3" y="6.5" width="18" height="13" rx="3" fill="#f0f1f5"></rect>
+                            <path class="wa-mail-flap" d="M3.5 8.5l8.5 5.4 8.5-5.4"></path>
+                        </svg>
+                    </button>
+
+                    <div class="user-menu">
+                        <button class="user-btn">
+                            <span class="user-btn-avatar">
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2.2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    style="width: 14px; height: 14px"
+                                >
+                                    <path
+                                        d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"
+                                    ></path>
+                                    <circle cx="12" cy="7" r="4"></circle>
+                                </svg>
+                            </span>
+                            <span class="username">Admin</span>
+                            <svg
+                                class="chevron"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2.2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </button>
+                        <div class="dropdown-content">
+                            <button class="dropdown-item" onclick="openPwdModal()">
+                                <span class="dropdown-item-icon">
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                    >
+                                        <rect
+                                            x="3"
+                                            y="11"
+                                            width="18"
+                                            height="11"
+                                            rx="3"
+                                            ry="3"
+                                        ></rect>
+                                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                    </svg>
+                                </span>
+                                修改密码
+                            </button>
+                            <a href="/logout" class="dropdown-item logout-item">
+                                <span class="dropdown-item-icon">
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                    >
+                                        <path
+                                            d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"
+                                        ></path>
+                                        <polyline points="16 17 21 12 16 7"></polyline>
+                                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                                    </svg>
+                                </span>
+                                退出登录
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <div class="top-section-grid">
+                <div class="sub-card wa-overview-card">
+                    <div class="card-header">
+                        <div class="card-header-left">
+                            <span class="card-title">
+                                <span class="ui-icon-badge blue wa-icon-bars">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect class="wa-bar-1" x="3" y="12" width="4" height="8" rx="1.5"></rect>
+                                        <rect class="wa-bar-2" x="10" y="8" width="4" height="12" rx="1.5"></rect>
+                                        <rect class="wa-bar-3" x="17" y="4" width="4" height="16" rx="1.5"></rect>
+                                    </svg>
+                                </span>
+                                节点总览
+                            </span>
+                            {{if .ProtoStats}}
+                            <div class="proto-stats-bar">
+                                {{range .ProtoStats}}
+                                <div class="proto-badge">
+                                    {{.Name}}
+                                    <span class="proto-count">{{.Count}}</span>
+                                </div>
+                                {{end}}
+                            </div>
+                            {{end}}
+                        </div>
+                        <button
+                            class="btn-custom-common btn-color-blue wa-btn-plus"
+                            onclick="openAddNodeModal()"
+                        >
+                            <svg class="wa-plus-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            添加节点
+                        </button>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-num text-blue">
+                                {{.Stats.Total}}
+                            </div>
+                            <div class="stat-label">可用总数</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-num text-green">
+                                {{.Stats.Direct}}
+                            </div>
+                            <div class="stat-label">直连节点</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-num text-yellow">
+                                {{.Stats.Landing}}
+                            </div>
+                            <div class="stat-label">落地节点</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-num text-red">
+                                {{.Stats.Blocked}}
+                            </div>
+                            <div class="stat-label">屏蔽节点</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="sub-card wa-tools-card" id="quickActionsCard">
+                    <div class="card-header">
+                        <span class="card-title">
+                            <span class="ui-icon-badge purple wa-tools-box" aria-hidden="true">
+                                <!-- ChatGPT Spell 166 灵感：工具箱底座固定，星标与斜向工具在悬停/开启工具弹窗时向上弹性探出 -->
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="overflow: visible">
+                                    <g class="wa-tool-sparkle">
+                                        <path d="M8.4 4.2l.85 2.15 2.15.85-2.15.85-.85 2.15-.85-2.15-2.15-.85 2.15-.85z" fill="currentColor" stroke="none"></path>
+                                    </g>
+                                    <g class="wa-tool-wand">
+                                        <path d="M13.6 10.6l4.4-5.2a1.25 1.25 0 0 1 1.85.15l.25.3a1.25 1.25 0 0 1-.1 1.75l-4.6 4.8"></path>
+                                    </g>
+                                    <path class="wa-tool-tray" d="M4.5 11.5h15a1.5 1.5 0 0 1 1.5 1.5v5a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 18v-5a1.5 1.5 0 0 1 1.5-1.5z" fill="#f2ebff"></path>
+                                    <line class="wa-tool-handle" x1="9.5" y1="15.5" x2="14.5" y2="15.5"></line>
+                                </svg>
+                            </span>
+                            快捷操作
+                        </span>
+                        <div style="display: flex; gap: 10px">
+                            <a
+                                href="javascript:void(0)"
+                                onclick="openSubLinksModal()"
+                                class="btn-custom-common btn-color-blue wa-btn-link"
+                            >
+                                <svg
+                                    width="14"
+                                    height="14"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2.4"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    style="overflow: visible"
+                                >
+                                    <path
+                                        class="wa-link-a"
+                                        d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
+                                    ></path>
+                                    <path
+                                        class="wa-link-b"
+                                        d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
+                                    ></path>
+                                </svg>
+                                我的订阅
+                            </a>
+                            <a
+                                href="javascript:void(0)"
+                                onclick="openSystemSettingsModal()"
+                                class="btn-custom-common btn-color-soft wa-btn-gear"
+                                id="sysSettingsTriggerBtn"
+                            >
+                                <svg
+                                    class="wa-gear-svg"
+                                    width="14"
+                                    height="14"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2.3"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                    <path
+                                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
+                                    ></path>
+                                </svg>
+                                系统设置
+                            </a>
+                        </div>
+                    </div>
+                    <div class="rule-actions">
+                        <a
+                            href="javascript:void(0)"
+                            onclick="openCustomRulesModal()"
+                            class="btn-edit-rule wa-tile-bolt"
+                            data-modal-id="customRulesModal"
+                        >
+                            <span class="rule-icon-box ui-icon-badge orange">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="overflow: visible">
+                                    <polygon class="wa-bolt-path" points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                                </svg>
+                            </span>
+                            <span class="rule-name">自定义分流</span>
+                        </a>
+                        <a
+                            href="javascript:void(0)"
+                            onclick="openGlobalSettingsModal()"
+                            class="btn-edit-rule wa-tile-cube"
+                            data-modal-id="globalSettingsModal"
+                        >
+                            <span class="rule-icon-box ui-icon-badge indigo">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="overflow: visible">
+                                    <path class="wa-cube-base" d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                                    <polyline class="wa-cube-lid" points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                                    <line class="wa-cube-seam" x1="12" y1="22.08" x2="12" y2="12"></line>
+                                </svg>
+                            </span>
+                            <span class="rule-name">SingBox配置</span>
+                        </a>
+                        <a
+                            href="javascript:void(0)"
+                            onclick="openAirportSubModal()"
+                            class="btn-edit-rule wa-tile-plane"
+                            data-modal-id="airportModal"
+                        >
+                            <span class="rule-icon-box ui-icon-badge blue">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="overflow: visible">
+                                    <g class="wa-plane-body">
+                                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                    </g>
+                                </svg>
+                            </span>
+                            <span class="rule-name">机场订阅</span>
+                        </a>
+                        <a
+                            href="javascript:void(0)"
+                            onclick="openClashModal()"
+                            class="btn-edit-rule wa-tile-sliders"
+                            data-modal-id="clashTemplateModal"
+                        >
+                            <span class="rule-icon-box ui-icon-badge purple">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="overflow: visible">
+                                    <!-- 垂直轨道固定，三个滑块旋钮沿各自轨道反向弹性滑动 -->
+                                    <line x1="4" y1="21" x2="4" y2="3" opacity="0.45"></line>
+                                    <line x1="12" y1="21" x2="12" y2="3" opacity="0.45"></line>
+                                    <line x1="20" y1="21" x2="20" y2="3" opacity="0.45"></line>
+                                    <line class="wa-slider-k1" x1="1.5" y1="14" x2="6.5" y2="14"></line>
+                                    <line class="wa-slider-k2" x1="9.5" y1="8" x2="14.5" y2="8"></line>
+                                    <line class="wa-slider-k3" x1="17.5" y1="16" x2="22.5" y2="16"></line>
+                                </svg>
+                            </span>
+                            <span class="rule-name">Clash规则集</span>
+                        </a>
+                        <a
+                            href="javascript:void(0)"
+                            onclick="openCFTunnelModal()"
+                            class="btn-edit-rule wa-tile-cloud"
+                            data-modal-id="cfTunnelModal"
+                        >
+                            <span class="rule-icon-box ui-icon-badge cyan">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="overflow: visible">
+                                    <path class="wa-cloud-body" d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path>
+                                </svg>
+                            </span>
+                            <span class="rule-name">CF配置</span>
+                        </a>
+                        <a
+                            href="javascript:void(0)"
+                            onclick="openCustomNodesModal()"
+                            class="btn-edit-rule wa-tile-link"
+                            data-modal-id="customNodesModal"
+                        >
+                            <span class="rule-icon-box ui-icon-badge rose">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="overflow: visible">
+                                    <path class="wa-link-a" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                                    <path class="wa-link-b" d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                                </svg>
+                            </span>
+                            <span class="rule-name">自定义节点</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sub-card" id="node-manager-card">
+                <div class="node-columns-grid">
+                    <div class="node-column-panel theme-green">
+                        <div
+                            class="column-header"
+                            style="
+                                display: flex;
+                                align-items: center;
+                                justify-content: space-between;
+                            "
+                        >
+                            <span
+                                class="card-title"
+                                style="
+                                    color: #1d1d1f;
+                                    font-size: 16px;
+                                    font-weight: 700;
+                                "
+                            >
+                                <span class="ui-icon-badge green">
+                                    <svg
+                                        width="16"
+                                        height="16"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2.5"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                    >
+                                        <path d="M5 12h14"></path>
+                                        <path d="M12 5l7 7-7 7"></path>
+                                    </svg>
+                                </span>
+                                直连节点
+                            </span>
+                            <span
+                                style="
+                                    font-size: 11px;
+                                    font-weight: 600;
+                                    color: #28a745;
+                                    background: #e8fdf0;
+                                    padding: 4px 10px;
+                                    border-radius: 999px;
+                                    letter-spacing: 0.3px;
+                                "
+                                >国内入口 / 中转</span
+                            >
+                        </div>
+                        <div
+                            class="node-list-container"
+                            id="direct-nodes-list"
+                        ><div class="wa-loading-state"><span class="wa-spinner"></span><span>加载直连节点...</span></div></div>
+                    </div>
+
+                    <div class="node-column-panel theme-yellow">
+                        <div
+                            class="column-header"
+                            style="
+                                display: flex;
+                                align-items: center;
+                                justify-content: space-between;
+                            "
+                        >
+                            <span
+                                class="card-title"
+                                style="
+                                    color: #1d1d1f;
+                                    font-size: 16px;
+                                    font-weight: 700;
+                                "
+                            >
+                                <span class="ui-icon-badge orange">
+                                    <svg
+                                        width="16"
+                                        height="16"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2.4"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                    >
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line
+                                            x1="2"
+                                            y1="12"
+                                            x2="22"
+                                            y2="12"
+                                        ></line>
+                                        <path
+                                            d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
+                                        ></path>
+                                    </svg>
+                                </span>
+                                落地节点
+                            </span>
+                            <span
+                                style="
+                                    font-size: 11px;
+                                    font-weight: 600;
+                                    color: #d97706;
+                                    background: #fff4e5;
+                                    padding: 4px 10px;
+                                    border-radius: 999px;
+                                    letter-spacing: 0.3px;
+                                "
+                                >海外出口 / 代理</span
+                            >
+                        </div>
+                        <div
+                            class="node-list-container"
+                            id="land-nodes-list"
+                        ><div class="wa-loading-state"><span class="wa-spinner"></span><span>加载落地节点...</span></div></div>
+                    </div>
+                </div>
+            </div>
+
+            {{template "traffic_stats_panel_v2.html" .}}
+        </main>
+
+        <footer class="main-footer">WireArc &copy; 2026</footer>
+
+        <script>
+            window.allNodesData = {};
+
+            // 备用调色盘 (用于未知的新协议)
+            const tagColorPalette = [
+                { bg: "#dcfce7", text: "#16a34a" }, // Green
+                { bg: "#fce7f3", text: "#db2777" }, // Pink
+                { bg: "#cffafe", text: "#0d9488" }, // Cyan
+                { bg: "#e0f2fe", text: "#2563eb" }, // Blue
+                { bg: "#fef9c3", text: "#d97706" }, // Yellow
+                { bg: "#f3e8ff", text: "#7c3aed" }, // Purple
+                { bg: "#ffedd5", text: "#ca8a04" }, // Orange
+                { bg: "#fee2e2", text: "#dc2626" }, // Red
+                { bg: "#ccfbf1", text: "#059669" }, // Teal
+                { bg: "#e0e7ff", text: "#4f46e5" }, // Indigo
+            ];
+
+            // 核心硬编码映射：确保默认的几个主流协议绝不撞色，色彩对比强烈
+            const fixedProtoColors = {
+                ss: { bg: "#e0f2fe", text: "#2563eb" }, // 经典蓝
+                hy2: { bg: "#ffedd5", text: "#ea580c" }, // 活力橙
+                reality: { bg: "#f3e8ff", text: "#9333ea" }, // 优雅紫
+                tuic: { bg: "#fee2e2", text: "#dc2626" }, // 醒目红
+                socks5: { bg: "#ccfbf1", text: "#0d9488" }, // 青色
+                trojan: { bg: "#fef9c3", text: "#ca8a04" }, // 黄色
+                vmess: { bg: "#dcfce7", text: "#16a34a" }, // 绿色
+            };
+
+            // 增强版色彩分配引擎
+            function getProtoColor(protoName) {
+                const key = protoName.toLowerCase();
+
+                // 1. 优先命中硬编码的预设色彩
+                if (fixedProtoColors[key]) {
+                    return fixedProtoColors[key];
+                }
+
+                // 2. 对于未知的新协议，使用增强后的哈希算法防止短字符串碰撞
+                let hash = 0;
+                for (let i = 0; i < key.length; i++) {
+                    hash =
+                        key.charCodeAt(i) + ((hash << 5) - hash) + (hash >> 2);
+                    hash = hash & hash;
+                }
+                return tagColorPalette[Math.abs(hash) % tagColorPalette.length];
+            }
+
+            function applyNodesPayload(data) {
+                if (!data) return false;
+                window.allNodesData = {};
+
+                const cacheNodes = (nodes) => {
+                    if (nodes)
+                        nodes.forEach(
+                            (n) => (window.allNodesData[n.uuid] = n),
+                        );
+                };
+                cacheNodes(data.direct_nodes);
+                cacheNodes(data.land_nodes);
+                window.allWGPairs = data.wg_pairs || {};
+                window.panelUrl = data.panel_url;
+                window.cftTunnelSubdomain =
+                    data.tunnel_subdomain || "";
+
+                renderNodes(
+                    "direct-nodes-list",
+                    data.direct_nodes,
+                    "#34c759",
+                );
+                renderNodes(
+                    "land-nodes-list",
+                    data.land_nodes,
+                    "#f5a623",
+                );
+
+                initDragAndDrop();
+                return true;
+            }
+
+            async function loadNodesList() {
+                try {
+                    const response = await fetch("/api/get-nodes");
+                    const result = await response.json();
+
+                    if (result.status === "success") {
+                        applyNodesPayload(result.data);
+                    } else {
+                        showErrorState("direct-nodes-list");
+                        showErrorState("land-nodes-list");
+                    }
+                } catch (error) {
+                    console.error("获取节点列表失败:", error);
+                    showErrorState("direct-nodes-list");
+                    showErrorState("land-nodes-list");
+                }
+            }
+
+            function initDragAndDrop() {
+                if (typeof Sortable === "undefined") {
+                    if (!window._waSortablePending) {
+                        window._waSortablePending = true;
+                        document.addEventListener(
+                            "DOMContentLoaded",
+                            function () {
+                                window._waSortablePending = false;
+                                initDragAndDrop();
+                            },
+                            { once: true },
+                        );
+                    }
+                    return;
+                }
+                const directList = document.getElementById("direct-nodes-list");
+                const landList = document.getElementById("land-nodes-list");
+
+                if (window._sortableDirect) {
+                    window._sortableDirect.destroy();
+                    window._sortableDirect = null;
+                }
+                if (window._sortableLand) {
+                    window._sortableLand.destroy();
+                    window._sortableLand = null;
+                }
+
+                const sortableOptions = {
+                    group: "active-nodes",
+                    handle: ".drag-handle",
+                    animation: 200,
+                    ghostClass: "sortable-ghost",
+                    onEnd: function (evt) {
+                        const toList = evt.to;
+
+                        let targetRoutingType = 1;
+                        if (toList.id === "land-nodes-list") {
+                            targetRoutingType = 2;
+                        }
+
+                        const nodeItems = toList.querySelectorAll(".node-item");
+                        const uuidList = Array.from(nodeItems).map((el) =>
+                            el.getAttribute("data-uuid"),
+                        );
+                        const cleanUUIDs = uuidList.filter((id) => id);
+
+                        saveNodeOrder(targetRoutingType, cleanUUIDs);
+
+                        if (evt.from !== evt.to) {
+                            let sourceRoutingType = 1;
+                            if (evt.from.id === "land-nodes-list")
+                                sourceRoutingType = 2;
+
+                            const sourceItems =
+                                evt.from.querySelectorAll(".node-item");
+                            const sourceUUIDs = Array.from(sourceItems)
+                                .map((el) => el.getAttribute("data-uuid"))
+                                .filter((id) => id);
+
+                            setTimeout(() => {
+                                saveNodeOrder(sourceRoutingType, sourceUUIDs);
+                            }, 200);
+
+                            if (sourceUUIDs.length === 0) {
+                                evt.from.innerHTML = `<div style="text-align: center; color: #86868b; font-size: 13px; margin-top: 30px;" class="empty-tip">暂无节点数据</div>`;
+                            }
+                        }
+
+                        Array.from(toList.children).forEach((child) => {
+                            if (
+                                !child.classList.contains("node-item") &&
+                                !child.classList.contains("sortable-ghost")
+                            ) {
+                                child.remove();
+                            }
+                        });
+                    },
+                };
+
+                if (directList) window._sortableDirect = new Sortable(directList, sortableOptions);
+                if (landList) window._sortableLand = new Sortable(landList, sortableOptions);
+            }
+
+            async function saveNodeOrder(routingType, uuids) {
+                try {
+                    const res = await fetch("/api/reorder-nodes", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            target_routing_type: routingType,
+                            node_uuids: uuids,
+                        }),
+                    });
+                    if (!res.ok) {
+                        console.error("排序保存失败: HTTP", res.status);
+                        return;
+                    }
+
+                    // 节点排序/分组变更后，通知已打开的弹窗刷新数据
+                    if (typeof cftLoadTunnelNodeSettings === "function" &&
+                        document.getElementById("cfTunnelModal")?.classList.contains("active") &&
+                        document.querySelector('.cft-nav-card[data-cft-id="tunnel-nodes"]')?.classList.contains("active")) {
+                        cftLoadTunnelNodeSettings();
+                    }
+                    if (typeof loadOfflineNotifySettings === "function" &&
+                        document.getElementById("systemSettingsModal")?.classList.contains("active") &&
+                        document.querySelector('.sys-nav-card[data-sys-id="offline-notify"]')?.classList.contains("active")) {
+                        loadOfflineNotifySettings();
+                    }
+                } catch (e) {
+                    console.error("排序保存失败", e);
+                }
+            }
+
+            function showErrorState(containerId) {
+                const container = document.getElementById(containerId);
+                if (container) {
+                    container.innerHTML = `<div style="text-align: center; color: #ff3b30; font-size: 13px; margin-top: 30px;">数据加载失败</div>`;
+                }
+            }
+
+            // 精致圆润的矢量地球图标（替原生丑陋的 🌐 与方框）
+            const globeBadgeHTML = `<span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; background:#eaf4ff; color:#007aff; margin-right:8px; flex-shrink:0;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg></span>`;
+
+            function escapeNodeHTML(str) {
+                return String(str ?? "")
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#39;");
+            }
+
+            // =========================================================
+            // 核心优化：节点列表项渲染逻辑
+            // =========================================================
+            function renderNodes(containerId, nodes, dotColor) {
+                const container = document.getElementById(containerId);
+                container.innerHTML = "";
+
+                if (!nodes || nodes.length === 0) {
+                    container.innerHTML = `<div style="text-align: center; color: #86868b; font-size: 13px; margin: 18px 0;" class="empty-tip">暂无节点数据</div>`;
+                    return;
+                }
+
+                nodes.forEach((node) => {
+                    const item = document.createElement("div");
+                    item.className = "node-item";
+                    item.setAttribute("data-uuid", node.uuid);
+
+                    if (node.is_blocked) item.classList.add("is-blocked");
+                    const finalDotColor = node.is_blocked
+                        ? "#ff3b30"
+                        : dotColor;
+
+                    // 1. 处理跨平台国旗显示 (调用外部 flagcdn 接口转换图片，圆润切角，固定宽高避免布局抖动)
+                    let flagHTML = globeBadgeHTML;
+                    if (node.region && node.region.trim() !== "") {
+                        const isoCode = node.region.trim().toLowerCase();
+                        if (/^[a-z]{2}$/.test(isoCode)) {
+                            flagHTML = `<img src="https://flagcdn.com/${isoCode}.svg" width="22" height="16" decoding="async" alt="${isoCode}" style="width: 22px; height: 16px; object-fit: cover; margin-right: 8px; border-radius: 5px; background: #f2f3f7; box-shadow: 0 1px 3px rgba(0,0,0,0.12); flex-shrink: 0;">`;
+                        }
+                    }
+
+                    // 2. 动态生成启用的协议标签
+                    const linksMap = node.links || {};
+                    const disabledArr = node.disabled_links || [];
+                    const activeProtos = Object.keys(linksMap).filter(
+                        (p) => !disabledArr.includes(p),
+                    );
+
+                    let tagsHTML = "";
+                    if (activeProtos.length > 0) {
+                        tagsHTML = activeProtos
+                            .map((proto) => {
+                                const color = getProtoColor(proto);
+                                return `<span class="proto-tag" style="background-color: ${color.bg}; color: ${color.text};">${escapeNodeHTML(proto)}</span>`;
+                            })
+                            .join("");
+                    } else {
+                        tagsHTML = `<span style="font-size:11px; color:#a1a1a6;">暂无有效协议</span>`;
+                    }
+
+                    // 2.5 若节点处于 Agent WG 配对中，展示实时链路角色与状态徽章
+                    const wgInfo = window.allWGPairs ? window.allWGPairs[node.uuid] : null;
+                    if (wgInfo) {
+                        const st = wgInfo.status || "";
+                        let wgBg = "#eaf4ff", wgText = "#0066cc", stHint = "处理中";
+                        if (st === "active") {
+                            wgBg = "#e8fdf0"; wgText = "#15803d"; stHint = "";
+                        } else if (st === "blocked" || st === "failed") {
+                            wgBg = "#feeceb"; wgText = "#d92d20"; stHint = st === "blocked" ? "已阻断" : "异常";
+                        } else if (st === "cleanup_pending") {
+                            wgBg = "#fff4e5"; wgText = "#b45309"; stHint = "清理中";
+                        }
+                        const arrow = wgInfo.role === "entry" ? "→" : "←";
+                        const peerLabel = escapeNodeHTML(wgInfo.peer_name || "");
+                        const badgeText = `WG ${arrow} ${peerLabel}${stHint ? " · " + stHint : ""}`;
+                        const wgBadge = `<span class="proto-tag" style="background-color: ${wgBg}; color: ${wgText}; font-weight: 600;" title="WireGuard 双机中转">${badgeText}</span>`;
+                        tagsHTML = activeProtos.length > 0 ? (tagsHTML + wgBadge) : wgBadge;
+                    }
+
+                    // 3. 拖拽手柄
+                    let dragHandleHTML = `
+                    <div class="drag-handle">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="4" y1="12" x2="20" y2="12"></line>
+                            <line x1="4" y1="6" x2="20" y2="6"></line>
+                            <line x1="4" y1="18" x2="20" y2="18"></line>
+                        </svg>
+                    </div>
+                `;
+
+                    let ipTagsHTML = "";
+                    if (node.ipv4 && node.ipv4.trim() !== "") {
+                        ipTagsHTML += `<span style="font-size: 9.5px; font-weight: 700; background: #f2f3f7; color: #6e6e73; padding: 2px 7px; border-radius: 999px; margin-left: 6px; line-height: 1.2;">IPv4</span>`;
+                    }
+                    if (node.ipv6 && node.ipv6.trim() !== "") {
+                        const marginLeft = ipTagsHTML !== "" ? "4px" : "6px";
+                        ipTagsHTML += `<span style="font-size: 9.5px; font-weight: 700; background: #f2f3f7; color: #6e6e73; padding: 2px 7px; border-radius: 999px; margin-left: ${marginLeft}; line-height: 1.2;">IPv6</span>`;
+                    }
+
+                    const safeUUID = escapeNodeHTML(node.uuid);
+                    const safeName = escapeNodeHTML(node.name);
+
+                    // 4. 组装 DOM
+                    item.innerHTML = `
+                    <div class="node-row-main">
+                        <div class="node-row-left">
+                            ${dragHandleHTML}
+                            <div class="node-info">
+                                <div class="node-name-wrapper">
+                                    ${flagHTML}
+                                    <span class="node-name">${safeName}</span>
+                                    ${ipTagsHTML}
+                                </div>
+                                <div class="node-tags">${tagsHTML}</div>
+                            </div>
+                        </div>
+
+                        <div class="node-actions-group">
+                            <div class="node-status-dot" style="background: ${finalDotColor}; box-shadow: 0 0 0 3px ${finalDotColor}22; margin-right: 4px;"></div>
+
+                            <button type="button" onclick="openScriptModal('${safeUUID}')" class="node-action-btn wa-act-download" style="color: #007aff;" title="生成部署脚本">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="overflow:visible"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><g class="wa-dl-arrow"><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></g></svg>
+                            </button>
+
+                            <button type="button" onclick="openEditModal('${safeUUID}')" class="node-action-btn wa-act-edit" style="color: #007aff;" title="编辑节点">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="overflow:visible"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path class="wa-edit-pen" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            </button>
+
+                            <button type="button" onclick="openDeleteModal('${safeUUID}')" class="node-action-btn wa-act-trash" style="color: #ff3b30;" title="删除节点">
+                                <svg style="pointer-events: none; width: 15px; height: 15px; overflow: visible;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><g class="wa-trash-lid"><polyline points="3 6 5 6 21 6"></polyline><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></g><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                    container.appendChild(item);
+                });
+            }
+
+            // 首帧同步注水：若服务端已随 HTML 下发初始节点快照，立即完成首帧渲染；否则回退异步拉取
+            if (window.__WA_BOOTSTRAP__ && window.__WA_BOOTSTRAP__.nodes) {
+                applyNodesPayload(window.__WA_BOOTSTRAP__.nodes);
+            } else {
+                queueMicrotask(function () {
+                    if (typeof loadNodesList === "function") loadNodesList();
+                });
+            }
+
+            // 打开删除确认弹窗
+            function openDeleteModal(uuid) {
+                currentDeleteUUID = uuid;
+                const modal = document.getElementById("deleteModal");
+                if (modal) modal.style.display = "flex";
+            }
+
+            // 关闭删除弹窗
+            function closeDeleteModal() {
+                currentDeleteUUID = null;
+                const modal = document.getElementById("deleteModal");
+                if (modal) modal.style.display = "none";
+            }
+
+            // 确认删除（含防重复点击保护）
+            let _deleteInProgress = false;
+            async function confirmDeleteNode() {
+                if (!currentDeleteUUID) return;
+                if (_deleteInProgress) return;
+                _deleteInProgress = true;
+
+                const btn = document.querySelector('.btn-confirm-delete');
+                if (btn) {
+                    btn.disabled = true;
+                    btn._origText = btn.textContent;
+                    btn.textContent = '删除中...';
+                    btn.style.opacity = '0.6';
+                    btn.style.cursor = 'not-allowed';
+                }
+
+                try {
+                    const response = await fetch("/api/delete-node", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ uuid: currentDeleteUUID }),
+                    });
+                    const result = await response.json();
+                    if (result.status === "success") {
+                        closeDeleteModal();
+                        loadNodesList();
+                        if (result.message && result.message !== "节点已删除") {
+                            alert(result.message);
+                        }
+                    } else {
+                        alert("删除失败: " + result.message);
+                    }
+                } catch (error) {
+                    alert("网络错误，请稍后重试");
+                } finally {
+                    _deleteInProgress = false;
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = btn._origText || '确认删除';
+                        btn.style.opacity = '';
+                        btn.style.cursor = '';
+                    }
+                }
+            }
+
+            // 页面加载时检查
+            document.addEventListener("DOMContentLoaded", function () {
+                const isSecure = window.location.protocol === "https:";
+                const isDismissed = localStorage.getItem("hide_security_warn");
+
+                if (!isSecure && !isDismissed) {
+                    document.getElementById("security-banner").style.display =
+                        "flex";
+                }
+
+            });
+
+            function dismissSecurityBanner() {
+                document.getElementById("security-banner").style.display =
+                    "none";
+                localStorage.setItem("hide_security_warn", "true");
+            }
+        </script>
+
+        {{template "pwd_modal.html" .}} {{template "add_node_modal.html" .}}
+        {{template "delete_node_modal.html" .}} {{template
+        "edit_node_modal.html" .}} {{template "install_script_modal.html" .}}
+        {{template "global_settings_modal.html" .}} {{template
+        "system_settings_modal.html" .}}
+        {{template "clash_template_modal.html" .}} {{template
+        "sub_links_modal.html" .}} {{template "custom_rules_modal.html" .}}
+        {{template "airport_sub_modal.html" .}} {{template "logs_modal.html" .}}
+        {{template "cf_modal.html" .}}
+        {{template "custom_nodes_modal.html" .}}
+        {{template "node_wg_editor.html" .}}
+
+        <style id="wirearc-ui-unified">
+            /* WireArc 全局统一视觉规范：圆润卡片、柔和遮罩、现代美化下拉选择框与表单控件 */
+            [class$="-modal-overlay"] {
+                backdrop-filter: saturate(180%) blur(10px);
+                -webkit-backdrop-filter: saturate(180%) blur(10px);
+            }
+            [class$="-modal-card"] {
+                border-radius: 26px !important;
+                border: 1px solid rgba(0, 0, 0, 0.06);
+                box-shadow: 0 24px 56px rgba(0, 0, 0, 0.14), 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+            }
+            [class$="-modal-card"] select:not(.no-custom-select) {
+                appearance: none;
+                -webkit-appearance: none;
+                border-radius: 14px !important;
+                border: 1px solid rgba(0, 0, 0, 0.09);
+                background-color: #f6f7f9;
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236e6e73' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+                background-repeat: no-repeat;
+                background-position: right 13px center;
+                background-size: 14px 14px;
+                padding-right: 36px;
+                cursor: pointer;
+                transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+            }
+            [class$="-modal-card"] .traffic-input-group select,
+            [class$="-modal-card"] .add-traffic-input-group select {
+                border: none !important;
+                border-radius: 0 !important;
+                background-color: transparent !important;
+                background-image: none !important;
+                box-shadow: none !important;
+                padding-right: 28px !important;
+            }
+            [class$="-modal-card"] select:hover:not(:disabled) {
+                border-color: rgba(0, 122, 255, 0.35);
+            }
+            [class$="-modal-card"] select:focus {
+                outline: none;
+                border-color: #007aff;
+                background-color: #ffffff;
+                box-shadow: 0 0 0 3.5px rgba(0, 122, 255, 0.14);
+            }
+            [class$="-modal-card"] input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="range"]):not(.proto-port-input),
+            [class$="-modal-card"] textarea {
+                border-radius: 14px;
+                transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+            }
+            [class$="-modal-card"] .traffic-input-group input,
+            [class$="-modal-card"] .add-traffic-input-group input {
+                border-radius: 0 !important;
+            }
+            [class$="-modal-card"] input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="range"]):focus,
+            [class$="-modal-card"] textarea:focus {
+                border-color: #007aff;
+                box-shadow: 0 0 0 3.5px rgba(0, 122, 255, 0.14);
+            }
+            [class$="-modal-card"] .traffic-input-group input:focus,
+            [class$="-modal-card"] .add-traffic-input-group input:focus {
+                border: none !important;
+                box-shadow: none !important;
+            }
+            @media (max-width: 768px) {
+                [class$="-modal-card"] {
+                    border-radius: 22px !important;
+                }
+            }
+
+            /* =========================================================
+               WireArc Micro-Interactions (Design Spells: ChatGPT Tools & Granola Sidebar)
+               ========================================================= */
+            /* 1) ChatGPT Spell 166：外框锚定、内部工具部件弹性探出 */
+            .wa-tools-box .wa-tool-sparkle,
+            .wa-tools-box .wa-tool-wand {
+                transform-box: fill-box;
+                transform-origin: center bottom;
+                transition: transform 0.34s var(--ease-spell);
+            }
+            .wa-tools-box .wa-tool-sparkle {
+                transform: translate(0.5px, 2.2px) scale(0.86);
+            }
+            .wa-tools-box .wa-tool-wand {
+                transform: translate(-0.8px, 2.6px) rotate(-8deg);
+            }
+            .wa-tools-card:hover .wa-tools-box .wa-tool-sparkle,
+            .wa-tools-card.is-tools-open .wa-tools-box .wa-tool-sparkle {
+                transform: translate(-0.8px, -1.6px) rotate(-10deg) scale(1.06);
+            }
+            .wa-tools-card:hover .wa-tools-box .wa-tool-wand,
+            .wa-tools-card.is-tools-open .wa-tools-box .wa-tool-wand {
+                transform: translate(0.9px, -1.7px) rotate(6deg);
+            }
+
+            /* 顶部最近日志信封：内部日志纸片探出 */
+            .wa-spell-mail .wa-mail-sheet,
+            .wa-spell-mail .wa-mail-body {
+                transition: transform 0.34s var(--ease-spell), fill 0.22s ease;
+            }
+            .wa-spell-mail .wa-mail-sheet {
+                transform-box: fill-box;
+                transform-origin: center bottom;
+                transform: translateY(3.2px);
+            }
+            .wa-spell-mail:hover .wa-mail-body,
+            .wa-spell-mail.is-open .wa-mail-body {
+                fill: #eaf4ff;
+            }
+            .wa-spell-mail:hover .wa-mail-sheet,
+            .wa-spell-mail.is-open .wa-mail-sheet {
+                transform: translateY(-2.4px) scale(1.03);
+            }
+
+            /* 快捷操作 6 个图标：各自子部件独立微动效 */
+            .btn-edit-rule svg * {
+                transform-box: fill-box;
+                transform-origin: center;
+                transition: transform 0.32s var(--ease-spell);
+            }
+            .wa-tile-bolt:hover .wa-bolt-path,
+            .wa-tile-bolt.is-open .wa-bolt-path {
+                transform: translateY(-1.5px) rotate(-6deg) scale(1.06);
+            }
+            .wa-tile-cube .wa-cube-lid {
+                transform-origin: center top;
+            }
+            .wa-tile-cube:hover .wa-cube-lid,
+            .wa-tile-cube.is-open .wa-cube-lid {
+                transform: translateY(-1.6px);
+            }
+            .wa-tile-cube:hover .wa-cube-seam,
+            .wa-tile-cube.is-open .wa-cube-seam {
+                transform: scaleY(0.92);
+            }
+            .wa-tile-plane:hover .wa-plane-body,
+            .wa-tile-plane.is-open .wa-plane-body {
+                transform: translate(1.8px, -1.8px) scale(1.04);
+            }
+            .wa-tile-sliders:hover .wa-slider-k1,
+            .wa-tile-sliders.is-open .wa-slider-k1 {
+                transform: translateY(-4.5px);
+            }
+            .wa-tile-sliders:hover .wa-slider-k2,
+            .wa-tile-sliders.is-open .wa-slider-k2 {
+                transform: translateY(4.5px);
+            }
+            .wa-tile-sliders:hover .wa-slider-k3,
+            .wa-tile-sliders.is-open .wa-slider-k3 {
+                transform: translateY(-5px);
+            }
+            .wa-tile-cloud:hover .wa-cloud-body,
+            .wa-tile-cloud.is-open .wa-cloud-body {
+                transform: translateY(-2px) scale(1.04);
+            }
+            .wa-tile-link:hover .wa-link-a,
+            .wa-tile-link.is-open .wa-link-a,
+            .wa-btn-link:hover .wa-link-a {
+                transform: translate(1.1px, -1.1px);
+            }
+            .wa-tile-link:hover .wa-link-b,
+            .wa-tile-link.is-open .wa-link-b,
+            .wa-btn-link:hover .wa-link-b {
+                transform: translate(-1.1px, 1.1px);
+            }
+            .wa-btn-link .wa-link-a,
+            .wa-btn-link .wa-link-b {
+                transform-box: fill-box;
+                transform-origin: center;
+                transition: transform 0.3s var(--ease-spell);
+            }
+
+            /* 节点总览三柱波浪 & 顶部胶囊按钮微动效 */
+            .wa-icon-bars rect {
+                transform-box: fill-box;
+                transform-origin: center bottom;
+                transition: transform 0.32s var(--ease-spell);
+            }
+            .wa-overview-card:hover .wa-icon-bars .wa-bar-1 {
+                transform: scaleY(1.16);
+            }
+            .wa-overview-card:hover .wa-icon-bars .wa-bar-2 {
+                transform: scaleY(0.86);
+                transition-delay: 0.04s;
+            }
+            .wa-overview-card:hover .wa-icon-bars .wa-bar-3 {
+                transform: scaleY(1.08);
+                transition-delay: 0.08s;
+            }
+            .wa-btn-plus .wa-plus-svg {
+                transition: transform 0.34s var(--ease-spell);
+            }
+            .wa-btn-plus:hover .wa-plus-svg {
+                transform: rotate(90deg);
+            }
+            .wa-btn-gear .wa-gear-svg {
+                transition: transform 0.42s var(--ease-spell);
+            }
+            .wa-btn-gear:hover .wa-gear-svg,
+            .wa-btn-gear.is-open .wa-gear-svg {
+                transform: rotate(52deg);
+            }
+
+            /* 节点行操作按钮微动效 */
+            .wa-act-download .wa-dl-arrow,
+            .wa-act-edit .wa-edit-pen,
+            .wa-act-trash .wa-trash-lid {
+                transform-box: fill-box;
+                transition: transform 0.28s var(--ease-spell);
+            }
+            .wa-act-download:hover .wa-dl-arrow {
+                transform: translateY(1.8px);
+            }
+            .wa-act-edit .wa-edit-pen {
+                transform-origin: left bottom;
+            }
+            .wa-act-edit:hover .wa-edit-pen {
+                transform: translate(0.6px, -0.8px) rotate(-7deg);
+            }
+            .wa-act-trash .wa-trash-lid {
+                transform-origin: right bottom;
+            }
+            .wa-act-trash:hover .wa-trash-lid {
+                transform: translateY(-1.4px) rotate(14deg);
+            }
+
+            /* 无障碍：尊重系统“减弱动态效果”设置 */
+            @media (prefers-reduced-motion: reduce) {
+                .wa-tools-box *,
+                .wa-spell-mail *,
+                .btn-edit-rule svg *,
+                .wa-icon-bars rect,
+                .wa-btn-plus .wa-plus-svg,
+                .wa-btn-gear .wa-gear-svg,
+                .wa-btn-link *,
+                .wa-act-download *,
+                .wa-act-edit *,
+                .wa-act-trash * {
+                    transition: none !important;
+                    animation: none !important;
+                }
+            }
+            /* ================= 全局统一极简下拉菜单 (WireArc Custom Select) ================= */
+            select:not(.ts-hidden):focus-visible {
+                outline: none;
+            }
+            select.wa-select-open:not(.ts-hidden) {
+                border-color: #007aff !important;
+                background-color: #ffffff !important;
+                box-shadow: 0 0 0 3.5px rgba(0, 122, 255, 0.14) !important;
+            }
+            .traffic-input-group select.wa-select-open,
+            .add-traffic-input-group select.wa-select-open {
+                border: none !important;
+                background-color: transparent !important;
+                box-shadow: none !important;
+            }
+            .wa-select-popover {
+                position: fixed;
+                z-index: 99999;
+                background: rgba(255, 255, 255, 0.98);
+                backdrop-filter: saturate(180%) blur(20px);
+                -webkit-backdrop-filter: saturate(180%) blur(20px);
+                border: 1px solid rgba(0, 0, 0, 0.08);
+                border-radius: 16px;
+                padding: 6px;
+                box-shadow:
+                    0 18px 44px rgba(15, 23, 42, 0.14),
+                    0 2px 8px rgba(15, 23, 42, 0.05);
+                max-height: 272px;
+                overflow-y: auto;
+                overscroll-behavior: contain;
+                box-sizing: border-box;
+                opacity: 0;
+                transform: translateY(-4px) scale(0.97);
+                transform-origin: top center;
+                transition:
+                    opacity 0.16s cubic-bezier(0.22, 1, 0.36, 1),
+                    transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+                pointer-events: none;
+                font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+                scrollbar-width: thin;
+                scrollbar-color: rgba(0, 0, 0, 0.16) transparent;
+            }
+            .wa-select-popover.is-above {
+                transform: translateY(4px) scale(0.97);
+                transform-origin: bottom center;
+            }
+            .wa-select-popover.is-open {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+                pointer-events: auto;
+            }
+            .wa-select-popover::-webkit-scrollbar {
+                width: 5px;
+            }
+            .wa-select-popover::-webkit-scrollbar-thumb {
+                background: rgba(0, 0, 0, 0.16);
+                border-radius: 999px;
+            }
+            .wa-select-group-label {
+                padding: 6px 10px 4px;
+                font-size: 11px;
+                font-weight: 600;
+                color: #86868b;
+                letter-spacing: 0.02em;
+                user-select: none;
+            }
+            .wa-select-item {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 10px;
+                width: 100%;
+                box-sizing: border-box;
+                padding: 8.5px 12px;
+                border: none;
+                border-radius: 10px;
+                background: transparent;
+                color: #1d1d1f;
+                font-size: 13px;
+                font-weight: 500;
+                line-height: 1.35;
+                text-align: left;
+                cursor: pointer;
+                transition: background-color 0.12s ease, color 0.12s ease;
+                font-family: inherit;
+            }
+            .wa-select-item + .wa-select-item {
+                margin-top: 2px;
+            }
+            .wa-select-item-label {
+                flex: 1;
+                min-width: 0;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .wa-select-flag {
+                width: 18px;
+                height: 13px;
+                border-radius: 3.5px;
+                object-fit: cover;
+                background: #f2f3f7;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+                flex-shrink: 0;
+            }
+            .wa-select-globe {
+                width: 18px;
+                height: 18px;
+                border-radius: 50%;
+                background: #eaf4ff;
+                color: #007aff;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+            }
+            .wa-select-item-check {
+                width: 14px;
+                height: 14px;
+                flex-shrink: 0;
+                color: #007aff;
+                opacity: 0;
+                transform: scale(0.8);
+                transition: opacity 0.14s ease, transform 0.14s ease;
+            }
+            .wa-select-item:hover:not(.is-disabled),
+            .wa-select-item.is-focused:not(.is-disabled) {
+                background: #f2f4f8;
+            }
+            .wa-select-item.is-selected {
+                background: #eaf4ff;
+                color: #007aff;
+                font-weight: 600;
+            }
+            .wa-select-item.is-selected:hover:not(.is-disabled),
+            .wa-select-item.is-selected.is-focused:not(.is-disabled) {
+                background: #dfeeff;
+            }
+            .wa-select-item.is-selected .wa-select-item-check {
+                opacity: 1;
+                transform: scale(1);
+            }
+            .wa-select-item.is-disabled {
+                color: #a1a1a6;
+                cursor: not-allowed;
+                opacity: 0.65;
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .wa-select-popover,
+                .wa-select-item,
+                .wa-select-item-check {
+                    transition: none !important;
+                }
+            }
+            /* ================= 全局统一极简确认/提示弹窗 (WireArc Dialog) ================= */
+            .wa-dialog-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                z-index: 99990;
+                background: rgba(15, 15, 20, 0.42);
+                backdrop-filter: saturate(180%) blur(10px);
+                -webkit-backdrop-filter: saturate(180%) blur(10px);
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+                box-sizing: border-box;
+                opacity: 0;
+                transition: opacity 0.18s ease;
+            }
+            .wa-dialog-overlay.is-open {
+                display: flex;
+                opacity: 1;
+            }
+            .wa-dialog-card {
+                width: 100%;
+                max-width: 400px;
+                background: #ffffff;
+                border-radius: 24px;
+                border: 1px solid rgba(0, 0, 0, 0.06);
+                box-shadow: 0 24px 60px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.05);
+                padding: 24px 24px 20px;
+                box-sizing: border-box;
+                transform: scale(0.95) translateY(6px);
+                transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+                font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+            }
+            .wa-dialog-overlay.is-open .wa-dialog-card {
+                transform: scale(1) translateY(0);
+            }
+            .wa-dialog-head {
+                display: flex;
+                align-items: center;
+                gap: 11px;
+                margin-bottom: 12px;
+            }
+            .wa-dialog-icon {
+                width: 34px;
+                height: 34px;
+                border-radius: 11px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+            }
+            .wa-dialog-icon.info { background: #eaf4ff; color: #007aff; }
+            .wa-dialog-icon.success { background: #e8fdf0; color: #28a745; }
+            .wa-dialog-icon.warning { background: #fff4e5; color: #d97706; }
+            .wa-dialog-icon.danger { background: #feeceb; color: #ff3b30; }
+            .wa-dialog-title {
+                font-size: 16px;
+                font-weight: 700;
+                color: #1d1d1f;
+                line-height: 1.3;
+            }
+            .wa-dialog-msg {
+                font-size: 13.5px;
+                line-height: 1.65;
+                color: #48484a;
+                white-space: pre-wrap;
+                word-break: break-word;
+                margin-bottom: 20px;
+                max-height: 46vh;
+                overflow-y: auto;
+            }
+            .wa-dialog-actions {
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                gap: 10px;
+            }
+            .wa-dialog-btn {
+                border: none;
+                border-radius: 999px;
+                padding: 9px 20px;
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: background-color 0.16s ease, transform 0.14s ease, box-shadow 0.16s ease;
+                font-family: inherit;
+            }
+            .wa-dialog-btn:active {
+                transform: scale(0.97);
+            }
+            .wa-dialog-btn-cancel {
+                background: #f2f3f7;
+                color: #1d1d1f;
+            }
+            .wa-dialog-btn-cancel:hover {
+                background: #e5e6eb;
+            }
+            .wa-dialog-btn-confirm {
+                background: linear-gradient(180deg, #1a90ff 0%, #007aff 100%);
+                color: #ffffff;
+                box-shadow: 0 3px 10px rgba(0, 122, 255, 0.26);
+            }
+            .wa-dialog-btn-confirm:hover {
+                background: linear-gradient(180deg, #007aff 0%, #0062cc 100%);
+            }
+            .wa-dialog-btn-confirm.danger {
+                background: linear-gradient(180deg, #ff5449 0%, #ff3b30 100%);
+                box-shadow: 0 3px 10px rgba(255, 59, 48, 0.26);
+            }
+            .wa-dialog-btn-confirm.danger:hover {
+                background: linear-gradient(180deg, #f5352a 0%, #d70015 100%);
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .wa-dialog-overlay,
+                .wa-dialog-card {
+                    transition: none !important;
+                }
+            }
+        </style>
+        <script id="wirearc-custom-dialog">
+            (function () {
+                const nativeAlert = window.alert ? window.alert.bind(window) : null;
+                let overlay = null;
+                let queue = [];
+                let activeJob = null;
+
+                function inferTone(msg, mode, explicitTone) {
+                    if (explicitTone) return explicitTone;
+                    const text = String(msg || "");
+                    if (/✅|成功/.test(text) && !/失败|错误/.test(text)) return "success";
+                    if (/❌|失败|错误|删除|清空|停用|重置|不可逆|丢失|阻断|异常/.test(text)) return "danger";
+                    if (/⚠️|警告|冲突|确认|重启|切换/.test(text)) return "warning";
+                    return mode === "confirm" ? "warning" : "info";
+                }
+
+                function iconSVG(tone) {
+                    if (tone === "success") {
+                        return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                    }
+                    if (tone === "danger") {
+                        return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
+                    }
+                    if (tone === "warning") {
+                        return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
+                    }
+                    return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
+                }
+
+                function ensureOverlay() {
+                    if (overlay) return overlay;
+                    overlay = document.createElement("div");
+                    overlay.id = "waDialogOverlay";
+                    overlay.className = "wa-dialog-overlay";
+                    overlay.setAttribute("role", "dialog");
+                    overlay.setAttribute("aria-modal", "true");
+                    overlay.innerHTML =
+                        '<div class="wa-dialog-card">' +
+                        '  <div class="wa-dialog-head">' +
+                        '    <span class="wa-dialog-icon info" id="waDialogIcon"></span>' +
+                        '    <div class="wa-dialog-title" id="waDialogTitle">提示</div>' +
+                        "  </div>" +
+                        '  <div class="wa-dialog-msg" id="waDialogMsg"></div>' +
+                        '  <div class="wa-dialog-actions">' +
+                        '    <button type="button" class="wa-dialog-btn wa-dialog-btn-cancel" id="waDialogCancelBtn">取消</button>' +
+                        '    <button type="button" class="wa-dialog-btn wa-dialog-btn-confirm" id="waDialogConfirmBtn">确认</button>' +
+                        "  </div>" +
+                        "</div>";
+
+                    overlay.addEventListener("click", function (e) {
+                        if (e.target === overlay && activeJob) {
+                            finishActive(activeJob.mode === "alert" ? true : false);
+                        }
+                    });
+                    overlay.querySelector("#waDialogCancelBtn").addEventListener("click", function () {
+                        finishActive(false);
+                    });
+                    overlay.querySelector("#waDialogConfirmBtn").addEventListener("click", function () {
+                        finishActive(true);
+                    });
+                    document.body.appendChild(overlay);
+                    return overlay;
+                }
+
+                function finishActive(result) {
+                    if (!activeJob) return;
+                    const job = activeJob;
+                    activeJob = null;
+                    if (overlay) overlay.classList.remove("is-open");
+                    job.resolve(result);
+                    if (queue.length > 0) {
+                        setTimeout(pumpQueue, 30);
+                    }
+                }
+
+                function pumpQueue() {
+                    if (activeJob || queue.length === 0) return;
+                    if (!document.body) {
+                        const job = queue.shift();
+                        if (job.mode === "alert" && nativeAlert) nativeAlert(job.message);
+                        job.resolve(true);
+                        return;
+                    }
+                    const job = queue.shift();
+                    activeJob = job;
+
+                    const el = ensureOverlay();
+                    const tone = inferTone(job.message, job.mode, job.options.tone);
+                    const cleanedMsg = String(job.message || "").replace(/^(?:✅|❌|⚠️)\s*/, "");
+
+                    const iconEl = el.querySelector("#waDialogIcon");
+                    iconEl.className = "wa-dialog-icon " + tone;
+                    iconEl.innerHTML = iconSVG(tone);
+
+                    el.querySelector("#waDialogTitle").textContent =
+                        job.options.title || (job.mode === "confirm" ? "请确认操作" : tone === "success" ? "操作完成" : tone === "danger" ? "操作提示" : "提示");
+                    el.querySelector("#waDialogMsg").textContent = cleanedMsg;
+
+                    const cancelBtn = el.querySelector("#waDialogCancelBtn");
+                    const confirmBtn = el.querySelector("#waDialogConfirmBtn");
+                    if (job.mode === "confirm") {
+                        cancelBtn.style.display = "";
+                        cancelBtn.textContent = job.options.cancelText || "取消";
+                        confirmBtn.textContent = job.options.confirmText || "确认";
+                    } else {
+                        cancelBtn.style.display = "none";
+                        confirmBtn.textContent = job.options.confirmText || "知道了";
+                    }
+                    confirmBtn.className = "wa-dialog-btn wa-dialog-btn-confirm" + (tone === "danger" && job.mode === "confirm" ? " danger" : "");
+
+                    el.classList.add("is-open");
+                    requestAnimationFrame(function () {
+                        try {
+                            confirmBtn.focus({ preventScroll: true });
+                        } catch (_) {}
+                    });
+                }
+
+                document.addEventListener(
+                    "keydown",
+                    function (e) {
+                        if (!activeJob) return;
+                        if (e.key === "Escape") {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            finishActive(activeJob.mode === "alert" ? true : false);
+                        } else if (e.key === "Enter" && document.activeElement !== overlay?.querySelector("#waDialogCancelBtn")) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            finishActive(true);
+                        }
+                    },
+                    true,
+                );
+
+                window.waAlert = function (message, options) {
+                    return new Promise(function (resolve) {
+                        queue.push({ mode: "alert", message: String(message ?? ""), options: options || {}, resolve });
+                        pumpQueue();
+                    });
+                };
+
+                window.waConfirm = function (message, options) {
+                    return new Promise(function (resolve) {
+                        queue.push({ mode: "confirm", message: String(message ?? ""), options: options || {}, resolve });
+                        pumpQueue();
+                    });
+                };
+
+                // 统一接管页面内所有原生 alert()，彻底杜绝丑陋的浏览器原生弹窗
+                window.alert = function (message) {
+                    window.waAlert(message);
+                };
+            })();
+        </script>
+        <script id="wirearc-custom-select">
+            (function () {
+                let popover = null;
+                let activeSelect = null;
+                let activeGroup = null;
+                let focusedIdx = -1;
+                let hideTimer = null;
+
+                function isEnhanceableSelect(el) {
+                    if (!el || el.tagName !== "SELECT") return false;
+                    if (el.disabled || el.multiple || (el.size && el.size > 1)) return false;
+                    if (el.classList.contains("ts-hidden")) return false;
+                    if (el.dataset.nativeSelect === "true") return false;
+                    return true;
+                }
+
+                function ensurePopover() {
+                    if (popover) return popover;
+                    popover = document.createElement("div");
+                    popover.id = "waSelectPopover";
+                    popover.className = "wa-select-popover";
+                    popover.setAttribute("role", "listbox");
+                    popover.hidden = true;
+                    popover.addEventListener("mousedown", function (e) {
+                        // 阻止点击菜单时触发底层 select 失焦闪动
+                        e.preventDefault();
+                    });
+                    document.body.appendChild(popover);
+                    return popover;
+                }
+
+                function getInteractiveItems() {
+                    if (!popover) return [];
+                    return Array.from(popover.querySelectorAll(".wa-select-item:not(.is-disabled)"));
+                }
+
+                function highlightItem(idx) {
+                    const items = getInteractiveItems();
+                    items.forEach((el) => el.classList.remove("is-focused"));
+                    if (!items.length) {
+                        focusedIdx = -1;
+                        return;
+                    }
+                    focusedIdx = ((idx % items.length) + items.length) % items.length;
+                    const target = items[focusedIdx];
+                    target.classList.add("is-focused");
+                    target.scrollIntoView({ block: "nearest" });
+                }
+
+                function selectOptionByIndex(optionIndex) {
+                    if (!activeSelect) return;
+                    const sel = activeSelect;
+                    const opt = sel.options[optionIndex];
+                    if (!opt || opt.disabled) return;
+                    const changed = sel.selectedIndex !== optionIndex;
+                    sel.selectedIndex = optionIndex;
+                    closePopover(true);
+                    if (changed) {
+                        sel.dispatchEvent(new Event("input", { bubbles: true }));
+                        sel.dispatchEvent(new Event("change", { bubbles: true }));
+                    }
+                }
+
+                function closePopover(restoreFocus) {
+                    if (hideTimer) {
+                        clearTimeout(hideTimer);
+                        hideTimer = null;
+                    }
+                    const prevSelect = activeSelect;
+                    if (activeSelect) {
+                        activeSelect.classList.remove("wa-select-open");
+                        activeSelect = null;
+                    }
+                    if (activeGroup) {
+                        activeGroup.classList.remove("wa-select-group-open");
+                        activeGroup = null;
+                    }
+                    focusedIdx = -1;
+                    if (popover) {
+                        popover.classList.remove("is-open");
+                        hideTimer = setTimeout(function () {
+                            if (!activeSelect && popover) {
+                                popover.hidden = true;
+                                popover.innerHTML = "";
+                            }
+                        }, 180);
+                    }
+                    if (restoreFocus && prevSelect && document.contains(prevSelect)) {
+                        try {
+                            prevSelect.focus({ preventScroll: true });
+                        } catch (_) {}
+                    }
+                }
+
+                function buildOptionItem(opt) {
+                    const btn = document.createElement("button");
+                    btn.type = "button";
+                    btn.className = "wa-select-item";
+                    btn.setAttribute("role", "option");
+                    btn.dataset.optionIndex = String(opt.index);
+                    const isSelected = opt.selected;
+                    const isDisabled = opt.disabled || (opt.parentElement && opt.parentElement.tagName === "OPTGROUP" && opt.parentElement.disabled);
+                    if (isSelected) {
+                        btn.classList.add("is-selected");
+                        btn.setAttribute("aria-selected", "true");
+                    } else {
+                        btn.setAttribute("aria-selected", "false");
+                    }
+                    if (isDisabled) {
+                        btn.classList.add("is-disabled");
+                        btn.disabled = true;
+                    }
+                    const label = document.createElement("span");
+                    label.className = "wa-select-item-label";
+                    const flagCode = (opt.dataset && opt.dataset.flag) ? String(opt.dataset.flag).trim().toLowerCase() : "";
+                    if (flagCode === "auto") {
+                        const globe = document.createElement("span");
+                        globe.className = "wa-select-globe";
+                        globe.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>';
+                        label.appendChild(globe);
+                    } else if (/^[a-z]{2}$/.test(flagCode)) {
+                        const img = document.createElement("img");
+                        img.className = "wa-select-flag";
+                        img.src = "https://flagcdn.com/" + flagCode + ".svg";
+                        img.width = 18;
+                        img.height = 13;
+                        img.decoding = "async";
+                        img.alt = flagCode.toUpperCase();
+                        label.appendChild(img);
+                    }
+                    const textNode = document.createElement("span");
+                    textNode.style.overflow = "hidden";
+                    textNode.style.textOverflow = "ellipsis";
+                    textNode.textContent = opt.textContent || opt.label || "";
+                    label.appendChild(textNode);
+                    const check = document.createElement("span");
+                    check.className = "wa-select-item-check";
+                    check.innerHTML =
+                        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                    btn.append(label, check);
+                    if (!isDisabled) {
+                        btn.addEventListener("click", function (e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            selectOptionByIndex(opt.index);
+                        });
+                    }
+                    return btn;
+                }
+
+                function positionPopover(sel) {
+                    if (!popover || !sel) return;
+                    const rect = sel.getBoundingClientRect();
+                    const vw = window.innerWidth;
+                    const vh = window.innerHeight;
+                    const gap = 6;
+                    const margin = 10;
+
+                    const inCompositeGroup = !!sel.closest(".traffic-input-group, .add-traffic-input-group");
+                    const minWidth = inCompositeGroup ? Math.max(rect.width, 132) : Math.max(rect.width, 140);
+                    const width = Math.min(Math.max(minWidth, rect.width), vw - margin * 2);
+                    popover.style.width = width + "px";
+
+                    // 测量真实内容高度
+                    const popHeight = Math.min(popover.scrollHeight || 200, 272);
+                    const spaceBelow = vh - rect.bottom - margin;
+                    const spaceAbove = rect.top - margin;
+                    const openAbove = spaceBelow < popHeight + gap && spaceAbove > spaceBelow;
+
+                    popover.classList.toggle("is-above", openAbove);
+                    const top = openAbove
+                        ? Math.max(margin, rect.top - popHeight - gap)
+                        : Math.min(vh - popHeight - margin, rect.bottom + gap);
+
+                    let left = inCompositeGroup ? rect.right - width : rect.left;
+                    if (left + width > vw - margin) left = vw - width - margin;
+                    if (left < margin) left = margin;
+
+                    popover.style.left = Math.round(left) + "px";
+                    popover.style.top = Math.round(top) + "px";
+                }
+
+                function openPopover(sel) {
+                    if (!isEnhanceableSelect(sel)) return;
+                    if (activeSelect === sel && popover && !popover.hidden && popover.classList.contains("is-open")) {
+                        closePopover(false);
+                        return;
+                    }
+                    closePopover(false);
+                    if (hideTimer) {
+                        clearTimeout(hideTimer);
+                        hideTimer = null;
+                    }
+
+                    const pop = ensurePopover();
+                    pop.innerHTML = "";
+
+                    const frag = document.createDocumentFragment();
+                    Array.from(sel.children).forEach(function (child) {
+                        if (child.tagName === "OPTGROUP") {
+                            const grpLabel = document.createElement("div");
+                            grpLabel.className = "wa-select-group-label";
+                            grpLabel.textContent = child.label || "";
+                            frag.appendChild(grpLabel);
+                            Array.from(child.children).forEach(function (opt) {
+                                if (opt.tagName === "OPTION") frag.appendChild(buildOptionItem(opt));
+                            });
+                        } else if (child.tagName === "OPTION") {
+                            frag.appendChild(buildOptionItem(child));
+                        }
+                    });
+                    pop.appendChild(frag);
+
+                    activeSelect = sel;
+                    sel.classList.add("wa-select-open");
+                    activeGroup = sel.closest(".traffic-input-group, .add-traffic-input-group");
+                    if (activeGroup) activeGroup.classList.add("wa-select-group-open");
+
+                    pop.hidden = false;
+                    positionPopover(sel);
+
+                    requestAnimationFrame(function () {
+                        if (activeSelect !== sel) return;
+                        pop.classList.add("is-open");
+                        const selectedEl = pop.querySelector(".wa-select-item.is-selected");
+                        if (selectedEl) {
+                            selectedEl.scrollIntoView({ block: "nearest" });
+                            const items = getInteractiveItems();
+                            focusedIdx = items.indexOf(selectedEl);
+                        }
+                    });
+                }
+
+                document.addEventListener(
+                    "mousedown",
+                    function (e) {
+                        if (e.button !== 0) return;
+                        const sel = e.target && e.target.closest ? e.target.closest("select") : null;
+                        if (sel && isEnhanceableSelect(sel)) {
+                            e.preventDefault();
+                            try {
+                                sel.focus({ preventScroll: true });
+                            } catch (_) {}
+                            openPopover(sel);
+                            return;
+                        }
+                        if (activeSelect && popover && !popover.contains(e.target)) {
+                            closePopover(false);
+                        }
+                    },
+                    true,
+                );
+
+                document.addEventListener(
+                    "keydown",
+                    function (e) {
+                        if (activeSelect && popover && popover.classList.contains("is-open")) {
+                            if (e.key === "Escape") {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                closePopover(true);
+                                return;
+                            }
+                            if (e.key === "Tab") {
+                                closePopover(false);
+                                return;
+                            }
+                            if (e.key === "ArrowDown") {
+                                e.preventDefault();
+                                highlightItem(focusedIdx + 1);
+                                return;
+                            }
+                            if (e.key === "ArrowUp") {
+                                e.preventDefault();
+                                highlightItem(focusedIdx <= 0 ? getInteractiveItems().length - 1 : focusedIdx - 1);
+                                return;
+                            }
+                            if (e.key === "Home") {
+                                e.preventDefault();
+                                highlightItem(0);
+                                return;
+                            }
+                            if (e.key === "End") {
+                                e.preventDefault();
+                                highlightItem(getInteractiveItems().length - 1);
+                                return;
+                            }
+                            if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                const items = getInteractiveItems();
+                                if (focusedIdx >= 0 && items[focusedIdx]) {
+                                    selectOptionByIndex(Number(items[focusedIdx].dataset.optionIndex));
+                                } else {
+                                    closePopover(true);
+                                }
+                                return;
+                            }
+                        } else if (
+                            document.activeElement &&
+                            isEnhanceableSelect(document.activeElement) &&
+                            (e.key === "Enter" || e.key === " " || e.key === "ArrowDown" || e.key === "ArrowUp")
+                        ) {
+                            e.preventDefault();
+                            openPopover(document.activeElement);
+                        }
+                    },
+                    true,
+                );
+
+                window.addEventListener("resize", function () {
+                    if (activeSelect) closePopover(false);
+                });
+                window.addEventListener(
+                    "scroll",
+                    function (e) {
+                        if (!activeSelect) return;
+                        if (popover && e.target && (e.target === popover || popover.contains(e.target))) return;
+                        closePopover(false);
+                    },
+                    true,
+                );
+            })();
+        </script>
+        <script id="wirearc-micro-interactions">
+            (function () {
+                // 同步弹窗打开状态与首页触发图标（如 ChatGPT Tools / Mail 打开保持展开姿态）
+                const quickModalIds = [
+                    "customRulesModal",
+                    "globalSettingsModal",
+                    "airportModal",
+                    "clashTemplateModal",
+                    "cfTunnelModal",
+                    "customNodesModal",
+                ];
+
+                function syncIconActiveStates() {
+                    const quickCard = document.getElementById("quickActionsCard");
+                    let anyQuickOpen = false;
+                    quickModalIds.forEach((id) => {
+                        const modal = document.getElementById(id);
+                        const isOpen = !!(modal && modal.classList.contains("active"));
+                        if (isOpen) anyQuickOpen = true;
+                        const tile = document.querySelector(`.btn-edit-rule[data-modal-id="${id}"]`);
+                        if (tile) tile.classList.toggle("is-open", isOpen);
+                    });
+                    if (quickCard) quickCard.classList.toggle("is-tools-open", anyQuickOpen);
+
+                    const logModal = document.getElementById("logViewerModal");
+                    const mailBtn = document.getElementById("mailLogBtn");
+                    if (mailBtn) {
+                        mailBtn.classList.toggle("is-open", !!(logModal && logModal.classList.contains("active")));
+                    }
+
+                    const sysModal = document.getElementById("systemSettingsModal");
+                    const sysBtn = document.getElementById("sysSettingsTriggerBtn");
+                    if (sysBtn) {
+                        sysBtn.classList.toggle("is-open", !!(sysModal && sysModal.classList.contains("active")));
+                    }
+                }
+
+                document.addEventListener("DOMContentLoaded", function () {
+                    const observer = new MutationObserver(syncIconActiveStates);
+                    [...quickModalIds, "logViewerModal", "systemSettingsModal"].forEach((id) => {
+                        const el = document.getElementById(id);
+                        if (el) observer.observe(el, { attributes: true, attributeFilter: ["class"] });
+                    });
+                    syncIconActiveStates();
+                });
+            })();
+        </script>
+    </body>
+</html>

@@ -1,0 +1,141 @@
+{{define "delete_node_modal.html"}}
+<div id="deleteModal" class="delete-modal-overlay" style="display: none;">
+    <div class="delete-modal-content">
+        <h3 class="delete-modal-title">删除确认</h3>
+
+        <div class="delete-modal-body">
+            确定要删除该节点吗？此操作无法撤销。
+        </div>
+
+        <div class="delete-modal-actions">
+            <button class="btn-cancel" onclick="closeDeleteModal()">取消</button>
+            <button class="btn-confirm-delete" onclick="confirmDeleteNode()">确认删除</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* 【关键修改】：将 .modal-overlay 改名为 .delete-modal-overlay */
+    /* 这样就不会跟 add_node_modal.html 里的样式打架了 */
+    .delete-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 15, 20, 0.36);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 3000;
+        backdrop-filter: saturate(180%) blur(12px);
+        -webkit-backdrop-filter: saturate(180%) blur(12px);
+    }
+
+    /* 弹窗主体 */
+    .delete-modal-content {
+        background: #fff;
+        width: 340px;
+        max-width: 90%;
+        border-radius: 26px;
+        padding: 26px;
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        box-shadow: 0 24px 56px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.04);
+        animation: deletePop 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .delete-modal-title {
+        font-size: 17px;
+        font-weight: 700;
+        color: #1d1d1f;
+        margin-bottom: 12px;
+        letter-spacing: -0.01em;
+    }
+
+    .delete-modal-body {
+        font-size: 14px;
+        color: #6e6e73;
+        margin-bottom: 24px;
+        line-height: 1.55;
+    }
+
+    /* 按钮容器 */
+    .delete-modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+    /* 取消按钮 */
+    .btn-cancel {
+        background: #f2f2f7;
+        color: #1d1d1f;
+        border: none;
+        padding: 9px 20px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .btn-cancel:hover {
+        background: #e5e5ea;
+        transform: translateY(-1px);
+    }
+
+    .btn-cancel:active {
+        transform: scale(0.97);
+    }
+
+    /* 确认删除按钮 */
+    .btn-confirm-delete {
+        background: linear-gradient(180deg, #ff453a 0%, #ff3b30 100%);
+        color: white;
+        border: none;
+        padding: 9px 20px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 3px 10px rgba(255, 59, 48, 0.25);
+        transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .btn-confirm-delete:hover {
+        box-shadow: 0 5px 14px rgba(255, 59, 48, 0.35);
+        transform: translateY(-1px);
+    }
+
+    .btn-confirm-delete:active {
+        transform: scale(0.97);
+    }
+
+    @keyframes deletePop {
+        from {
+            transform: translateY(10px) scale(0.96);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+        }
+    }
+</style>
+
+<script>
+    // 点击遮罩层关闭
+    document.getElementById('deleteModal').addEventListener('click', function(e) {
+        if (e.target === this) closeDeleteModal();
+    });
+
+    // ESC 键关闭
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('deleteModal');
+            if (modal && modal.style.display !== 'none') closeDeleteModal();
+        }
+    });
+</script>
+{{end}}

@@ -1,0 +1,7 @@
+services:
+  wirearc:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: wirearc:local
+    pull_policy: build

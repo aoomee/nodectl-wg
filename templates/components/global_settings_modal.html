@@ -1,0 +1,1291 @@
+{{define "global_settings_modal.html"}}
+<style>
+    /* ================= 统一弹窗基础框架 ================= */
+    .gs-modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 15, 20, 0.36);
+        backdrop-filter: saturate(180%) blur(12px);
+        -webkit-backdrop-filter: saturate(180%) blur(12px);
+        z-index: 3000;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.28s ease;
+    }
+
+    .gs-modal-overlay.active {
+        display: flex;
+        opacity: 1;
+    }
+
+    /* 默认窄模式 420px，展开后 800px */
+    .gs-modal-card {
+        background: #ffffff;
+        width: 100%;
+        max-width: 900px;
+        height: 85vh;
+        border-radius: 26px;
+        box-shadow: 0 24px 56px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.04);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        animation: cnModalSpring 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    .gs-modal-card.has-content {
+        max-width: 900px;
+    }
+
+    /* 统一 Header 样式 */
+    .gs-header {
+        background: rgba(248, 248, 250, 0.9);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        padding: 16px 24px 16px 26px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .gs-title-area {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .gs-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1d1d1f;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+    }
+
+    .gs-save-indicator {
+        font-size: 12px;
+        font-weight: 600;
+        color: #34c759;
+        opacity: 0;
+        transition: opacity 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    /* 主内容区 */
+    .gs-body {
+        flex: 1;
+        display: flex;
+        flex-direction: row;
+        background: #fff;
+        overflow: hidden;
+    }
+
+    .no-scrollbar {
+        overflow-y: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* ================= 左侧协议面板 ================= */
+    .gs-left-col {
+        width: 340px;
+        flex-shrink: 0;
+        padding: 22px 22px;
+        border-right: 1px solid transparent;
+        transition: border-color 0.3s;
+    }
+
+    .gs-modal-card.has-content .gs-left-col {
+        border-right-color: rgba(0, 0, 0, 0.055);
+    }
+
+    /* ================= 右侧详情面板 ================= */
+    .gs-right-col {
+        flex: 1;
+        padding: 22px 26px;
+        display: none;
+        background: #fff;
+    }
+
+    .gs-modal-card.has-content .gs-right-col {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    .gs-section-label {
+        display: flex;
+        align-items: center;
+        height: 18px;
+        font-size: 12px;
+        line-height: 18px;
+        font-weight: 600;
+        color: #86868b;
+        margin-bottom: 8px;
+    }
+
+    /* 协议选择卡片：统一 14px 大圆角 */
+    .proto-nav-card {
+        border: 1px solid rgba(0, 0, 0, 0.065);
+        border-radius: 14px;
+        background: #fff;
+        margin-bottom: 9px;
+        padding: 10px 14px;
+        min-height: 46px;
+        box-sizing: border-box;
+        user-select: none;
+        cursor: pointer;
+        transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .proto-nav-card:hover {
+        border-color: rgba(0, 122, 255, 0.24);
+        background: #f8faff;
+    }
+
+    .proto-nav-card.active {
+        border-color: #007aff;
+        background: #f0f7ff;
+        box-shadow: 0 2px 10px rgba(0, 122, 255, 0.08);
+    }
+
+    .proto-name {
+        font-size: 13.5px;
+        font-weight: 600;
+        color: #1d1d1f;
+        transition: color 0.2s;
+    }
+
+    .proto-nav-card.active .proto-name {
+        color: #007aff;
+    }
+
+    .proto-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .proto-chip {
+        font-size: 10.5px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        height: 20px;
+        line-height: 1;
+    }
+
+    .proto-chip.tcp {
+        color: #007aff;
+        background: #eaf4ff;
+    }
+
+    .proto-chip.udp {
+        color: #d97706;
+        background: #fff4e5;
+    }
+
+    .port-input {
+        width: 58px;
+        padding: 4px 6px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 10px !important;
+        font-size: 12.5px;
+        text-align: center;
+        color: #1d1d1f;
+        font-weight: 600;
+        font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, monospace;
+        outline: none;
+        transition: all 0.2s;
+        background: #f6f7f9;
+    }
+
+    .port-input:focus {
+        border-color: #007aff;
+        background: #fff;
+        box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.1);
+    }
+
+    .port-input::-webkit-outer-spin-button,
+    .port-input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    .port-input[type=number] {
+        -moz-appearance: textfield;
+    }
+
+    .expand-indicator {
+        color: #ccc;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        margin-left: 2px;
+    }
+
+    .proto-nav-card:hover .expand-indicator {
+        color: #86868b;
+        transform: translateX(2px);
+    }
+
+    .proto-nav-card.active .expand-indicator {
+        color: #007aff;
+    }
+
+    /* ✨ 终极修复版：极致自适应悬浮提示框 (Tooltip) */
+    .gs-info-tooltip-wrap {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        cursor: pointer;
+        margin-left: 4px;
+        outline: none;
+    }
+
+    .gs-info-tooltip-wrap svg {
+        color: #a1a1aa;
+        transition: color 0.2s;
+    }
+
+    .gs-info-tooltip-wrap:hover svg,
+    .gs-info-tooltip-wrap:focus svg {
+        color: #007aff;
+    }
+
+    .gs-tooltip-content {
+        position: fixed;
+        background: rgba(29, 29, 31, 0.9);
+        color: #fff;
+        padding: 10px 14px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s, visibility 0.2s;
+        pointer-events: none;
+        z-index: 99999;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        line-height: 1.6;
+        text-align: left;
+        width: max-content;
+        max-width: min(280px, calc(100vw - 60px));
+        white-space: normal;
+        word-wrap: break-word;
+    }
+
+    /* 向上指的小三角 */
+    .gs-tooltip-content::after {
+        content: '';
+        position: absolute;
+        bottom: 100%;
+        left: 16px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: transparent transparent rgba(29, 29, 31, 0.9) transparent;
+    }
+
+    /* 右侧/内联详情表单 */
+    .gs-field {
+        margin-bottom: 16px;
+    }
+
+    .gs-label {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        color: #86868b;
+        margin-bottom: 8px;
+    }
+
+    .gs-input,
+    .gs-select {
+        width: 100%;
+        box-sizing: border-box;
+        height: 42px;
+        padding: 0 14px;
+        border: 1px solid rgba(0, 0, 0, 0.09);
+        border-radius: 14px;
+        font-size: 13.5px;
+        color: #1d1d1f;
+        outline: none;
+        transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+        background: #f6f7f9;
+        font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, monospace;
+    }
+
+    select.gs-select {
+        appearance: none;
+        -webkit-appearance: none;
+        padding-right: 36px;
+        cursor: pointer;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236e6e73' stroke-width='2.3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 13px center;
+        background-size: 14px 14px;
+    }
+
+    .gs-input:focus,
+    .gs-select:focus {
+        border-color: #007aff;
+        background: #fff;
+        box-shadow: 0 0 0 3.5px rgba(0, 122, 255, 0.14);
+    }
+
+    .socks5-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    /* Socks5 随机认证 toggle */
+    .gs-socks5-toggle input:checked + span {
+        background-color: #007aff !important;
+    }
+    .gs-socks5-toggle input:checked + span + .gs-toggle-knob {
+        transform: translateX(20px);
+    }
+
+    /* ================= 变种配置区：统一 16px 大圆角 ================= */
+    .variant-section {
+        border: 1px solid rgba(0, 0, 0, 0.07);
+        border-radius: 16px;
+        margin-bottom: 12px;
+        overflow: hidden;
+    }
+
+    .variant-section-hd {
+        background: #f6f7f9;
+        padding: 8px 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 12px;
+        font-weight: 700;
+        color: #48484a;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.055);
+    }
+
+    .variant-section-hd-title {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .variant-port-input {
+        width: 72px;
+        padding: 4px 8px;
+        border: 1px solid rgba(0, 0, 0, 0.09);
+        border-radius: 10px !important;
+        font-size: 12px;
+        color: #1d1d1f;
+        outline: none;
+        transition: border 0.2s;
+        background: #fff;
+        font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, monospace;
+        text-align: center;
+    }
+
+    .variant-port-input:focus {
+        border-color: #007aff;
+    }
+
+    .variant-section-bd {
+        padding: 12px 14px 6px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .variant-section-bd .gs-field {
+        margin-bottom: 8px;
+    }
+
+    .variant-field-sni  { flex: 1; min-width: 140px; }
+    .variant-field-full { flex: 1; min-width: 180px; }
+
+    .variant-note {
+        font-size: 11px;
+        color: #86868b;
+        font-style: italic;
+        padding: 0 14px 10px;
+    }
+
+    .tls-path-wrap {
+        margin-top: 4px;
+        padding: 12px 14px 4px;
+        background: #f8f9fb;
+        border: 1px dashed rgba(0, 0, 0, 0.14);
+        border-radius: 14px;
+        margin-bottom: 12px;
+    }
+
+    .tls-path-wrap .gs-label { color: #555; }
+
+    .gs-empty-state {
+        font-size: 13px;
+        color: #86868b;
+        text-align: center;
+        padding: 50px 0;
+        line-height: 1.6;
+    }
+
+    .gs-footer {
+        padding: 14px 26px;
+        border-top: 1px solid rgba(0, 0, 0, 0.06);
+        display: flex;
+        justify-content: flex-end;
+        background: #fff;
+    }
+
+    .btn-gs-cancel {
+        background: #f2f3f7;
+        border: none;
+        color: #1d1d1f;
+        height: 38px;
+        padding: 0 24px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .btn-gs-cancel:hover {
+        background: #e5e6ec;
+    }
+
+    /* ================= 移动端适配：内联展开模式 ================= */
+    .mobile-inline-form {
+        padding: 15px;
+        background: #fdfdfd;
+        border: 1px solid #cce4ff;
+        border-top: none;
+        border-radius: 0 0 10px 10px;
+        margin-top: -10px;
+        margin-bottom: 10px;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+        animation: slideDown 0.2s ease-out;
+        transform-origin: top center;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: scaleY(0.95);
+        }
+
+        to {
+            opacity: 1;
+            transform: scaleY(1);
+        }
+    }
+
+    .proto-nav-card.mobile-expanded {
+        border-radius: 10px 10px 0 0;
+        margin-bottom: 0;
+        border-bottom-color: transparent;
+    }
+
+    @media (max-width: 768px) {
+        .gs-modal-card {
+            max-width: 95%;
+            height: 85vh;
+        }
+
+        .gs-modal-card.has-content {
+            max-width: 95%;
+        }
+
+        .gs-body {
+            flex-direction: column;
+            overflow-y: auto;
+            display: block;
+        }
+
+        .gs-left-col {
+            width: 100%;
+            height: auto;
+            border-right: none;
+            padding: 15px;
+            overflow: visible;
+        }
+
+        .gs-right-col {
+            display: none !important;
+        }
+
+        .socks5-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .gs-empty-state {
+            padding: 20px 0;
+        }
+    }
+</style>
+
+<div class="gs-modal-overlay" id="globalSettingsModal">
+    <div class="gs-modal-card" id="gsModalCard">
+
+        <div class="gs-header">
+            <div class="gs-title-area">
+                <div class="gs-title"><span class="ui-icon-badge indigo" style="width:28px;height:28px;border-radius:9px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg></span> 全局默认参数</div>
+            </div>
+            <div class="gs-save-indicator" id="gsSaveIndicator">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 6L9 17l-5-5"></path>
+                </svg>
+                已保存
+            </div>
+        </div>
+
+        <div class="gs-body no-scrollbar">
+            <div class="gs-left-col no-scrollbar">
+                <label class="gs-section-label">选择协议以配置默认安装参数</label>
+
+                <div class="proto-nav-card" data-proto-id="vless" onclick="selectGsProto('vless', this)">
+                    <div class="proto-name">VLESS</div>
+                    <div class="proto-actions">
+                        <span class="proto-chip tcp">TCP</span>
+                        <div class="expand-indicator"><svg viewBox="0 0 24 24" width="16" height="16" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg></div>
+                    </div>
+                </div>
+
+                <div class="proto-nav-card" data-proto-id="vmess" onclick="selectGsProto('vmess', this)">
+                    <div class="proto-name">VMess</div>
+                    <div class="proto-actions">
+                        <span class="proto-chip tcp">TCP</span>
+                        <div class="expand-indicator"><svg viewBox="0 0 24 24" width="16" height="16" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg></div>
+                    </div>
+                </div>
+
+                <div class="proto-nav-card" data-proto-id="ss" onclick="selectGsProto('ss', this)">
+                    <div class="proto-name">Shadowsocks</div>
+                    <div class="proto-actions">
+                        <span class="proto-chip tcp">TCP</span>
+                        <span class="proto-chip udp">UDP</span>
+                        <div class="expand-indicator"><svg viewBox="0 0 24 24" width="16" height="16" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg></div>
+                    </div>
+                </div>
+
+                <div class="proto-nav-card" data-proto-id="hy2" onclick="selectGsProto('hy2', this)">
+                    <div class="proto-name">Hysteria2</div>
+                    <div class="proto-actions">
+                        <span class="proto-chip udp">UDP</span>
+                        <div class="expand-indicator"><svg viewBox="0 0 24 24" width="16" height="16" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg></div>
+                    </div>
+                </div>
+
+                <div class="proto-nav-card" data-proto-id="tuic" onclick="selectGsProto('tuic', this)">
+                    <div class="proto-name">TUIC</div>
+                    <div class="proto-actions">
+                        <span class="proto-chip udp">UDP</span>
+                        <div class="expand-indicator"><svg viewBox="0 0 24 24" width="16" height="16" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg></div>
+                    </div>
+                </div>
+
+                <div class="proto-nav-card" data-proto-id="socks5" onclick="selectGsProto('socks5', this)">
+                    <div class="proto-name">Socks5</div>
+                    <div class="proto-actions">
+                        <span class="proto-chip tcp">TCP</span>
+                        <span class="proto-chip udp">UDP</span>
+                        <div class="expand-indicator"><svg viewBox="0 0 24 24" width="16" height="16" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg></div>
+                    </div>
+                </div>
+
+                <div class="proto-nav-card" data-proto-id="trojan" onclick="selectGsProto('trojan', this)">
+                    <div class="proto-name">Trojan</div>
+                    <div class="proto-actions">
+                        <span class="proto-chip tcp">TCP</span>
+                        <div class="expand-indicator"><svg viewBox="0 0 24 24" width="16" height="16" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg></div>
+                    </div>
+                </div>
+
+                <div class="proto-nav-card" data-proto-id="anytls" onclick="selectGsProto('anytls', this)">
+                    <div class="proto-name">AnyTLS</div>
+                    <div class="proto-actions">
+                        <span class="proto-chip tcp">TCP</span>
+                        <div class="expand-indicator"><svg viewBox="0 0 24 24" width="16" height="16" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg></div>
+                    </div>
+                </div>
+
+                <label class="gs-section-label" style="margin-top:18px;">系统优化</label>
+
+                <div class="proto-nav-card" style="cursor:default;" onclick="event.stopPropagation()">
+                    <div class="proto-name" style="font-size:13px;">BBR 内核加速</div>
+                    <div class="proto-actions">
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+                            <input type="checkbox" id="gs_proxy_enable_bbr" onchange="triggerGsAutoSave()"
+                                style="width:16px;height:16px;cursor:pointer;">
+                            <span style="font-size:12px;color:#86868b;">安装时启用</span>
+                        </label>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="gs-right-col no-scrollbar" id="gsRightCol">
+                <label class="gs-section-label" id="gsRightTitle">协议配置</label>
+
+                <!-- ===== VLESS 变种 ===== -->
+                <div class="proto-form" id="gs-form-vless" style="display:none;">
+                    <div class="variant-section">
+                        <div class="variant-section-hd">
+                            <div class="variant-section-hd-title"><span class="proto-chip tcp">TCP</span> VLESS Reality</div>
+                            <input type="number" id="gs_proxy_port_reality" class="variant-port-input" placeholder="20004" oninput="triggerGsAutoSave()">
+                        </div>
+                        
+                    </div>
+                    <div class="variant-section">
+                        <div class="variant-section-hd">
+                            <div class="variant-section-hd-title"><span class="proto-chip tcp">TCP</span> VLESS-WS-TLS</div>
+                            <input type="number" id="gs_proxy_port_vless_wst" class="variant-port-input" placeholder="20015" oninput="triggerGsAutoSave()">
+                        </div>
+                        
+                    </div>
+                    <div class="variant-section">
+                        <div class="variant-section-hd">
+                            <div class="variant-section-hd-title"><span class="proto-chip tcp">TCP</span> VLESS-HU-TLS</div>
+                            <input type="number" id="gs_proxy_port_vless_hut" class="variant-port-input" placeholder="20017" oninput="triggerGsAutoSave()">
+                        </div>
+                        
+                    </div>
+                    <div class="tls-path-wrap">
+                        <div class="gs-field" style="margin:0 0 10px 0;">
+                            <label class="gs-label">VLESS 默认 SNI 域名（Reality/WS/HU-TLS）</label>
+                            <input type="text" id="gs_proxy_vless_tls_sni" class="gs-input" placeholder="www.bing.com" oninput="triggerGsAutoSave()">
+                        </div>
+                        <div class="gs-field" style="margin:0;">
+                            <label class="gs-label">WS / HTTPUpgrade 传输路径 (TLS 变种共用)</label>
+                            <input type="text" class="gs-input tls-path-input" placeholder="/ray" oninput="syncTlsPath(this)">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== VMess 变种 ===== -->
+                <div class="proto-form" id="gs-form-vmess" style="display:none;">
+                    <div class="variant-section">
+                        <div class="variant-section-hd">
+                            <div class="variant-section-hd-title"><span class="proto-chip tcp">TCP</span> VMess-TCP</div>
+                            <input type="number" id="gs_proxy_port_vmess_tcp" class="variant-port-input" placeholder="20008" oninput="triggerGsAutoSave()">
+                        </div>
+                        
+                    </div>
+                    <div class="variant-section">
+                        <div class="variant-section-hd">
+                            <div class="variant-section-hd-title"><span class="proto-chip tcp">TCP</span> VMess-WS</div>
+                            <input type="number" id="gs_proxy_port_vmess_ws" class="variant-port-input" placeholder="20009" oninput="triggerGsAutoSave()">
+                        </div>
+                        
+                    </div>
+                    <div class="variant-section">
+                        <div class="variant-section-hd">
+                            <div class="variant-section-hd-title"><span class="proto-chip tcp">TCP</span> VMess-HTTP</div>
+                            <input type="number" id="gs_proxy_port_vmess_http" class="variant-port-input" placeholder="20010" oninput="triggerGsAutoSave()">
+                        </div>
+                        
+                    </div>
+                    <div class="variant-section">
+                        <div class="variant-section-hd">
+                            <div class="variant-section-hd-title"><span class="proto-chip udp">UDP</span> VMess-QUIC</div>
+                            <input type="number" id="gs_proxy_port_vmess_quic" class="variant-port-input" placeholder="20011" oninput="triggerGsAutoSave()">
+                        </div>
+                        
+                    </div>
+                    <div class="variant-section">
+                        <div class="variant-section-hd">
+                            <div class="variant-section-hd-title"><span class="proto-chip tcp">TCP</span> VMess-WS-TLS</div>
+                            <input type="number" id="gs_proxy_port_vmess_wst" class="variant-port-input" placeholder="20012" oninput="triggerGsAutoSave()">
+                        </div>
+                        
+                    </div>
+                    <div class="variant-section">
+                        <div class="variant-section-hd">
+                            <div class="variant-section-hd-title"><span class="proto-chip tcp">TCP</span> VMess-HU-TLS</div>
+                            <input type="number" id="gs_proxy_port_vmess_hut" class="variant-port-input" placeholder="20014" oninput="triggerGsAutoSave()">
+                        </div>
+                        
+                    </div>
+                    <div class="tls-path-wrap">
+                        <div class="gs-field" style="margin:0 0 10px 0;">
+                            <label class="gs-label">VMess TLS 传输族默认 SNI 域名（WS/HU-TLS）</label>
+                            <input type="text" id="gs_proxy_vmess_tls_sni" class="gs-input" placeholder="www.bing.com" oninput="triggerGsAutoSave()">
+                        </div>
+                        <div class="gs-field" style="margin:0;">
+                            <label class="gs-label">WS / HTTPUpgrade 传输路径 (TLS 变种共用)</label>
+                            <input type="text" class="gs-input tls-path-input" placeholder="/ray" oninput="syncTlsPath(this)">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== Shadowsocks ===== -->
+                <div class="proto-form" id="gs-form-ss" style="display:none;">
+                    <div class="variant-section">
+                        <div class="variant-section-hd">
+                            <div class="variant-section-hd-title"><span class="proto-chip tcp">TCP</span><span class="proto-chip udp">UDP</span> Shadowsocks</div>
+                            <input type="number" id="gs_proxy_port_ss" class="variant-port-input" placeholder="20001" oninput="triggerGsAutoSave()">
+                        </div>
+                        <div class="variant-section-bd">
+                            
+                            <div class="gs-field variant-field-sni">
+                                <label class="gs-label" style="display:flex;align-items:center;">加密方式
+                                    <div class="gs-info-tooltip-wrap" tabindex="0">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                        </svg>
+                                        <div class="gs-tooltip-content">
+                                            <span style="color:#34c759">2022-blake3-aes-128-gcm:</span> 推荐，抗封锁强，低端设备友好<br>
+                                            <span style="color:#34c759">2022-blake3-aes-256-gcm:</span> 更高安全强度<br>
+                                            <span style="color:#34c759">2022-blake3-chacha20-poly1305:</span> 适合无 AES 加速的 CPU
+                                        </div>
+                                    </div>
+                                </label>
+                                <select id="gs_proxy_ss_method" class="gs-select" onchange="triggerGsAutoSave()">
+                                    <option value="2022-blake3-aes-128-gcm">2022-blake3-aes-128-gcm</option>
+                                    <option value="2022-blake3-aes-256-gcm">2022-blake3-aes-256-gcm</option>
+                                    <option value="2022-blake3-chacha20-poly1305">2022-blake3-chacha20-poly1305</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== Hysteria2 ===== -->
+                <div class="proto-form" id="gs-form-hy2" style="display:none;">
+                    <div class="variant-section">
+                        <div class="variant-section-hd">
+                            <div class="variant-section-hd-title"><span class="proto-chip udp">UDP</span> Hysteria2</div>
+                            <input type="number" id="gs_proxy_port_hy2" class="variant-port-input" placeholder="20002" oninput="triggerGsAutoSave()">
+                        </div>
+                        <div class="variant-section-bd">
+                            
+                            <div class="gs-field variant-field-sni">
+                                <label class="gs-label">客户端 SNI 伪装域名</label>
+                                <input type="text" id="gs_proxy_hy2_sni" class="gs-input" placeholder="www.bing.com" oninput="triggerGsAutoSave()">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== TUIC ===== -->
+                <div class="proto-form" id="gs-form-tuic" style="display:none;">
+                    <div class="variant-section">
+                        <div class="variant-section-hd">
+                            <div class="variant-section-hd-title"><span class="proto-chip udp">UDP</span> TUIC</div>
+                            <input type="number" id="gs_proxy_port_tuic" class="variant-port-input" placeholder="20003" oninput="triggerGsAutoSave()">
+                        </div>
+                        <div class="variant-section-bd">
+                            
+                            <div class="gs-field variant-field-sni">
+                                <label class="gs-label">客户端 SNI 伪装域名</label>
+                                <input type="text" id="gs_proxy_tuic_sni" class="gs-input" placeholder="www.bing.com" oninput="triggerGsAutoSave()">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== Socks5 ===== -->
+                <div class="proto-form" id="gs-form-socks5" style="display:none;">
+                    <div class="variant-section">
+                        <div class="variant-section-hd">
+                            <div class="variant-section-hd-title"><span class="proto-chip tcp">TCP</span><span class="proto-chip udp">UDP</span> Socks5</div>
+                            <input type="number" id="gs_proxy_port_socks5" class="variant-port-input" placeholder="20005" oninput="triggerGsAutoSave()">
+                        </div>
+                        <div class="variant-section-bd">
+                            
+                            <div class="gs-field variant-field-sni">
+                                <label class="gs-label">默认账号 (留空无密码)</label>
+                                <input type="text" id="gs_proxy_socks5_user" class="gs-input" placeholder="" oninput="triggerGsAutoSave()">
+                            </div>
+                            <div class="gs-field variant-field-sni">
+                                <label class="gs-label">默认密码 (留空无密码)</label>
+                                <input type="text" id="gs_proxy_socks5_pass" class="gs-input" placeholder="" oninput="triggerGsAutoSave()">
+                            </div>
+                            <div class="gs-field" style="width: 100%; margin-top: 10px; padding-top: 10px; border-top: 1px solid #e5e5ea;">
+                                <div style="display: flex; align-items: center; justify-content: space-between;">
+                                    <div>
+                                        <label class="gs-label" style="margin-bottom: 2px;">🔀 每节点随机认证</label>
+                                        <div style="font-size: 11px; color: #86868b; line-height: 1.4;">各节点使用独立凭据，增强安全性</div>
+                                    </div>
+                                    <label class="gs-socks5-toggle" style="position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; margin-left: 12px;">
+                                        <input type="checkbox" id="gs_proxy_socks5_random_auth" onchange="toggleSocks5RandomAuth(); triggerGsAutoSave();" style="opacity: 0; width: 0; height: 0;">
+                                        <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 24px; transition: .3s;"></span>
+                                        <span class="gs-toggle-knob" style="position: absolute; content: ''; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transition: .3s; box-shadow: 0 1px 3px rgba(0,0,0,0.2);"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== AnyTLS ===== -->
+                <div class="proto-form" id="gs-form-anytls" style="display:none;">
+                    <div class="variant-section">
+                        <div class="variant-section-hd">
+                            <div class="variant-section-hd-title"><span class="proto-chip tcp">TCP</span> AnyTLS</div>
+                            <input type="number" id="gs_proxy_port_anytls" class="variant-port-input" placeholder="20021" oninput="triggerGsAutoSave()">
+                        </div>
+                        <div class="variant-section-bd">
+                            
+                            <div class="gs-field variant-field-sni">
+                                <label class="gs-label">客户端 SNI 伪装域名</label>
+                                <input type="text" id="gs_proxy_anytls_sni" class="gs-input" placeholder="addons.mozilla.org" oninput="triggerGsAutoSave()">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== Trojan 变种 ===== -->
+                <div class="proto-form" id="gs-form-trojan" style="display:none;">
+                    <div class="variant-section">
+                        <div class="variant-section-hd">
+                            <div class="variant-section-hd-title"><span class="proto-chip tcp">TCP</span> Trojan</div>
+                            <input type="number" id="gs_proxy_port_trojan" class="variant-port-input" placeholder="20006" oninput="triggerGsAutoSave()">
+                        </div>
+                        
+                    </div>
+                    <div class="variant-section">
+                        <div class="variant-section-hd">
+                            <div class="variant-section-hd-title"><span class="proto-chip tcp">TCP</span> Trojan-WS-TLS</div>
+                            <input type="number" id="gs_proxy_port_trojan_wst" class="variant-port-input" placeholder="20018" oninput="triggerGsAutoSave()">
+                        </div>
+                        
+                    </div>
+                    <div class="variant-section">
+                        <div class="variant-section-hd">
+                            <div class="variant-section-hd-title"><span class="proto-chip tcp">TCP</span> Trojan-HU-TLS</div>
+                            <input type="number" id="gs_proxy_port_trojan_hut" class="variant-port-input" placeholder="20020" oninput="triggerGsAutoSave()">
+                        </div>
+                        
+                    </div>
+                    <div class="tls-path-wrap">
+                        <div class="gs-field" style="margin:0 0 10px 0;">
+                            <label class="gs-label">Trojan TLS 传输族默认 SNI 域名（WS/HU-TLS）</label>
+                            <input type="text" id="gs_proxy_trojan_tls_sni" class="gs-input" placeholder="www.bing.com" oninput="triggerGsAutoSave()">
+                        </div>
+                        <div class="gs-field" style="margin:0;">
+                            <label class="gs-label">WS / HTTPUpgrade 传输路径 (TLS 变种共用)</label>
+                            <input type="text" class="gs-input tls-path-input" placeholder="/ray" oninput="syncTlsPath(this)">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="gs-footer">
+            <button class="btn-gs-cancel" onclick="closeGlobalSettingsModal()">关闭</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const gsModal = document.getElementById('globalSettingsModal');
+    const gsModalCard = document.getElementById('gsModalCard');
+
+    // 点击遮罩层关闭
+    gsModal.addEventListener('click', function(e) {
+        if (e.target === gsModal) closeGlobalSettingsModal();
+    });
+
+    // ESC 键关闭
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && gsModal.classList.contains('active')) closeGlobalSettingsModal();
+    });
+
+    function selectGsProto(protoId, cardElement) {
+        const isAlreadyActive = cardElement.classList.contains('active');
+        const isMobile = window.innerWidth <= 768;
+
+        document.querySelectorAll('.proto-nav-card').forEach(c => {
+            c.classList.remove('active', 'mobile-expanded');
+        });
+        document.querySelectorAll('.proto-form').forEach(f => {
+            f.style.display = 'none';
+            f.classList.remove('mobile-inline-form');
+            document.getElementById('gsRightCol').appendChild(f);
+        });
+
+        if (isAlreadyActive && isMobile) {
+            gsModalCard.classList.remove('has-content');
+            return;
+        }
+
+        cardElement.classList.add('active');
+        const protoName = cardElement.querySelector('.proto-name').innerText;
+        document.getElementById('gsRightTitle').innerText = protoName + ' 变种配置';
+
+        const formEl = document.getElementById('gs-form-' + protoId);
+
+        if (isMobile) {
+            cardElement.classList.add('mobile-expanded');
+            formEl.classList.add('mobile-inline-form');
+            cardElement.parentNode.insertBefore(formEl, cardElement.nextSibling);
+            gsModalCard.classList.remove('has-content');
+        } else {
+            document.getElementById('gsRightCol').appendChild(formEl);
+            gsModalCard.classList.add('has-content');
+        }
+
+        formEl.style.display = 'block';
+
+        if (isMobile) {
+            setTimeout(() => {
+                cardElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+        }
+    }
+
+    function adjustGsLayout() {
+        const isMobile = window.innerWidth <= 768;
+        const activeCard = document.querySelector('.proto-nav-card.active');
+
+        if (!activeCard) {
+            if (!isMobile) {
+                const firstCard = document.querySelector('.proto-nav-card[data-proto-id]');
+                if (firstCard) selectGsProto(firstCard.getAttribute('data-proto-id'), firstCard);
+            }
+            return;
+        }
+
+        const protoId = activeCard.getAttribute('data-proto-id');
+        const formEl = document.getElementById('gs-form-' + protoId);
+
+        if (isMobile) {
+            activeCard.classList.add('mobile-expanded');
+            formEl.classList.add('mobile-inline-form');
+            activeCard.parentNode.insertBefore(formEl, activeCard.nextSibling);
+            gsModalCard.classList.remove('has-content');
+        } else {
+            activeCard.classList.remove('mobile-expanded');
+            formEl.classList.remove('mobile-inline-form');
+            document.getElementById('gsRightCol').appendChild(formEl);
+            gsModalCard.classList.add('has-content');
+        }
+    }
+
+    let gsLastIsMobile = window.innerWidth <= 768;
+    window.addEventListener('resize', () => {
+        const currentIsMobile = window.innerWidth <= 768;
+        if (currentIsMobile !== gsLastIsMobile) {
+            gsLastIsMobile = currentIsMobile;
+            if (gsModal.classList.contains('active')) adjustGsLayout();
+        }
+    });
+
+    // 同步所有 TLS 路径输入框（VLESS / VMess / Trojan 面板各有一个，值保持一致）
+    function syncTlsPath(el) {
+        const val = el.value;
+        document.querySelectorAll('.tls-path-input').forEach(inp => {
+            if (inp !== el) inp.value = val;
+        });
+        triggerGsAutoSave();
+    }
+
+    let gsSettingsLoaded = false;
+    async function openGlobalSettingsModal() {
+        document.querySelectorAll('.proto-nav-card').forEach(c => c.classList.remove('active', 'mobile-expanded'));
+        document.querySelectorAll('.proto-form').forEach(f => {
+            f.style.display = 'none';
+            f.classList.remove('mobile-inline-form');
+            document.getElementById('gsRightCol').appendChild(f);
+        });
+
+        if (window.innerWidth > 768) {
+            gsModalCard.classList.add('has-content');
+            const firstCard = document.querySelector('.proto-nav-card[data-proto-id]');
+            if (firstCard) {
+                firstCard.classList.add('active');
+                const protoId = firstCard.getAttribute('data-proto-id');
+                document.getElementById('gsRightTitle').innerText = firstCard.querySelector('.proto-name').innerText + ' 变种配置';
+                document.getElementById('gs-form-' + protoId).style.display = 'block';
+            }
+        } else {
+            gsModalCard.classList.remove('has-content');
+        }
+
+        gsModal.classList.add('active');
+        document.getElementById('gsSaveIndicator').style.opacity = '0';
+
+        gsSettingsLoaded = false;
+        clearTimeout(gsAutoSaveTimer);
+        try {
+            const res = await fetch('/api/get-settings');
+            const result = await res.json();
+            if (!res.ok || result.status !== 'success') throw new Error('设置读取失败');
+            if (result.status === 'success') {
+                const d = result.data;
+                // VLESS 族
+                document.getElementById('gs_proxy_port_reality').value   = d.proxy_port_reality   || '';
+                document.getElementById('gs_proxy_port_vless_wst').value = d.proxy_port_vless_wst || '';
+                document.getElementById('gs_proxy_port_vless_hut').value = d.proxy_port_vless_hut || '';
+                // VMess 族
+                document.getElementById('gs_proxy_port_vmess_tcp').value  = d.proxy_port_vmess_tcp  || '';
+                document.getElementById('gs_proxy_port_vmess_ws').value   = d.proxy_port_vmess_ws   || '';
+                document.getElementById('gs_proxy_port_vmess_http').value = d.proxy_port_vmess_http || '';
+                document.getElementById('gs_proxy_port_vmess_quic').value = d.proxy_port_vmess_quic || '';
+                document.getElementById('gs_proxy_port_vmess_wst').value  = d.proxy_port_vmess_wst  || '';
+                document.getElementById('gs_proxy_port_vmess_hut').value  = d.proxy_port_vmess_hut  || '';
+                // Shadowsocks
+                document.getElementById('gs_proxy_port_ss').value = d.proxy_port_ss || '';
+                const ssMethodSelect = document.getElementById('gs_proxy_ss_method');
+                if (d.proxy_ss_method) {
+                    const optionExists = Array.from(ssMethodSelect.options).some(o => o.value === d.proxy_ss_method);
+                    if (!optionExists) ssMethodSelect.add(new Option(d.proxy_ss_method, d.proxy_ss_method));
+                    ssMethodSelect.value = d.proxy_ss_method;
+                }
+                // Hysteria2
+                document.getElementById('gs_proxy_port_hy2').value = d.proxy_port_hy2 || '';
+                document.getElementById('gs_proxy_hy2_sni').value   = d.proxy_hy2_sni  || '';
+                // TUIC
+                document.getElementById('gs_proxy_port_tuic').value = d.proxy_port_tuic || '';
+                document.getElementById('gs_proxy_tuic_sni').value   = d.proxy_tuic_sni  || '';
+                // Socks5
+                document.getElementById('gs_proxy_port_socks5').value = d.proxy_port_socks5 || '';
+                document.getElementById('gs_proxy_socks5_user').value  = d.proxy_socks5_user || '';
+                document.getElementById('gs_proxy_socks5_pass').value  = d.proxy_socks5_pass || '';
+                document.getElementById('gs_proxy_socks5_random_auth').checked = (d.proxy_socks5_random_auth === 'true');
+                toggleSocks5RandomAuth();
+                // Trojan 族
+                document.getElementById('gs_proxy_port_trojan').value     = d.proxy_port_trojan     || '';
+                document.getElementById('gs_proxy_port_trojan_wst').value = d.proxy_port_trojan_wst || '';
+                document.getElementById('gs_proxy_port_trojan_hut').value = d.proxy_port_trojan_hut || '';
+                // AnyTLS
+                document.getElementById('gs_proxy_port_anytls').value = d.proxy_port_anytls || '';
+                document.getElementById('gs_proxy_anytls_sni').value  = d.proxy_anytls_sni  || '';
+                // TLS 传输路径（VLESS / VMess / Trojan 面板共用同一个值）
+                const tlsPath = d.proxy_tls_transport_path || '';
+                document.querySelectorAll('.tls-path-input').forEach(inp => inp.value = tlsPath);
+                document.getElementById('gs_proxy_vmess_tls_sni').value = d.proxy_vmess_tls_sni || '';
+                document.getElementById('gs_proxy_vless_tls_sni').value = d.proxy_vless_tls_sni || '';
+                document.getElementById('gs_proxy_trojan_tls_sni').value = d.proxy_trojan_tls_sni || '';
+                // 系统优化
+                document.getElementById('gs_proxy_enable_bbr').checked = (d.proxy_enable_bbr === 'true');
+                gsSettingsLoaded = true;
+            }
+        } catch (e) {
+            const indicator = document.getElementById('gsSaveIndicator');
+            indicator.textContent = '设置读取失败，请关闭后重新打开；当前未保存修改';
+            indicator.style.opacity = '1';
+        }
+    }
+
+    function closeGlobalSettingsModal() {
+        gsModal.classList.remove('active');
+        setTimeout(() => gsModalCard.classList.remove('has-content'), 300);
+    }
+
+    let gsAutoSaveTimer = null;
+    function triggerGsAutoSave() {
+        if (!document.getElementById('globalSettingsModal').classList.contains('active')) return;
+
+        if (!gsSettingsLoaded) {
+            const indicator = document.getElementById('gsSaveIndicator');
+            indicator.textContent = '设置尚未加载，请关闭后重新打开';
+            indicator.style.opacity = '1';
+            return;
+        }
+        clearTimeout(gsAutoSaveTimer);
+        const indicator = document.getElementById('gsSaveIndicator');
+        indicator.innerHTML = '<span style="color:#888;">保存中...</span>';
+        indicator.style.opacity = '1';
+
+        gsAutoSaveTimer = setTimeout(async () => {
+            if (!gsSettingsLoaded) return;
+            const tlsPath = document.querySelector('.tls-path-input')?.value || '';
+            const payload = {
+                // VLESS 族
+                "proxy_port_reality":   document.getElementById('gs_proxy_port_reality').value,
+                "proxy_port_vless_wst": document.getElementById('gs_proxy_port_vless_wst').value,
+                "proxy_port_vless_hut": document.getElementById('gs_proxy_port_vless_hut').value,
+                // VMess 族
+                "proxy_port_vmess_tcp":  document.getElementById('gs_proxy_port_vmess_tcp').value,
+                "proxy_port_vmess_ws":   document.getElementById('gs_proxy_port_vmess_ws').value,
+                "proxy_port_vmess_http": document.getElementById('gs_proxy_port_vmess_http').value,
+                "proxy_port_vmess_quic": document.getElementById('gs_proxy_port_vmess_quic').value,
+                "proxy_port_vmess_wst":  document.getElementById('gs_proxy_port_vmess_wst').value,
+                "proxy_port_vmess_hut":  document.getElementById('gs_proxy_port_vmess_hut').value,
+                // Shadowsocks
+                "proxy_port_ss":   document.getElementById('gs_proxy_port_ss').value,
+                "proxy_ss_method": document.getElementById('gs_proxy_ss_method').value,
+                // Hysteria2
+                "proxy_port_hy2": document.getElementById('gs_proxy_port_hy2').value,
+                "proxy_hy2_sni":  document.getElementById('gs_proxy_hy2_sni').value,
+                // TUIC
+                "proxy_port_tuic": document.getElementById('gs_proxy_port_tuic').value,
+                "proxy_tuic_sni":  document.getElementById('gs_proxy_tuic_sni').value,
+                // Socks5
+                "proxy_port_socks5": document.getElementById('gs_proxy_port_socks5').value,
+                "proxy_socks5_user": document.getElementById('gs_proxy_socks5_user').value,
+                "proxy_socks5_pass": document.getElementById('gs_proxy_socks5_pass').value,
+                "proxy_socks5_random_auth": document.getElementById('gs_proxy_socks5_random_auth').checked ? 'true' : 'false',
+                // Trojan 族
+                "proxy_port_trojan":     document.getElementById('gs_proxy_port_trojan').value,
+                "proxy_port_trojan_wst": document.getElementById('gs_proxy_port_trojan_wst').value,
+                "proxy_port_trojan_hut": document.getElementById('gs_proxy_port_trojan_hut').value,
+                // AnyTLS
+                "proxy_port_anytls": document.getElementById('gs_proxy_port_anytls').value,
+                "proxy_anytls_sni":  document.getElementById('gs_proxy_anytls_sni').value,
+                // TLS 传输路径（三个面板共用）
+                "proxy_tls_transport_path": tlsPath,
+                "proxy_vmess_tls_sni": document.getElementById('gs_proxy_vmess_tls_sni').value,
+                "proxy_vless_tls_sni": document.getElementById('gs_proxy_vless_tls_sni').value,
+                "proxy_trojan_tls_sni": document.getElementById('gs_proxy_trojan_tls_sni').value,
+                // 系统优化
+                "proxy_enable_bbr": document.getElementById('gs_proxy_enable_bbr').checked ? 'true' : 'false'
+            };
+
+            try {
+                const response = await fetch('/api/update-settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const savedResult = await response.json();
+                if (!response.ok || savedResult.status !== "success") throw new Error(savedResult.message || "保存失败");
+                if (response.ok) {
+                    indicator.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg> 已保存`;
+                    setTimeout(() => indicator.style.opacity = '0', 2000);
+                }
+            } catch (error) {
+                const failure = document.createElement("span");
+                failure.style.color = "#ff3b30";
+                failure.textContent = error.message || "保存失败";
+                indicator.replaceChildren(failure);
+            }
+        }, 600);
+    }
+
+    function toggleSocks5RandomAuth() {
+        const checked = document.getElementById('gs_proxy_socks5_random_auth').checked;
+        const userInput = document.getElementById('gs_proxy_socks5_user');
+        const passInput = document.getElementById('gs_proxy_socks5_pass');
+        if (checked) {
+            userInput.disabled = true;
+            passInput.disabled = true;
+            userInput.style.opacity = '0.5';
+            passInput.style.opacity = '0.5';
+            userInput.placeholder = '已启用随机认证';
+            passInput.placeholder = '已启用随机认证';
+        } else {
+            userInput.disabled = false;
+            passInput.disabled = false;
+            userInput.style.opacity = '1';
+            passInput.style.opacity = '1';
+            userInput.placeholder = '';
+            passInput.placeholder = '';
+        }
+    }
+
+    // ── Tooltip fixed 定位：防止被 overflow:hidden 裁切 ──
+    function initGsTooltips() {
+        document.querySelectorAll('.gs-info-tooltip-wrap').forEach(wrap => {
+            if (wrap._tooltipInited) return;
+            wrap._tooltipInited = true;
+            const tip = wrap.querySelector('.gs-tooltip-content');
+            if (!tip) return;
+
+            wrap.addEventListener('mouseenter', () => {
+                const rect = wrap.getBoundingClientRect();
+                // 先让元素可见以便测量尺寸
+                tip.style.visibility = 'hidden';
+                tip.style.opacity = '0';
+                tip.style.display = 'block';
+
+                const tipW = tip.offsetWidth;
+                const tipH = tip.offsetHeight;
+                const margin = 8;
+
+                let left = rect.left;
+                let top  = rect.bottom + margin;
+
+                // 防止右边超出屏幕
+                if (left + tipW > window.innerWidth - 10) {
+                    left = window.innerWidth - tipW - 10;
+                }
+                // 防止下边超出屏幕，则翻转到图标上方
+                if (top + tipH > window.innerHeight - 10) {
+                    top = rect.top - tipH - margin;
+                }
+
+                tip.style.left = left + 'px';
+                tip.style.top  = top  + 'px';
+                tip.style.visibility = 'visible';
+                tip.style.opacity = '1';
+            });
+
+            wrap.addEventListener('mouseleave', () => {
+                tip.style.opacity = '0';
+                tip.style.visibility = 'hidden';
+            });
+
+            wrap.addEventListener('focus', () => wrap.dispatchEvent(new MouseEvent('mouseenter')));
+            wrap.addEventListener('blur',  () => wrap.dispatchEvent(new MouseEvent('mouseleave')));
+        });
+    }
+
+    // 页面加载时初始化一次，打开弹窗时再补初始化（处理动态渲染的 proto-form）
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initGsTooltips);
+    } else {
+        initGsTooltips();
+    }
+    // 每次打开全局设置弹窗时重新扫描（兼容切换 proto 面板后出现的新 tooltip）
+    document.addEventListener('click', e => {
+        if (e.target.closest && e.target.closest('[onclick*="openGlobalSettings"]')) {
+            setTimeout(initGsTooltips, 100);
+        }
+    });
+</script>
+{{end}}

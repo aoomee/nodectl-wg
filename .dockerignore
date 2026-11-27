@@ -1,0 +1,13 @@
+.git
+.github
+data
+dist
+docs
+scripts
+tests
+*.md
+*.exe
+.DS_Store
+.venv
+**/__pycache__
+**/*.pyc

@@ -82,7 +82,7 @@ func (c *wgPairCoordinator) nodeReadiness(db *gorm.DB, n database.NodePool, role
 	detail = "Agent 在线，可直接受管部署 WireGuard 双机中转。"
 	switch status {
 	case "offline":
-		detail = "Agent 未连接；请确认服务器上的 nodectl-agent 服务正在运行。"
+		detail = "Agent 未连接；请确认服务器上的 wirearc-agent 服务正在运行。"
 	case "revoked", "unauthenticated":
 		detail = "当前节点连接凭据已失效或被撤销；请检查 Agent 配置或重新安装 Agent。"
 	case "unsupported":

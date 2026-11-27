@@ -66,13 +66,14 @@ type Manager struct {
 
 // NewManager 创建 sing-box 管理器
 func NewManager() *Manager {
+	workDir := ResolveWorkDir()
 	return &Manager{
-		binaryPath:   DefaultBinaryPath,
-		configPath:   DefaultConfigPath,
-		logPath:      "/var/log/nodectl-agent/singbox.log",
-		pidPath:      filepath.Join(DefaultWorkDir, "singbox.pid"),
+		binaryPath:   filepath.Join(workDir, "sing-box"),
+		configPath:   filepath.Join(workDir, "singbox-config.json"),
+		logPath:      "/var/log/wirearc-agent/singbox.log",
+		pidPath:      filepath.Join(workDir, "singbox.pid"),
 		config:       NewConfigManager(),
-		installer:    NewInstaller(""),
+		installer:    NewInstaller(filepath.Join(workDir, "sing-box")),
 		maxRestarts:  5,
 		restartDelay: 3 * time.Second,
 	}

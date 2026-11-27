@@ -12,13 +12,25 @@ import (
 
 // 默认路径常量
 const (
-	DefaultWorkDir       = "/var/lib/nodectl-agent"
-	DefaultConfigPath    = "/var/lib/nodectl-agent/singbox-config.json"
-	DefaultProtocolsPath = "/var/lib/nodectl-agent/protocols.json"
-	DefaultCertDir       = "/var/lib/nodectl-agent/certs"
-	DefaultCertPath      = "/var/lib/nodectl-agent/certs/fullchain.pem"
-	DefaultKeyPath       = "/var/lib/nodectl-agent/certs/privkey.pem"
+	DefaultWorkDir       = "/var/lib/wirearc-agent"
+	LegacyWorkDir        = "/var/lib/nodectl-agent"
+	DefaultConfigPath    = "/var/lib/wirearc-agent/singbox-config.json"
+	DefaultProtocolsPath = "/var/lib/wirearc-agent/protocols.json"
+	DefaultCertDir       = "/var/lib/wirearc-agent/certs"
+	DefaultCertPath      = "/var/lib/wirearc-agent/certs/fullchain.pem"
+	DefaultKeyPath       = "/var/lib/wirearc-agent/certs/privkey.pem"
 )
+
+// ResolveWorkDir 返回实际工作目录：新版目录不存在而旧版目录存在时自动复用旧目录，避免旧节点在线升级后重复下载 sing-box 或丢失证书。
+func ResolveWorkDir() string {
+	if _, err := os.Stat(DefaultWorkDir); err == nil {
+		return DefaultWorkDir
+	}
+	if _, err := os.Stat(LegacyWorkDir); err == nil {
+		return LegacyWorkDir
+	}
+	return DefaultWorkDir
+}
 
 // ConfigManager sing-box 配置管理器
 type ConfigManager struct {
@@ -35,10 +47,11 @@ type ConfigManager struct {
 
 // NewConfigManager 创建配置管理器
 func NewConfigManager() *ConfigManager {
+	workDir := ResolveWorkDir()
 	return &ConfigManager{
-		configPath:    DefaultConfigPath,
-		protocolsPath: DefaultProtocolsPath,
-		certDir:       DefaultCertDir,
+		configPath:    filepath.Join(workDir, "singbox-config.json"),
+		protocolsPath: filepath.Join(workDir, "protocols.json"),
+		certDir:       filepath.Join(workDir, "certs"),
 		Protocols:     DefaultProtocolConfig(),
 	}
 }

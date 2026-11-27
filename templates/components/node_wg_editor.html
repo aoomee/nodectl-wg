@@ -314,7 +314,7 @@ function resetNodeWGEditor() {
 }
 function nodeWGOrdinarySnapshot() {
     const fields = Array.from(document.querySelectorAll('#editNodeModal input, #editNodeModal select, #editNodeModal textarea'))
-        .filter(el => !el.closest('#nodeWGCard, #nodeWGSetup') && el.id !== 'editNodeUUID')
+        .filter(el => !el.closest('#nodeWGCard, #nodeWGSetup') && el.id !== 'editNodeUUID' && el.id !== 'editNodeRegion')
         .map(el => [el.id || el.className, el.type === 'checkbox' ? el.checked : el.value]);
     const protocols = Array.from(document.querySelectorAll('#protocolListContainer .protocol-card')).map(card => [card.dataset.proto, card.querySelector('.proto-ipmode-item.active')?.dataset.val]);
     return JSON.stringify([fields, protocols]);

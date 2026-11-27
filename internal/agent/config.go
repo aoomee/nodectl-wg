@@ -12,10 +12,27 @@ import (
 	"nodectl/internal/agent/singbox"
 )
 
-// DefaultConfigPath 默认配置文件路径
-const DefaultConfigPath = "/etc/nodectl-agent/config.json"
+// DefaultConfigPath 默认配置文件路径；LegacyDefaultConfigPath 用于兼容从旧版 nodectl-agent 就地自更新的节点
+const (
+	DefaultConfigPath       = "/etc/wirearc-agent/config.json"
+	LegacyDefaultConfigPath = "/etc/nodectl-agent/config.json"
+)
 
-// Config Agent 主配置结构体，从 /etc/nodectl-agent/config.json 读取
+// ResolveDefaultConfigPath 解析配置文件路径：若使用默认路径且新版配置尚不存在、旧版配置存在，则自动回退兼容旧节点平滑升级。
+func ResolveDefaultConfigPath(path string) string {
+	if path != "" && path != DefaultConfigPath {
+		return path
+	}
+	if _, err := os.Stat(DefaultConfigPath); err == nil {
+		return DefaultConfigPath
+	}
+	if _, err := os.Stat(LegacyDefaultConfigPath); err == nil {
+		return LegacyDefaultConfigPath
+	}
+	return DefaultConfigPath
+}
+
+// Config Agent 主配置结构体，默认从 /etc/wirearc-agent/config.json 读取
 type Config struct {
 	// 基础配置
 	AgentToken string `json:"agent_token,omitempty"` // Permanent enrollment credential; config must remain 0600.
@@ -34,8 +51,8 @@ type Config struct {
 
 // SingboxProcessConfig sing-box 进程管理配置
 type SingboxProcessConfig struct {
-	BinaryPath   string `json:"binary_path,omitempty"`   // sing-box 二进制路径（默认 /var/lib/nodectl-agent/sing-box）
-	ConfigPath   string `json:"config_path,omitempty"`   // sing-box 配置文件路径（默认 /var/lib/nodectl-agent/singbox-config.json）
+	BinaryPath   string `json:"binary_path,omitempty"`   // sing-box 二进制路径（默认 /var/lib/wirearc-agent/sing-box）
+	ConfigPath   string `json:"config_path,omitempty"`   // sing-box 配置文件路径（默认 /var/lib/wirearc-agent/singbox-config.json）
 	AutoRestart  *bool  `json:"auto_restart,omitempty"`  // 崩溃后自动重启（默认 true）
 	RestartDelay string `json:"restart_delay,omitempty"` // 重启间隔（默认 "5s"）
 }
@@ -43,12 +60,13 @@ type SingboxProcessConfig struct {
 // DefaultConfig 返回带有合理默认值的配置
 func DefaultConfig() *Config {
 	autoRestart := true
+	workDir := singbox.ResolveWorkDir()
 	return &Config{
 		Interface: "auto",
 		LogLevel:  "info",
 		Singbox: &SingboxProcessConfig{
-			BinaryPath:   singbox.DefaultBinaryPath,
-			ConfigPath:   singbox.DefaultConfigPath,
+			BinaryPath:   filepath.Join(workDir, "sing-box"),
+			ConfigPath:   filepath.Join(workDir, "singbox-config.json"),
 			AutoRestart:  &autoRestart,
 			RestartDelay: "5s",
 		},
@@ -57,9 +75,7 @@ func DefaultConfig() *Config {
 
 // LoadConfig 从指定路径加载配置文件
 func LoadConfig(path string) (*Config, error) {
-	if path == "" {
-		path = DefaultConfigPath
-	}
+	path = ResolveDefaultConfigPath(path)
 
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -253,7 +269,7 @@ func SaveConfig(path string, cfg *Config) error {
 	}
 
 	// Atomic replacement also removes permissive modes from pre-existing files.
-	f, err := os.CreateTemp(filepath.Dir(path), ".nodectl-config-*")
+	f, err := os.CreateTemp(filepath.Dir(path), ".wirearc-config-*")
 	if err != nil {
 		return fmt.Errorf("create private config: %w", err)
 	}

@@ -44,8 +44,8 @@ const (
 	maxCrashCount = 3
 	// HTTP 请求超时
 	httpTimeout = 60 * time.Second
-	// 产物文件名正则（匹配 nodectl-agent-linux-amd64-v1.4.2 或 nodectl-agent-linux-amd64-v1.4.2-alpha）
-	assetPattern = `^nodectl-agent-linux-%s-(v\d+\.\d+\.\d+.*)$`
+	// 产物文件名正则（优先匹配 wirearc-agent-linux-<arch>-v*，兼容过渡期旧版 nodectl-agent-linux-<arch>-v*）
+	assetPattern = `^(?:wirearc|nodectl)-agent-linux-%s-(v\d+\.\d+\.\d+.*)$`
 )
 
 // updateState 更新状态持久化结构体
@@ -479,7 +479,7 @@ func (u *Updater) findLatestStableRelease(ctx context.Context) (version, binaryU
 		return "", "", "", err
 	}
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
-	req.Header.Set("User-Agent", fmt.Sprintf("nodectl-agent/%s", AgentVersion))
+	req.Header.Set("User-Agent", fmt.Sprintf("wirearc-agent/%s", AgentVersion))
 
 	resp, err := u.client.Do(req)
 	if err != nil {
@@ -516,9 +516,13 @@ func (u *Updater) findLatestStableRelease(ctx context.Context) (version, binaryU
 		}
 		matches := pattern.FindStringSubmatch(asset.Name)
 		if matches != nil && len(matches) >= 2 {
-			matchedAsset = asset
-			matchedVersion = matches[1] // 提取版本号
-			break
+			if matchedAsset == nil || strings.HasPrefix(asset.Name, "wirearc-agent-") {
+				matchedAsset = asset
+				matchedVersion = matches[1] // 提取版本号
+				if strings.HasPrefix(asset.Name, "wirearc-agent-") {
+					break
+				}
+			}
 		}
 	}
 
@@ -553,7 +557,7 @@ func (u *Updater) findLatestAlphaRelease(ctx context.Context) (version, binaryUR
 		return "", "", "", err
 	}
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
-	req.Header.Set("User-Agent", fmt.Sprintf("nodectl-agent/%s", AgentVersion))
+	req.Header.Set("User-Agent", fmt.Sprintf("wirearc-agent/%s", AgentVersion))
 
 	resp, err := u.client.Do(req)
 	if err != nil {
@@ -607,9 +611,13 @@ func (u *Updater) findLatestAlphaRelease(ctx context.Context) (version, binaryUR
 			}
 			matches := pattern.FindStringSubmatch(asset.Name)
 			if matches != nil && len(matches) >= 2 {
-				matchedAsset = asset
-				matchedVersion = matches[1]
-				break
+				if matchedAsset == nil || strings.HasPrefix(asset.Name, "wirearc-agent-") {
+					matchedAsset = asset
+					matchedVersion = matches[1]
+					if strings.HasPrefix(asset.Name, "wirearc-agent-") {
+						break
+					}
+				}
 			}
 		}
 
@@ -667,7 +675,7 @@ func (u *Updater) downloadSHA256(ctx context.Context, url string) (string, error
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("User-Agent", fmt.Sprintf("nodectl-agent/%s", AgentVersion))
+	req.Header.Set("User-Agent", fmt.Sprintf("wirearc-agent/%s", AgentVersion))
 
 	resp, err := u.client.Do(req)
 	if err != nil {
@@ -707,7 +715,7 @@ func (u *Updater) downloadBinary(ctx context.Context, url string, destPath strin
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("User-Agent", fmt.Sprintf("nodectl-agent/%s", AgentVersion))
+	req.Header.Set("User-Agent", fmt.Sprintf("wirearc-agent/%s", AgentVersion))
 
 	resp, err := u.client.Do(req)
 	if err != nil {

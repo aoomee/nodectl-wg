@@ -148,9 +148,16 @@ func apiDownloadAgent(w http.ResponseWriter, r *http.Request) {
 	releaseTag := getPanelReleaseTag(channel)
 
 	// 通过 GitHub API 动态查找 agent 文件的真实下载 URL
-	// 这样即使 agent 版本号与面板版本号不同也能正确匹配
-	agentPrefix := fmt.Sprintf("nodectl-agent-linux-%s-", arch)
+	// 优先匹配新版 wirearc-agent-linux-{arch}-，若旧版 Release 中不存在则回退匹配 nodectl-agent-linux-{arch}-
+	agentPrefix := fmt.Sprintf("wirearc-agent-linux-%s-", arch)
 	downloadURL, err := findAgentAssetURL(githubRepo, releaseTag, agentPrefix)
+	if err != nil {
+		legacyPrefix := fmt.Sprintf("nodectl-agent-linux-%s-", arch)
+		if legacyURL, legacyErr := findAgentAssetURL(githubRepo, releaseTag, legacyPrefix); legacyErr == nil {
+			downloadURL = legacyURL
+			err = nil
+		}
+	}
 	if err != nil {
 		logger.Log.Error("查找 Agent 下载地址失败",
 			"repo", githubRepo,

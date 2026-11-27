@@ -21,7 +21,7 @@ import (
 
 const (
 	// DefaultBinaryPath sing-box 二进制默认安装路径
-	DefaultBinaryPath = "/var/lib/nodectl-agent/sing-box"
+	DefaultBinaryPath = "/var/lib/wirearc-agent/sing-box"
 
 	// SingBoxGitHubRepo GitHub Release 下载 URL 模板
 	// 格式: https://github.com/SagerNet/sing-box/releases/download/v{version}/sing-box-{version}-linux-{arch}.tar.gz

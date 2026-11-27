@@ -162,10 +162,10 @@ detect_arch() {
 install_na_command() {
     info "注册 na 快捷命令..."
 
-    cat > /usr/local/bin/na <<'NAEOF'
+    cat > /usr/local/bin/wa <<'NAEOF'
 #!/usr/bin/env bash
-# NodeCTL Agent 快捷管理命令 (na)
-# 用法: na uninstall  或直接运行 na 进入交互式菜单
+# WireArc Agent 快捷管理命令 (wa，同时兼容旧命令 na)
+# 用法: wa uninstall  或直接运行 wa 进入交互式菜单
 
 set -euo pipefail
 
@@ -184,7 +184,7 @@ err()   { echo -e "${RED}[ERR]${NC} $*" >&2; }
 
 # 检查 root
 if [ "$(id -u)" != "0" ]; then
-    err "na 命令需要 root 权限，请使用 sudo na"
+    err "wa 命令需要 root 权限，请使用 sudo wa"
     exit 1
 fi
 
@@ -203,8 +203,8 @@ INIT_SYS=$(detect_init)
 
 do_uninstall() {
     echo ""
-    warn "⚠️  即将完整卸载 NodeCTL Agent"
-    warn "将删除: 服务、二进制、sing-box、配置、证书、日志、na 命令"
+    warn "⚠️  即将完整卸载 WireArc Agent"
+    warn "将删除: 服务、二进制、sing-box、配置、证书、日志、wa/na 命令"
     echo ""
     read -r -p "确认卸载？输入 yes 继续: " confirm
     if [ "$confirm" != "yes" ]; then
@@ -222,52 +222,56 @@ do_uninstall() {
     # 强制清除残余进程
     pkill -9 -f "sing-box" 2>/dev/null || true
 
-    # 2. 停止并禁用 nodectl-agent 服务
-    info "[2/7] 停止 nodectl-agent 服务..."
-    if [ "$INIT_SYS" = "openrc" ]; then
-        rc-service nodectl-agent stop 2>/dev/null || true
-        rc-update del nodectl-agent default 2>/dev/null || true
-        rm -f /etc/init.d/nodectl-agent
-    else
-        systemctl stop nodectl-agent 2>/dev/null || true
-        systemctl disable nodectl-agent 2>/dev/null || true
-        rm -f /etc/systemd/system/nodectl-agent.service
+    # 2. 停止并禁用 wirearc-agent 及旧版 nodectl-agent 服务
+    info "[2/7] 停止 wirearc-agent 服务..."
+    for svc in wirearc-agent nodectl-agent; do
+        if [ "$INIT_SYS" = "openrc" ]; then
+            rc-service "$svc" stop 2>/dev/null || true
+            rc-update del "$svc" default 2>/dev/null || true
+            rm -f "/etc/init.d/$svc"
+        else
+            systemctl stop "$svc" 2>/dev/null || true
+            systemctl disable "$svc" 2>/dev/null || true
+            rm -f "/etc/systemd/system/${svc}.service"
+        fi
+        killall "$svc" 2>/dev/null || true
+        pkill -9 -f "$svc" 2>/dev/null || true
+    done
+    if [ "$INIT_SYS" != "openrc" ]; then
         systemctl daemon-reload 2>/dev/null || true
     fi
-    # 确保进程完全退出
-    killall nodectl-agent 2>/dev/null || true
-    pkill -9 -f "nodectl-agent" 2>/dev/null || true
 
     # 3. 删除二进制文件
     info "[3/7] 删除二进制文件..."
-    rm -f /usr/local/bin/nodectl-agent
-    rm -f /var/lib/nodectl-agent/sing-box
+    rm -f /usr/local/bin/wirearc-agent /usr/local/bin/nodectl-agent
+    rm -f /var/lib/wirearc-agent/sing-box /var/lib/nodectl-agent/sing-box
 
     # 4. 删除配置文件
     info "[4/7] 删除配置文件..."
-    rm -rf /etc/nodectl-agent
-    rm -f /var/lib/nodectl-agent/singbox-config.json
-    rm -f /var/lib/nodectl-agent/protocols.json
+    rm -rf /etc/wirearc-agent /etc/nodectl-agent
+    rm -f /var/lib/wirearc-agent/singbox-config.json /var/lib/wirearc-agent/protocols.json
+    rm -f /var/lib/nodectl-agent/singbox-config.json /var/lib/nodectl-agent/protocols.json
 
     # 5. 删除证书文件
     info "[5/7] 删除证书文件..."
-    rm -rf /var/lib/nodectl-agent/certs
+    rm -rf /var/lib/wirearc-agent/certs /var/lib/nodectl-agent/certs
 
     # 6. 删除日志文件和数据目录
     info "[6/7] 删除日志和数据目录..."
-    rm -f /var/log/nodectl-agent.log
-    rm -rf /var/log/nodectl-agent
-    rm -f /var/lib/nodectl-agent/singbox.pid
+    rm -f /var/log/wirearc-agent.log /var/log/nodectl-agent.log
+    rm -rf /var/log/wirearc-agent /var/log/nodectl-agent
+    rm -f /var/lib/wirearc-agent/singbox.pid /var/lib/nodectl-agent/singbox.pid
     # 清理数据目录（若已为空则删除）
+    rmdir /var/lib/wirearc-agent 2>/dev/null || rm -rf /var/lib/wirearc-agent
     rmdir /var/lib/nodectl-agent 2>/dev/null || rm -rf /var/lib/nodectl-agent
 
-    # 7. 删除 na 快捷命令自身
-    info "[7/7] 删除 na 快捷命令..."
-    rm -f /usr/local/bin/na
+    # 7. 删除 wa / na 快捷命令自身
+    info "[7/7] 删除 wa 快捷命令..."
+    rm -f /usr/local/bin/wa /usr/local/bin/na
 
     echo ""
-    ok "✅ NodeCTL Agent 已完整卸载！"
-    ok "  已清除: 二进制、sing-box、配置、证书、日志、服务、na 命令"
+    ok "✅ WireArc Agent 已完整卸载！"
+    ok "  已清除: 二进制、sing-box、配置、证书、日志、服务、wa/na 命令"
     echo ""
 }
 
@@ -275,7 +279,7 @@ do_uninstall() {
 
 show_menu() {
     echo ""
-    echo -e "${CYAN}NodeCTL Agent 管理 (na)${NC}"
+    echo -e "${CYAN}WireArc Agent 管理 (wa)${NC}"
     echo -e "  ${RED}1)${NC} 完整卸载"
     echo -e "  ${YELLOW}0)${NC} 退出"
     echo ""
@@ -291,15 +295,15 @@ show_menu() {
 
 show_help() {
     echo ""
-    echo -e "${CYAN}NodeCTL Agent 快捷命令 (na)${NC}"
+    echo -e "${CYAN}WireArc Agent 快捷命令 (wa)${NC}"
     echo ""
-    echo "用法: na [命令]"
+    echo "用法: wa [命令]"
     echo ""
     echo "可用命令:"
     echo "  uninstall   完整卸载 (清除所有数据)"
     echo "  help        显示此帮助"
     echo ""
-    echo "不带参数运行 na 可进入交互式菜单"
+    echo "不带参数运行 wa 可进入交互式菜单（同时兼容旧命令 na）"
     echo ""
 }
 
@@ -326,10 +330,11 @@ else
 fi
 NAEOF
 
-    chmod +x /usr/local/bin/na
-    info "na 快捷命令已注册 ✓"
-    info "  用法: na        (交互式菜单)"
-    info "  用法: na help   (查看所有命令)"
+    chmod +x /usr/local/bin/wa
+    ln -sf /usr/local/bin/wa /usr/local/bin/na
+    info "wa 快捷命令已注册 ✓（兼容旧命令 na）"
+    info "  用法: wa        (交互式菜单)"
+    info "  用法: wa help   (查看所有命令)"
 }
 
 # -----------------------
@@ -380,7 +385,7 @@ main() {
     detect_os
     check_root
 
-    info "NodeCTL Agent 安装脚本"
+    info "WireArc Agent 安装脚本"
     info "检测到系统: $OS (${OS_ID:-unknown})"
 
     local ARCH=$(detect_arch)
@@ -390,22 +395,37 @@ main() {
     # 0.5 安装基础依赖（确保 curl 可用）
     install_deps
 
-    # 1. 清理旧 agent（如果存在）
+    # 1. 停止并清理旧版 nodectl-agent 与已有 wirearc-agent 服务
+    for svc in wirearc-agent nodectl-agent; do
+        if [ "$OS" = "alpine" ]; then
+            rc-service "$svc" stop 2>/dev/null || true
+        else
+            systemctl stop "$svc" 2>/dev/null || true
+        fi
+        killall "$svc" 2>/dev/null || true
+    done
     if [ "$OS" = "alpine" ]; then
-        rc-service nodectl-agent stop 2>/dev/null || true
+        rc-update del nodectl-agent default 2>/dev/null || true
+        rm -f /etc/init.d/nodectl-agent
     else
-        systemctl stop nodectl-agent 2>/dev/null || true
+        systemctl disable nodectl-agent 2>/dev/null || true
+        rm -f /etc/systemd/system/nodectl-agent.service
     fi
-    killall nodectl-agent 2>/dev/null || true
+    rm -f /usr/local/bin/nodectl-agent
 
     # 2. 下载 agent（channel 参数确保下载与面板版本匹配的 Agent）
     local DOWNLOAD_URL="${PANEL_URL}/api/public/download/agent?arch=${ARCH}&channel=${CHANNEL}"
-    local AGENT_BIN="/usr/local/bin/nodectl-agent"
-    local CONFIG_DIR="/etc/nodectl-agent"
-    local DATA_DIR="/var/lib/nodectl-agent"
+    local AGENT_BIN="/usr/local/bin/wirearc-agent"
+    local CONFIG_DIR="/etc/wirearc-agent"
+    local DATA_DIR="/var/lib/wirearc-agent"
     local LOG_DIR="/var/log"
 
-    info "正在下载 nodectl-agent..."
+    # 平滑迁移旧版数据目录（复用已有 sing-box 与证书，避免重复下载）
+    if [ ! -d "$DATA_DIR" ] && [ -d "/var/lib/nodectl-agent" ]; then
+        mv /var/lib/nodectl-agent "$DATA_DIR" 2>/dev/null || true
+    fi
+
+    info "正在下载 wirearc-agent..."
     curl -fsSL "$DOWNLOAD_URL" -o "$AGENT_BIN"
     chmod +x "$AGENT_BIN"
 
@@ -438,14 +458,14 @@ EOF
     # 5. 注册系统服务（根据 init 系统自动选择）
     if [ "$OS" = "alpine" ]; then
         # OpenRC 服务 (Alpine Linux)
-        cat > /etc/init.d/nodectl-agent <<'SVCEOF'
+        cat > /etc/init.d/wirearc-agent <<'SVCEOF'
 #!/sbin/openrc-run
-name="nodectl-agent"
-description="NodeCTL Agent - 一体化代理管理器"
-command="/usr/local/bin/nodectl-agent"
+name="wirearc-agent"
+description="WireArc Agent - 一体化代理管理器"
+command="/usr/local/bin/wirearc-agent"
 supervisor=supervise-daemon
 rc_cgroup_cleanup="NO"
-pidfile="/run/nodectl-agent.pid"
+pidfile="/run/wirearc-agent.pid"
 respawn_max=0
 respawn_period=1800
 respawn_delay=5
@@ -455,23 +475,23 @@ depend() {
     after firewall
 }
 SVCEOF
-        chmod +x /etc/init.d/nodectl-agent
-        rc-update add nodectl-agent default 2>/dev/null || true
-        rc-service nodectl-agent restart 2>/dev/null || \
-            rc-service nodectl-agent start 2>/dev/null || true
+        chmod +x /etc/init.d/wirearc-agent
+        rc-update add wirearc-agent default 2>/dev/null || true
+        rc-service wirearc-agent restart 2>/dev/null || \
+            rc-service wirearc-agent start 2>/dev/null || true
         info "OpenRC 服务已注册并启动 ✓"
     else
         # systemd 服务 (Debian/Ubuntu/CentOS/RHEL/Fedora 等)
-        cat > /etc/systemd/system/nodectl-agent.service <<'SVCEOF'
+        cat > /etc/systemd/system/wirearc-agent.service <<'SVCEOF'
 [Unit]
-Description=NodeCTL Agent - 一体化代理管理器
+Description=WireArc Agent - 一体化代理管理器
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/nodectl-agent
-WorkingDirectory=/var/lib/nodectl-agent
+ExecStart=/usr/local/bin/wirearc-agent
+WorkingDirectory=/var/lib/wirearc-agent
 Restart=always
 RestartSec=5
 LimitNOFILE=1048576
@@ -480,12 +500,12 @@ LimitNOFILE=1048576
 WantedBy=multi-user.target
 SVCEOF
         systemctl daemon-reload
-        systemctl enable nodectl-agent
-        systemctl restart nodectl-agent
+        systemctl enable wirearc-agent
+        systemctl restart wirearc-agent
         info "systemd 服务已注册并启动 ✓"
     fi
 
-    # 6. 注册 na 快捷命令
+    # 6. 注册 wa 快捷命令（兼容旧命令 na）
     install_na_command
 
     # 7. BBR 内核加速优化
@@ -493,18 +513,18 @@ SVCEOF
 
     # 8. 验证安装
     sleep 2
-    if pidof nodectl-agent >/dev/null 2>&1; then
-        info "✅ nodectl-agent 安装完成！(PID: $(pidof nodectl-agent | awk '{print $1}'))"
+    if pidof wirearc-agent >/dev/null 2>&1; then
+        info "✅ wirearc-agent 安装完成！(PID: $(pidof wirearc-agent | awk '{print $1}'))"
     else
-        warn "⚠️ nodectl-agent 进程未检测到，请检查日志"
-        warn "  查看日志: tail -20 /var/log/nodectl-agent.log"
+        warn "⚠️ wirearc-agent 进程未检测到，请检查日志"
+        warn "  查看日志: tail -20 /var/log/wirearc-agent.log"
     fi
 
     info ""
     info "快捷管理命令:"
-    info "  na            进入交互式管理菜单"
-    info "  na uninstall  完整卸载 Agent"
-    info "  na help       查看帮助"
+    info "  wa            进入交互式管理菜单"
+    info "  wa uninstall  完整卸载 Agent"
+    info "  wa help       查看帮助"
 }
 
 main

@@ -1767,8 +1767,8 @@
                                         type="text"
                                         id="cft-quick-subdomain"
                                         class="cft-input"
-                                        placeholder="前缀（如 nodectl）"
-                                        value="nodectl"
+                                        placeholder="前缀（如 wirearc）"
+                                        value="wirearc"
                                     />
                                     <select
                                         id="cft-quick-domain"
@@ -1884,7 +1884,7 @@
                                     color: #333;
                                 "
                             >
-                                📚 nodectl Tunnel 列表
+                                📚 wirearc Tunnel 列表
                             </div>
                             <button
                                 class="cft-btn cft-btn-secondary"
@@ -1910,7 +1910,7 @@
                                 id="cft-tunnel-list-empty"
                                 style="font-size: 12px; color: #888"
                             >
-                                点击“查询”后显示名称以 nodectl 开头的 Tunnel。
+                                点击“查询”后显示名称以 wirearc 开头的 Tunnel。
                             </div>
                             <div
                                 id="cft-tunnel-list-wrap"
@@ -2143,7 +2143,7 @@
                                 type="text"
                                 id="cft-cf-prefix"
                                 class="cft-input"
-                                placeholder="前缀（可选，如 nodectl）"
+                                placeholder="前缀（可选，如 wirearc）"
                                 oninput="triggerCftSecurityAutoSave()"
                             />
                             <select
@@ -4710,7 +4710,7 @@
         tbody.innerHTML = "";
 
         try {
-            const res = await fetch("/api/cf/tunnel/list?prefix=nodectl");
+            const res = await fetch("/api/cf/tunnel/list?prefix=wirearc");
             const json = await res.json();
             if (json.status !== "success") {
                 emptyEl.textContent = json.message || "查询失败";
@@ -4719,7 +4719,7 @@
 
             const list = Array.isArray(json.data) ? json.data : [];
             if (list.length === 0) {
-                emptyEl.textContent = "未找到 nodectl 前缀 Tunnel";
+                emptyEl.textContent = "未找到 wirearc 前缀 Tunnel";
                 return;
             }
 
@@ -5562,7 +5562,7 @@
             "panel";
         const domain = document.getElementById("cft-quick-domain").value;
         const suffix = Math.floor(1000 + Math.random() * 9000);
-        const tunnelName = `nodectl-${suffix}`;
+        const tunnelName = `wirearc-${suffix}`;
 
         if (!domain) {
             cftShowMsg("cft-quick-msg", "error", "请选择根域名");

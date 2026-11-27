@@ -116,8 +116,15 @@ func runAgentStartupSilentUpdateCheck(ctx context.Context) (retErr error) {
 	var needUpdate []needUpdateNode
 	skippedUpToDate := 0
 	skippedInvalid := 0
+	skippedWG := 0
 
 	for _, node := range nodes {
+		// 处于 WireGuard 配对中的节点跳过启动静默更新，避免自动重启导致入口节点触发 fail-closed 拒流
+		if WGNodeInUse(node.UUID) {
+			skippedWG++
+			continue
+		}
+
 		installID := strings.TrimSpace(node.InstallID)
 		nodeName := strings.TrimSpace(node.Name)
 		if nodeName == "" {
@@ -168,10 +175,11 @@ func runAgentStartupSilentUpdateCheck(ctx context.Context) (retErr error) {
 
 	// 所有节点版本均已是最新，直接结束，不下发任何命令
 	if len(needUpdate) == 0 {
-		logger.Log.Info("Agent 更新检查完成：所有节点版本均已是最新",
+		logger.Log.Info("Agent 更新检查完成：无需静默更新的节点",
 			"latest_stable", latestStableVersion,
 			"latest_alpha", latestAlphaVersion,
 			"total_nodes", total,
+			"WG配对跳过", skippedWG,
 		)
 		return nil
 	}
@@ -208,6 +216,7 @@ func runAgentStartupSilentUpdateCheck(ctx context.Context) (retErr error) {
 		"成功", triggered,
 		"失败", skippedFireErr,
 		"离线跳过", skippedOffline,
+		"WG配对跳过", skippedWG,
 		"已是最新", skippedUpToDate,
 		"版本无效跳过", skippedInvalid,
 	)
@@ -224,7 +233,7 @@ func fetchLatestAgentVersionsFromGitHub(ctx context.Context) (stableVersion, alp
 		return "", "", err
 	}
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
-	req.Header.Set("User-Agent", "nodectl-core-agent-startup-check")
+	req.Header.Set("User-Agent", "wirearc-core-agent-startup-check")
 
 	client := &http.Client{Timeout: 15 * time.Second}
 	resp, err := client.Do(req)

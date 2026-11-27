@@ -58,11 +58,20 @@ type updateState struct {
 
 // Updater Agent 自动更新器（仅 Linux）
 type Updater struct {
-	mu       sync.Mutex
-	selfPath string       // 当前二进制绝对路径
-	stateDir string       // 状态文件目录
-	client   *http.Client // 复用 HTTP client
-	state    updateState  // 更新状态
+	mu                   sync.Mutex
+	selfPath             string       // 当前二进制绝对路径
+	stateDir             string       // 状态文件目录
+	client               *http.Client // 复用 HTTP client
+	state                updateState  // 更新状态
+	skipBackgroundUpdate func() bool  // 后台自动更新跳过回调（如 WG 配对中避免静默重启断网）
+}
+
+// SetSkipBackgroundUpdate 注册后台定时自动更新的跳过判断回调。
+// 仅影响后台 Run() 循环，不影响管理员在面板手动触发的 TriggerCheck / TriggerCheckWithNotify。
+func (u *Updater) SetSkipBackgroundUpdate(fn func() bool) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	u.skipBackgroundUpdate = fn
 }
 
 // NewUpdater 创建更新器实例
@@ -233,8 +242,15 @@ func (u *Updater) HealthTimeout() time.Duration {
 	return healthCheckTimeout
 }
 
-// checkAndUpdate 执行一次完整的检查和更新流程
+// checkAndUpdate 执行一次完整的检查和更新流程（仅后台定时循环调用）
 func (u *Updater) checkAndUpdate(ctx context.Context) {
+	u.mu.Lock()
+	skipFn := u.skipBackgroundUpdate
+	u.mu.Unlock()
+	if skipFn != nil && skipFn() {
+		log.Printf("[Updater] 当前节点处于 WireGuard 转发配对状态，跳过后台自动更新（如需升级请在面板手动操作或先解除配对）")
+		return
+	}
 	u.checkAndUpdateWithNotify(ctx, nil)
 }
 

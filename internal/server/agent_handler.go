@@ -426,7 +426,7 @@ func findAgentAssetURL(repo, tag, prefix string) (string, error) {
 		return "", fmt.Errorf("构造请求失败: %w", err)
 	}
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
-	req.Header.Set("User-Agent", "nodectl-panel/"+version.Version)
+	req.Header.Set("User-Agent", "wirearc-panel/"+version.Version)
 
 	// 如果配置了 GitHub Token 则使用（提高 API 限额）
 	if token := loadSysConfigValue("github_token"); token != "" {

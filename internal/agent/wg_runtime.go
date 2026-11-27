@@ -28,6 +28,19 @@ func (rt *Runtime) ensureWGManager() error {
 	return nil
 }
 
+func wgV2FailureMessage(err error) string {
+	switch {
+	case errors.Is(err, wgrelay.ErrUnsupported):
+		return "WG 初始化失败：需 Linux/systemd、root 权限及 ip/wg 工具"
+	case errors.Is(err, singbox.ErrWGRouteStale):
+		return "WG 路由状态冲突（节点存在未释放的旧配对或过期修订），请检查节点路由状态后重试"
+	case errors.Is(err, singbox.ErrWGConfigCheck):
+		return "WG sing-box 配置校验失败，请检查节点 sing-box 版本与协议配置"
+	default:
+		return "WG REALITY→SS 操作失败；保持阻断，请检查阶段状态及双端配置"
+	}
+}
+
 // Called under commandMu. WG operations never enter the ordinary sing-box
 // configuration path or stop its existing listeners.
 func (rt *Runtime) executeWGCommand(cmd ServerCommand, reply func(CommandResult)) {
@@ -57,11 +70,7 @@ func (rt *Runtime) executeWGCommand(cmd ServerCommand, reply func(CommandResult)
 			if cmd.Action == "wg-v2-status" && probeFailure(err) {
 				return
 			}
-			if errors.Is(err, wgrelay.ErrUnsupported) {
-				fail("WG 初始化失败：需 Linux/systemd、root 权限及 ip/wg 工具")
-				return
-			}
-			fail("WG REALITY→SS 操作失败；保持阻断，请检查阶段状态及双端配置")
+			fail(wgV2FailureMessage(err))
 			return
 		}
 		reply(CommandResult{Type: "result", Status: "ok", Data: data})

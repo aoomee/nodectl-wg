@@ -1879,12 +1879,28 @@
                         >
                             <div
                                 style="
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 6px;
                                     font-size: 12px;
                                     font-weight: 600;
                                     color: #333;
                                 "
                             >
-                                📚 wirearc Tunnel 列表
+                                <svg
+                                    width="14"
+                                    height="14"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="#007aff"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path>
+                                </svg>
+                                <span>WireArc Tunnel 列表</span>
                             </div>
                             <button
                                 class="cft-btn cft-btn-secondary"
@@ -1910,7 +1926,7 @@
                                 id="cft-tunnel-list-empty"
                                 style="font-size: 12px; color: #888"
                             >
-                                点击“查询”后显示名称以 wirearc 开头的 Tunnel。
+                                点击“查询”后显示 WireArc 管理的面板及 Argo 节点 Tunnel。
                             </div>
                             <div
                                 id="cft-tunnel-list-wrap"
@@ -1942,96 +1958,6 @@
                                         </tr>
                                     </thead>
                                     <tbody id="cft-tunnel-list-tbody"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div
-                        style="
-                            border: 1px solid #e5eaf3;
-                            border-radius: 10px;
-                            overflow: hidden;
-                            margin-top: 10px;
-                        "
-                    >
-                        <div
-                            style="
-                                display: flex;
-                                justify-content: space-between;
-                                align-items: center;
-                                padding: 10px 12px;
-                                background: #fafcff;
-                            "
-                        >
-                            <div
-                                style="
-                                    font-size: 12px;
-                                    font-weight: 600;
-                                    color: #333;
-                                "
-                            >
-                                📦 nodetunnel Tunnel 列表
-                            </div>
-                            <button
-                                class="cft-btn cft-btn-secondary"
-                                type="button"
-                                onclick="
-                                    event.stopPropagation();
-                                    cftQueryNodetunnelTunnels();
-                                "
-                                style="padding: 6px 12px"
-                            >
-                                查询
-                            </button>
-                        </div>
-                        <div
-                            id="cft-nodetunnel-list-body"
-                            style="
-                                display: none;
-                                padding: 10px 12px;
-                                background: #fff;
-                            "
-                        >
-                            <div
-                                id="cft-nodetunnel-list-empty"
-                                style="font-size: 12px; color: #888"
-                            >
-                                点击"查询"后显示名称以 nodetunnel 开头的节点专属
-                                Tunnel。
-                            </div>
-                            <div
-                                id="cft-nodetunnel-list-wrap"
-                                style="
-                                    display: none;
-                                    border: 1px solid #e5e5ea;
-                                    border-radius: 8px;
-                                    overflow: hidden;
-                                    margin-top: 8px;
-                                "
-                            >
-                                <table class="cft-perm-table">
-                                    <thead>
-                                        <tr>
-                                            <th>名称</th>
-                                            <th style="width: 220px">
-                                                Tunnel ID
-                                            </th>
-                                            <th style="width: 120px">状态</th>
-                                            <th style="width: 170px">
-                                                创建时间
-                                            </th>
-                                            <th
-                                                class="center"
-                                                style="width: 90px"
-                                            >
-                                                操作
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody
-                                        id="cft-nodetunnel-list-tbody"
-                                    ></tbody>
                                 </table>
                             </div>
                         </div>
@@ -4710,84 +4636,62 @@
         tbody.innerHTML = "";
 
         try {
-            const res = await fetch("/api/cf/tunnel/list?prefix=wirearc");
-            const json = await res.json();
-            if (json.status !== "success") {
-                emptyEl.textContent = json.message || "查询失败";
+            const [panelRes, nodeRes] = await Promise.all([
+                fetch("/api/cf/tunnel/list?prefix=wirearc"),
+                fetch("/api/cf/tunnel/list?prefix=nodetunnel"),
+            ]);
+            const [panelJson, nodeJson] = await Promise.all([
+                panelRes.json(),
+                nodeRes.json(),
+            ]);
+
+            if (panelJson.status !== "success" && nodeJson.status !== "success") {
+                emptyEl.textContent =
+                    panelJson.message || nodeJson.message || "查询失败";
                 return;
             }
 
-            const list = Array.isArray(json.data) ? json.data : [];
-            if (list.length === 0) {
-                emptyEl.textContent = "未找到 wirearc 前缀 Tunnel";
+            const seen = new Set();
+            const merged = [];
+            const appendItems = (rawList, kind) => {
+                if (!Array.isArray(rawList)) return;
+                for (const item of rawList) {
+                    const id = String(item.id || "");
+                    if (id && seen.has(id)) continue;
+                    if (id) seen.add(id);
+                    merged.push({ ...item, _kind: kind });
+                }
+            };
+            if (panelJson.status === "success") appendItems(panelJson.data, "panel");
+            if (nodeJson.status === "success") appendItems(nodeJson.data, "node");
+
+            if (merged.length === 0) {
+                emptyEl.textContent =
+                    "未找到 WireArc 管理的 Tunnel（面板 / Argo 节点）";
                 return;
             }
 
-            tbody.innerHTML = list
+            tbody.innerHTML = merged
                 .map((item) => {
                     const id = String(item.id || "");
                     const name = String(item.name || "-");
                     const status = String(item.status || "-");
                     const created = String(item.created_at || "-");
+                    const safeID = cftEscapeHtml(id);
+                    const safeName = cftEscapeHtml(name);
+                    const safeStatus = cftEscapeHtml(status);
+                    const safeCreated = cftEscapeHtml(created);
+                    const kindTag =
+                        item._kind === "node"
+                            ? '<span style="display:inline-block;margin-right:6px;padding:1px 6px;border-radius:999px;font-size:10px;font-weight:600;background:#f3e8ff;color:#7e22ce;">节点</span>'
+                            : '<span style="display:inline-block;margin-right:6px;padding:1px 6px;border-radius:999px;font-size:10px;font-weight:600;background:#e8f3ff;color:#0066d6;">面板</span>';
                     return `
                 <tr>
-                    <td>${name}</td>
-                    <td style="font-size:10px; word-break:break-all;">${id}</td>
-                    <td>${status}</td>
-                    <td style="font-size:11px;">${created}</td>
-                    <td class="center"><button class="cft-btn cft-btn-danger" style="padding:4px 8px;" onclick="cftDeleteTunnelByID('${id}', '${name.replace(/'/g, "\\'")}')">删除</button></td>
-                </tr>
-            `;
-                })
-                .join("");
-
-            emptyEl.style.display = "none";
-            wrapEl.style.display = "block";
-        } catch (e) {
-            emptyEl.textContent = "请求失败";
-        }
-    }
-
-    async function cftQueryNodetunnelTunnels() {
-        const emptyEl = document.getElementById("cft-nodetunnel-list-empty");
-        const wrapEl = document.getElementById("cft-nodetunnel-list-wrap");
-        const tbody = document.getElementById("cft-nodetunnel-list-tbody");
-        const body = document.getElementById("cft-nodetunnel-list-body");
-        if (!emptyEl || !wrapEl || !tbody || !body) return;
-
-        body.style.display = "block";
-        emptyEl.style.display = "block";
-        emptyEl.textContent = "查询中...";
-        wrapEl.style.display = "none";
-        tbody.innerHTML = "";
-
-        try {
-            const res = await fetch("/api/cf/tunnel/list?prefix=nodetunnel");
-            const json = await res.json();
-            if (json.status !== "success") {
-                emptyEl.textContent = json.message || "查询失败";
-                return;
-            }
-
-            const list = Array.isArray(json.data) ? json.data : [];
-            if (list.length === 0) {
-                emptyEl.textContent = "未找到 nodetunnel 前缀 Tunnel";
-                return;
-            }
-
-            tbody.innerHTML = list
-                .map((item) => {
-                    const id = String(item.id || "");
-                    const name = String(item.name || "-");
-                    const status = String(item.status || "-");
-                    const created = String(item.created_at || "-");
-                    return `
-                <tr>
-                    <td>${name}</td>
-                    <td style="font-size:10px; word-break:break-all;">${id}</td>
-                    <td>${status}</td>
-                    <td style="font-size:11px;">${created}</td>
-                    <td class="center"><button class="cft-btn cft-btn-danger" style="padding:4px 8px;" onclick="cftDeleteTunnelByID('${id}', '${name.replace(/'/g, "\\'")}')">删除</button></td>
+                    <td>${kindTag}${safeName}</td>
+                    <td style="font-size:10px; word-break:break-all;">${safeID}</td>
+                    <td>${safeStatus}</td>
+                    <td style="font-size:11px;">${safeCreated}</td>
+                    <td class="center"><button class="cft-btn cft-btn-danger" style="padding:4px 8px;" data-tunnel-id="${safeID}" data-tunnel-name="${safeName}" onclick="cftDeleteTunnelByID(this.dataset.tunnelId, this.dataset.tunnelName)">删除</button></td>
                 </tr>
             `;
                 })
@@ -4818,7 +4722,6 @@
             if (json.status === "success") {
                 cftShowSaveIndicator("success", "Tunnel 已删除");
                 cftQueryWireArcTunnels();
-                cftQueryNodetunnelTunnels();
                 cftLoadStatus();
                 cftLoadSettings();
             } else {

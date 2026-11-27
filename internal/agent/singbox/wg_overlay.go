@@ -15,6 +15,14 @@ import (
 	"strings"
 )
 
+var (
+	// ErrWGRouteStale indicates a stale revision, fenced direct tombstone, or
+	// unrelated pair attempting to mutate an existing WG route guard.
+	ErrWGRouteStale = errors.New("stale or unrelated WG route command")
+	// ErrWGConfigCheck indicates `sing-box check` rejected the candidate config.
+	ErrWGConfigCheck = errors.New("sing-box candidate check failed")
+)
+
 // WGRoute is a private, durable route intent. Password is a secret: callers must
 // redact it before returning route state to an API or logging it.
 type WGRoute struct {
@@ -127,10 +135,12 @@ func (cm *ConfigManager) GetWGRoute() (*WGRoute, error) {
 }
 
 // SetWGRoute atomically persists an intent and authorizes active mode only in
-// this process. Revisions are monotonic; pair replacement requires a newer
-// revision after an explicit direct tombstone. Same-revision guard transitions
-// preserve endpoint identity, except the initial empty blocked guard may acquire
-// its endpoint once. A direct tombstone cannot be reactivated at its revision.
+// this process. Revisions are monotonic per pair; a new pair may supersede an
+// explicit direct tombstone starting from a blocked guard at any nonzero
+// revision (for example revision 1 after node or panel recreation).
+// Same-revision guard transitions preserve endpoint identity, except the
+// initial empty blocked guard may acquire its endpoint once. A direct tombstone
+// cannot be reactivated at its own revision for the same pair.
 func (cm *ConfigManager) SetWGRoute(r WGRoute) error {
 	cm.wgMu.Lock()
 	defer cm.wgMu.Unlock()
@@ -143,25 +153,26 @@ func (cm *ConfigManager) SetWGRoute(r WGRoute) error {
 		return err
 	}
 	if old != nil {
-		if r.Revision < old.Revision {
-			return errors.New("stale WG route revision")
-		}
-		if r.PairID != old.PairID && (old.Mode != "direct" || r.Revision <= old.Revision || r.Mode != "blocked") {
-			return errors.New("WG route pair mismatch")
-		}
-		if r.Revision == old.Revision {
-			if old.Mode == "direct" && r.Mode != "direct" {
-				return errors.New("WG direct tombstone fences this revision")
+		if r.PairID == old.PairID {
+			if r.Revision < old.Revision {
+				return fmt.Errorf("%w: stale WG route revision", ErrWGRouteStale)
 			}
-			if r.Mode != "direct" {
-				a, b := *old, r
-				a.Mode = ""
-				b.Mode = ""
-				emptyGuard := old.Mode == "blocked" && old.Interface == "" && old.Server == "" && old.Port == 0 && old.Method == "" && old.Password == "" && (old.SourceDigest == "" || old.SourceDigest == r.SourceDigest)
-				if a != b && !emptyGuard {
-					return errors.New("WG endpoint changed at the same revision")
+			if r.Revision == old.Revision {
+				if old.Mode == "direct" && r.Mode != "direct" {
+					return fmt.Errorf("%w: WG direct tombstone fences this revision", ErrWGRouteStale)
+				}
+				if r.Mode != "direct" {
+					a, b := *old, r
+					a.Mode = ""
+					b.Mode = ""
+					emptyGuard := old.Mode == "blocked" && old.Interface == "" && old.Server == "" && old.Port == 0 && old.Method == "" && old.Password == "" && (old.SourceDigest == "" || old.SourceDigest == r.SourceDigest)
+					if a != b && !emptyGuard {
+						return errors.New("WG endpoint changed at the same revision")
+					}
 				}
 			}
+		} else if old.Mode != "direct" || r.Mode != "blocked" {
+			return fmt.Errorf("%w: WG route pair mismatch", ErrWGRouteStale)
 		}
 	}
 	if r.Mode == "active" && (cm.Protocols == nil || !cm.Protocols.IsEnabled(ProtoReality)) {

@@ -15,10 +15,15 @@ import (
 // its command mutex and own the topology lease. Success verifies process liveness
 // only, not end-to-end connectivity through the remote Shadowsocks server.
 func (m *Manager) ApplyWGRoute(ctx context.Context, route WGRoute) error {
-	// A delayed command must not stop or fence a newer authorized configuration.
+	// A delayed command must not stop or fence a newer authorized configuration
+	// or a completed direct release tombstone.
 	if current, err := m.config.GetWGRoute(); err == nil && current != nil {
-		if route.Revision < current.Revision || (route.PairID != current.PairID && current.Mode != "direct") {
-			return errors.New("stale or unrelated WG route command")
+		if route.PairID == current.PairID {
+			if route.Revision < current.Revision || (route.Revision == current.Revision && current.Mode == "direct" && route.Mode != "direct") {
+				return ErrWGRouteStale
+			}
+		} else if current.Mode != "direct" || route.Mode != "blocked" {
+			return ErrWGRouteStale
 		}
 	}
 	if err := m.config.SetWGRoute(route); err != nil {
@@ -57,7 +62,7 @@ func (m *Manager) checkWGConfig(ctx context.Context, data []byte) error {
 	// Do not surface binary output: invalid configuration diagnostics may contain
 	// credentials. The caller receives only the exit/context error.
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("sing-box candidate check failed: %w", err)
+		return fmt.Errorf("%w: %v", ErrWGConfigCheck, err)
 	}
 	return nil
 }

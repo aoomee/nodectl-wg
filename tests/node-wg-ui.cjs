@@ -50,7 +50,7 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
    });
    const open=async(uuid='a')=>{await page.evaluate(uuid=>openEditModal(uuid),uuid);await page.waitForFunction(()=>nodeWGEditor.loaded);await page.waitForFunction(()=>!isInitializingEdit);};
    const push=async()=>{await page.locator('#btnPushConfig').click();await page.locator('#btnPushConfig').click();await page.waitForFunction(()=>!nodeWGEditor.busy);};
-   const selectWG=async(peer='b')=>{await page.locator('#nodeWGMode').selectOption('wg');await page.locator('#nodeWGPeer').selectOption(peer);};
+   const selectWG=async(peer='b')=>{if(!(await page.locator('#nodeWGCard').isVisible()))await page.locator('#nodeWGToggle').click();await page.locator('#nodeWGMode').selectOption('wg');await page.locator('#nodeWGPeer').selectOption(peer);};
    const complete=async(status='ok')=>{await page.waitForFunction(()=>streams.length>0);await page.evaluate(status=>streams.at(-1).onmessage({data:JSON.stringify({type:'result',status})}),status);};
    await page.goto('https://wg-editor.test/');await open();
    await page.locator('.segment-option[data-type="1"]').focus();await page.keyboard.press('Space');
@@ -67,19 +67,26 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
    await page.evaluate(()=>{ nodeWGEditor.baseline = nodeWGOrdinarySnapshot(); });
 
    assert.equal(await page.locator('.protocol-card[data-proto="reality"] #nodeWGCard').count(),1);
+   assert.equal(await page.locator('#nodeWGToggle').isVisible(),true,'entry REALITY shows compact outbound chip');
+   assert.equal(await page.locator('#nodeWGCard').isVisible(),false,'pure direct entry keeps WG panel collapsed by default');
    assert.equal(await page.locator('#nodeWGPort').count(),0);
    assert.equal(await page.locator('#protocolListContainer .protocol-card').count(),1);
    await page.evaluate(()=>showAddProtocolMenu());assert.ok(!(await page.locator('#protoSelectList').innerText()).includes('WG'));
    await page.evaluate(()=>document.getElementById('protoSelectOverlay').style.display='none');
+   await page.locator('#nodeWGToggle').click();
+   assert.equal(await page.locator('#nodeWGCard').isVisible(),true,'clicking outbound chip expands WG panel');
    const box=await page.locator('#nodeWGCard').boundingBox();assert.ok(box.x>=-1 && box.x+box.width<=width+1,'outbound must fit viewport');
 
-   // Minimalist de-texted WG card: no redundant tutorial drawers or manual enrollment buttons.
+   // Minimalist de-texted WG card: header readiness pill hides setup drawer when ready.
    assert.equal(await page.locator('#nodeWGPeerField').isVisible(),false,'direct must hide landing controls');
    assert.equal(await page.locator('#nodeWGSetupDetails').count(),0);
    assert.equal(await page.locator('#nodeWGUsage').count(),0);
    assert.equal(await page.locator('#nodeWGBind').count(),0,'direct Agent WG requires no manual enrollment button');
    assert.equal(await page.locator('#nodeWGRefresh').isVisible(),true);
+   assert.equal(await page.locator('#nodeWGSetup').isVisible(),false,'ready setup drawer stays hidden in right column');
    assert.equal(await page.locator('#nodeWGSetup').evaluate(e=>e.classList.contains('is-compact')),true,'ready setup card stays compact');
+   await page.locator('#nodeWGToggle').click();
+   assert.equal(await page.locator('#nodeWGCard').isVisible(),false,'clicking outbound chip again collapses WG panel');
    await page.locator('#nodeWGRefresh').focus();
    assert.equal(await page.evaluate(()=>document.activeElement.id),'nodeWGRefresh');
    await page.locator('#nodeWGRefresh').evaluate(e=>e.blur());
@@ -97,6 +104,7 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
    diagnostics=true;ready=false;unavailablePeer=true;await page.evaluate(()=>loadNodeWGEditor('a'));
    assert.equal(await page.locator('#nodeWGChecks .node-wg-check').count(),1,'only failing checks are shown');
    assert.match(await page.locator('#nodeWGChecks').innerText(),/Agent 未连接/);
+   if(!(await page.locator('#nodeWGCard').isVisible()))await page.locator('#nodeWGToggle').click();
    await page.locator('#nodeWGMode').selectOption('wg');
    assert.equal(await page.locator('#nodeWGPeer option[value="c"]').isDisabled(),true);
    await page.locator('#nodeWGPeerIssues summary').click();
@@ -122,6 +130,7 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
    await complete();await page.waitForFunction(()=>!nodeWGEditor.ordinaryPending);await page.evaluate(()=>closeCmdLogPanel());
    await selectWG();await push();await page.waitForFunction(()=>nodeWGEditor.pair?.status==='active');
    assert.deepEqual(requests[0],{uuid:'a',peer_uuid:'b',entry_port:443,revision:1,enabled:true});
+   assert.equal(await page.locator('#nodeWGRefresh').isDisabled(),false,'header refresh pill must re-enable after push');
    await push();assert.equal(requests.length,1,'unchanged active is a no-op');assert.equal(ordinary.length,1);
 
    // Refresh/poll preserves both unsaved mode and peer, even while pair is active.
@@ -199,11 +208,13 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
    await push();assert.equal(requests.length,before);await page.locator('#nodeWGCleanup').click();await page.waitForFunction(()=>nodeWGEditor.pair.status==='disabled');
    assert.equal(requests.at(-1).enabled,false);
 
-   // Landing shows compact readiness bar without fake WG card; empty protocol placeholder clears on insert.
+   // Landing shows header readiness pill without fake WG card or right-column setup noise.
    await page.evaluate(()=>closeEditModal());await open('b');
    assert.equal(await page.locator('#nodeWGCard').count(),0);
+   assert.equal(await page.locator('#nodeWGToggle').count(),0);
+   assert.equal(await page.locator('#nodeWGSetup').isVisible(),false,'ready landing hides right-column setup drawer');
    assert.equal(await page.locator('#nodeWGSetupBadge').innerText(),'落地就绪');
-   const overflow=await page.locator('#editNodeModal').evaluate(e=>Array.from(e.querySelectorAll('#nodeWGSetup, .edit-footer')).some(el=>el.scrollWidth>el.clientWidth+1));
+   const overflow=await page.locator('#editNodeModal').evaluate(e=>Array.from(e.querySelectorAll('.edit-header, #nodeWGSetup, .edit-footer')).some(el=>el.scrollWidth>el.clientWidth+1));
    assert.equal(overflow,false,'readiness bar and footer must fit narrow screens');
    await page.evaluate(()=>closeEditModal());
    assert.deepEqual(errors,[]);await page.close();

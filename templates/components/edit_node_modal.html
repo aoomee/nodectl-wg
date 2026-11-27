@@ -147,6 +147,18 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .edit-header-right {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-left: auto;
+        max-width: 100%;
+        flex-shrink: 0;
     }
 
     .edit-title-area {
@@ -429,6 +441,8 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+        gap: 6px 8px;
+        flex-wrap: wrap;
         padding: 10px 12px;
         background: #fafbfc;
         border-bottom: 1px solid #f0f0f5;
@@ -444,6 +458,8 @@
     .proto-title {
         display: flex;
         align-items: center;
+        gap: 6px;
+        min-width: 0;
     }
 
     .proto-badge {
@@ -674,7 +690,7 @@
 
     .proto-chevron {
         transition: transform 0.2s;
-        margin-right: 6px;
+        flex-shrink: 0;
         color: #999;
     }
 
@@ -837,6 +853,9 @@
     /* 移动端 */
     @media (max-width: 768px) {
         .edit-left-col, .edit-right-col { box-sizing: border-box; min-width: 0; }
+        .edit-header {
+            padding: 12px 16px;
+        }
         .edit-modal-card {
             max-width: 95%;
             height: 85vh;
@@ -948,6 +967,112 @@
     .cmd-log-body .line.error-detail { color: #f38ba8; padding: 2px 0; }
     .cmd-log-body .line.success { color: #a6e3a1; }
     .cmd-log-body .line.info-highlight { color: #89b4fa; }
+
+    /* ================= 添加协议紧凑选择器 ================= */
+    #protoSelectList {
+        background: #ffffff;
+        padding: 14px 16px 16px;
+        border-radius: 22px;
+        box-shadow: 0 22px 54px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.05);
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        width: 408px;
+        max-width: 92vw;
+        max-height: 76vh;
+        overflow-y: auto;
+        box-sizing: border-box;
+        animation: fadeIn 0.15s ease;
+    }
+    .proto-picker-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+    .proto-picker-title {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 13.5px;
+        font-weight: 700;
+        color: #1d1d1f;
+    }
+    .proto-picker-close {
+        width: 24px;
+        height: 24px;
+        border: none;
+        border-radius: 999px;
+        background: #f2f3f7;
+        color: #6e6e73;
+        font-size: 12px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.15s, color 0.15s;
+    }
+    .proto-picker-close:hover {
+        background: #e5e7ec;
+        color: #1d1d1f;
+    }
+    .proto-picker-group + .proto-picker-group {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    .proto-picker-group-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: #8e8e93;
+        margin-bottom: 6px;
+        padding-left: 2px;
+    }
+    .proto-picker-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+    }
+    .proto-picker-item {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        height: 32px;
+        padding: 0 8px;
+        border: 1px solid transparent;
+        border-radius: 10px;
+        background: #f5f6f8;
+        color: #1d1d1f;
+        font-size: 11.5px;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+        overflow: hidden;
+        transition: background-color 0.15s, border-color 0.15s, color 0.15s, transform 0.12s;
+    }
+    .proto-picker-item:hover:not(:disabled) {
+        background: #eaf4ff;
+        border-color: rgba(0, 122, 255, 0.25);
+        color: #007aff;
+    }
+    .proto-picker-item:active:not(:disabled) {
+        transform: scale(0.98);
+    }
+    .proto-picker-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+    .proto-picker-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    @media (max-width: 440px) {
+        .proto-picker-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
 </style>
 
 <div class="edit-modal-overlay" id="editNodeModal">
@@ -957,12 +1082,14 @@
             <div class="edit-title-area">
                 <div class="edit-title">编辑节点配置</div>
             </div>
-            <div class="edit-save-indicator" id="editSaveIndicator">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M20 6L9 17l-5-5"></path>
-                </svg>
-                已保存
+            <div class="edit-header-right" id="editHeaderRight">
+                <div class="edit-save-indicator" id="editSaveIndicator">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 6L9 17l-5-5"></path>
+                    </svg>
+                    已保存
+                </div>
             </div>
         </div>
 
@@ -1188,10 +1315,7 @@
 <div id="protoSelectOverlay"
     style="display: none; position: fixed; top:0; left:0; width:100%; height:100%; z-index: 3100; justify-content:center; align-items:center; background:rgba(15,15,20,0.28); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);"
     onclick="this.style.display='none'">
-    <div id="protoSelectList"
-        style="background:#ffffff; padding:16px; border-radius:22px; box-shadow:0 20px 50px rgba(0,0,0,0.18); border: 1px solid rgba(0,0,0,0.06); width: 320px; max-width:90vw; max-height:70vh; overflow-y:auto; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; animation: fadeIn 0.15s;"
-        onclick="event.stopPropagation()">
-    </div>
+    <div id="protoSelectList" onclick="event.stopPropagation()"></div>
 </div>
 
 <script id="global-protocols-data" type="application/json">
@@ -1209,9 +1333,15 @@
         if (e.target === editModalEl) closeEditModal();
     });
 
-    // ESC 键关闭
+    // ESC 键关闭（优先关闭协议选择器浮层，再关闭编辑弹窗）
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && editModalEl.classList.contains('active')) closeEditModal();
+        if (e.key !== 'Escape') return;
+        const protoOverlay = document.getElementById('protoSelectOverlay');
+        if (protoOverlay && protoOverlay.style.display !== 'none') {
+            protoOverlay.style.display = 'none';
+            return;
+        }
+        if (editModalEl.classList.contains('active')) closeEditModal();
     });
 
     let originalRoutingType = 1;
@@ -1614,6 +1744,7 @@
             // 第二次点击：执行删除
             const card = btn.closest('.protocol-card');
             card.remove();
+            if (typeof renderNodeWGCard === 'function') renderNodeWGCard();
             const container = document.getElementById('protocolListContainer');
             if (container && container.querySelectorAll('.protocol-card').length === 0 && !container.querySelector('.security-warning-bar') && !container.querySelector('.proto-empty-state')) {
                 container.innerHTML += `<div class="proto-empty-state">暂无协议配置，点击下方添加协议</div>`;
@@ -2250,6 +2381,8 @@
     }
 
     function closeEditModal() {
+        const protoOverlay = document.getElementById('protoSelectOverlay');
+        if (protoOverlay) protoOverlay.style.display = 'none';
         if (typeof resetNodeWGEditor === 'function') resetNodeWGEditor();
         clearTimeout(editNodeAutoSaveTimer); editNodeAutoSaveTimer = null;
         clearTimeout(_pushConfigConfirmTimer); resetPushConfigBtn();
@@ -2291,7 +2424,7 @@
     function showAddProtocolMenu() {
         const container = document.getElementById('protocolListContainer');
         const listEl = document.getElementById('protoSelectList');
-        listEl.innerHTML = '<div style="grid-column:1 / -1; font-size:12px; color:#6e6e73; margin-bottom:4px; padding-left:4px; font-weight: 600;">选择协议类型</div>';
+        const overlay = document.getElementById('protoSelectOverlay');
 
         const existingProtos = new Set();
         container.querySelectorAll('.protocol-card').forEach(card => {
@@ -2305,28 +2438,65 @@
             return;
         }
 
-        availableProtos.forEach(proto => {
-            const item = document.createElement('div');
-            item.innerText = proto.toUpperCase();
-            item.style.padding = '10px 12px';
-            item.style.cursor = 'pointer';
-            item.style.borderRadius = '12px';
-            item.style.fontSize = '12.5px';
-            item.style.fontWeight = '600';
-            item.style.color = '#1d1d1f';
-            item.style.background = '#f5f6f8';
-            item.style.textAlign = 'center';
-            item.style.transition = 'background-color 0.15s, color 0.15s';
-            item.onmouseover = () => { item.style.background = '#eaf4ff'; item.style.color = '#007aff'; };
-            item.onmouseout = () => { item.style.background = '#f5f6f8'; item.style.color = '#1d1d1f'; };
-            item.onclick = () => {
-                insertProtocolCard(proto);
-                document.getElementById('protoSelectOverlay').style.display = 'none';
-            };
-            listEl.appendChild(item);
+        listEl.replaceChildren();
+
+        const head = document.createElement('div');
+        head.className = 'proto-picker-head';
+        head.innerHTML = `
+            <div class="proto-picker-title">
+                <span>选择协议类型</span>
+            </div>
+            <button type="button" class="proto-picker-close" aria-label="关闭" onclick="document.getElementById('protoSelectOverlay').style.display='none'">✕</button>
+        `;
+        listEl.appendChild(head);
+
+        const baseProtos = availableProtos.filter(p => !p.includes('_'));
+        const transportProtos = availableProtos.filter(p => p.includes('_'));
+        const groups = [];
+        if (baseProtos.length > 0) groups.push({ label: '基础协议', items: baseProtos });
+        if (transportProtos.length > 0) groups.push({ label: '传输 / TLS 协议', items: transportProtos });
+
+        groups.forEach(group => {
+            const section = document.createElement('div');
+            section.className = 'proto-picker-group';
+            if (groups.length > 1) {
+                const label = document.createElement('div');
+                label.className = 'proto-picker-group-label';
+                label.textContent = group.label;
+                section.appendChild(label);
+            }
+
+            const grid = document.createElement('div');
+            grid.className = 'proto-picker-grid';
+
+            group.items.forEach(proto => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'proto-picker-item';
+                btn.title = `添加 ${proto.toUpperCase()}`;
+
+                const dotColor = (window.getProtoColor && window.getProtoColor(proto)?.text) || '#8e8e93';
+                const dot = document.createElement('span');
+                dot.className = 'proto-picker-dot';
+                dot.style.background = dotColor;
+
+                const name = document.createElement('span');
+                name.className = 'proto-picker-name';
+                name.textContent = proto.toUpperCase();
+
+                btn.append(dot, name);
+                btn.onclick = () => {
+                    insertProtocolCard(proto);
+                    overlay.style.display = 'none';
+                };
+                grid.appendChild(btn);
+            });
+
+            section.appendChild(grid);
+            listEl.appendChild(section);
         });
 
-        document.getElementById('protoSelectOverlay').style.display = 'flex';
+        overlay.style.display = 'flex';
     }
 
     function insertProtocolCard(proto) {

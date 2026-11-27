@@ -420,10 +420,26 @@ main() {
     local DATA_DIR="/var/lib/wirearc-agent"
     local LOG_DIR="/var/log"
 
+    # 读取旧配置中的 install_id（用于判断是否为切换节点/重新绑定新面板）
+    local PREV_INSTALL_ID=""
+    for old_cfg in "${CONFIG_DIR}/config.json" "/etc/nodectl-agent/config.json"; do
+        if [ -f "$old_cfg" ]; then
+            PREV_INSTALL_ID=$(sed -n 's/.*"install_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$old_cfg" 2>/dev/null | head -n 1 || true)
+            if [ -n "$PREV_INSTALL_ID" ]; then
+                break
+            fi
+        fi
+    done
+
     # 平滑迁移旧版数据目录（复用已有 sing-box、protocols.json、WG 状态与证书；若存在半迁移空目录先清理再迁移）
     if [ -d "/var/lib/nodectl-agent" ] && [ ! -f "$DATA_DIR/sing-box" ]; then
         rm -rf "$DATA_DIR"
         mv /var/lib/nodectl-agent "$DATA_DIR" 2>/dev/null || true
+    fi
+
+    # 若以全新的 install_id 重新安装（换绑新面板或重建节点），清理旧节点遗留的 WG 路由守卫文件，避免阻塞新配对
+    if [ -n "$PREV_INSTALL_ID" ] && [ "$PREV_INSTALL_ID" != "$INSTALL_ID" ]; then
+        rm -f "$DATA_DIR/singbox-config.json.wg-route.json"
     fi
 
     info "正在下载 wirearc-agent..."

@@ -2211,12 +2211,14 @@
                 cursor: pointer;
                 transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
             }
-            [class$="-modal-card"] .traffic-input-group select {
+            [class$="-modal-card"] .traffic-input-group select,
+            [class$="-modal-card"] .add-traffic-input-group select {
                 border: none !important;
                 border-radius: 0 !important;
                 background-color: transparent !important;
                 background-image: none !important;
-                padding-right: 24px !important;
+                box-shadow: none !important;
+                padding-right: 28px !important;
             }
             [class$="-modal-card"] select:hover:not(:disabled) {
                 border-color: rgba(0, 122, 255, 0.35);
@@ -2232,16 +2234,19 @@
                 border-radius: 14px;
                 transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
             }
-            [class$="-modal-card"] .traffic-input-group input {
-                border-radius: 0;
+            [class$="-modal-card"] .traffic-input-group input,
+            [class$="-modal-card"] .add-traffic-input-group input {
+                border-radius: 0 !important;
             }
             [class$="-modal-card"] input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="range"]):focus,
             [class$="-modal-card"] textarea:focus {
                 border-color: #007aff;
                 box-shadow: 0 0 0 3.5px rgba(0, 122, 255, 0.14);
             }
-            [class$="-modal-card"] .traffic-input-group input:focus {
-                box-shadow: none;
+            [class$="-modal-card"] .traffic-input-group input:focus,
+            [class$="-modal-card"] .add-traffic-input-group input:focus {
+                border: none !important;
+                box-shadow: none !important;
             }
             @media (max-width: 768px) {
                 [class$="-modal-card"] {

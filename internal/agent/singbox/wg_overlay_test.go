@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -363,5 +364,64 @@ func TestWGStartRewritesStoredActiveAfterRestart(t *testing.T) {
 	data, _ := os.ReadFile(m.configPath)
 	if !bytes.Contains(data, []byte(`"reject"`)) || bytes.Contains(data, []byte(`"wg-ss-out"`)) {
 		t.Fatal("restart reused active config")
+	}
+}
+
+func TestWGNewPairSupersedesHigherRevisionDirectTombstone(t *testing.T) {
+	m := fakeManager(t)
+	// Simulate an old pair cleanly released to direct at revision 21 (e.g. before
+	// panel redeployment or node recreation).
+	oldDirect := WGRoute{PairID: "409994678d6cbf80328306a6", Revision: 21, Mode: "direct"}
+	if err := m.config.SetWGRoute(oldDirect); err != nil {
+		t.Fatalf("seed old direct tombstone: %v", err)
+	}
+
+	// Same pair at stale/same revision must remain fenced.
+	for _, rev := range []uint64{1, 21} {
+		err := m.ApplyWGRoute(context.Background(), WGRoute{PairID: oldDirect.PairID, Revision: rev, Mode: "blocked"})
+		if !errors.Is(err, ErrWGRouteStale) {
+			t.Fatalf("expected ErrWGRouteStale for same pair rev=%d, got %v", rev, err)
+		}
+	}
+
+	// New pair cannot jump straight to active or direct without starting from blocked guard.
+	newPairID := "7efe85e4ad2c95b8c2a7c5f2"
+	badActive := activeRoute()
+	badActive.PairID = newPairID
+	badActive.Revision = 1
+	if err := m.ApplyWGRoute(context.Background(), badActive); !errors.Is(err, ErrWGRouteStale) {
+		t.Fatalf("expected ErrWGRouteStale when new pair skips guard, got %v", err)
+	}
+	if err := m.ApplyWGRoute(context.Background(), WGRoute{PairID: newPairID, Revision: 1, Mode: "direct"}); !errors.Is(err, ErrWGRouteStale) {
+		t.Fatalf("expected ErrWGRouteStale when new pair writes direct directly, got %v", err)
+	}
+
+	// New pair starting from revision 1 blocked guard cleanly supersedes the direct tombstone.
+	guard := WGRoute{PairID: newPairID, Revision: 1, Mode: "blocked"}
+	if err := m.ApplyWGRoute(context.Background(), guard); err != nil {
+		t.Fatalf("new pair rev=1 guard must supersede old rev=21 direct tombstone: %v", err)
+	}
+	assertBlocked(t, m.config)
+
+	// While the new pair is blocked/active, another unrelated pair must still be rejected
+	// without disturbing the running process.
+	otherGuard := WGRoute{PairID: "aaaaaaaaaaaaaaaaaaaaaaaa", Revision: 1, Mode: "blocked"}
+	if err := m.ApplyWGRoute(context.Background(), otherGuard); !errors.Is(err, ErrWGRouteStale) {
+		t.Fatalf("expected ErrWGRouteStale for unrelated pair during active guard, got %v", err)
+	}
+	if !m.IsRunning() {
+		t.Fatal("unrelated pair command stopped running sing-box")
+	}
+
+	// New pair can proceed blocked -> active (rev 1) -> direct (rev 2).
+	active := activeRoute()
+	active.PairID = newPairID
+	active.Revision = 1
+	active.SourceDigest = m.config.RealityConfigDigest()
+	if err := m.ApplyWGRoute(context.Background(), active); err != nil {
+		t.Fatalf("new pair activate failed: %v", err)
+	}
+	if err := m.ApplyWGRoute(context.Background(), WGRoute{PairID: newPairID, Revision: 2, Mode: "direct"}); err != nil {
+		t.Fatalf("new pair release to direct failed: %v", err)
 	}
 }

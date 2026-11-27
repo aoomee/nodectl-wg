@@ -22,6 +22,104 @@ type ClashProvider struct {
 	Proxies []*ClashNode `yaml:"proxies"`
 }
 
+const (
+	SubV2RayIncludeLandingKey = "sub_v2ray_include_landing"
+	SubNodeVisibilityKey      = "sub_node_visibility"
+)
+
+// SubscriptionVisibilityConfig 控制订阅中节点的显隐规则（与节点运行态/WG 解耦）
+type SubscriptionVisibilityConfig struct {
+	V2RayIncludeLanding bool            `json:"v2ray_include_landing"`
+	NodeOverrides       map[string]bool `json:"node_overrides"`
+}
+
+// LoadSubscriptionVisibilityConfig 从 SysConfig 读取订阅显隐配置
+func LoadSubscriptionVisibilityConfig() SubscriptionVisibilityConfig {
+	cfg := SubscriptionVisibilityConfig{
+		V2RayIncludeLanding: false,
+		NodeOverrides:       make(map[string]bool),
+	}
+	if database.DB == nil {
+		return cfg
+	}
+	var rows []database.SysConfig
+	if err := database.DB.Where("key IN ?", []string{SubV2RayIncludeLandingKey, SubNodeVisibilityKey}).Find(&rows).Error; err != nil {
+		return cfg
+	}
+	for _, row := range rows {
+		switch row.Key {
+		case SubV2RayIncludeLandingKey:
+			cfg.V2RayIncludeLanding = strings.EqualFold(strings.TrimSpace(row.Value), "true")
+		case SubNodeVisibilityKey:
+			if strings.TrimSpace(row.Value) != "" {
+				var parsed map[string]bool
+				if err := json.Unmarshal([]byte(row.Value), &parsed); err == nil && parsed != nil {
+					cfg.NodeOverrides = parsed
+				}
+			}
+		}
+	}
+	return cfg
+}
+
+// ShouldIncludeNodeInV2RaySub 判断节点是否应出现在通用 V2Ray / 小火箭订阅中。
+// 规则：
+//   - 被显式覆盖（NodeOverrides[uuid]）时以用户勾选为准；
+//   - 未覆盖时：直连节点默认导出，落地节点默认隐藏（除非启用 V2RayIncludeLanding）。
+func (c SubscriptionVisibilityConfig) ShouldIncludeNodeInV2RaySub(node database.NodePool, includeLandingOverride *bool) bool {
+	if override, ok := c.NodeOverrides[node.UUID]; ok {
+		return override
+	}
+	if node.RoutingType == 2 {
+		if includeLandingOverride != nil {
+			return *includeLandingOverride
+		}
+		return c.V2RayIncludeLanding
+	}
+	return true
+}
+
+// ShouldIncludeNodeInClashSub 判断节点是否应出现在 Clash 对应分组（1=直连/2=落地）订阅中。
+// 仅当用户在订阅分发中心显式取消勾选（override == false）时隐藏。
+func (c SubscriptionVisibilityConfig) ShouldIncludeNodeInClashSub(nodeUUID string) bool {
+	if override, ok := c.NodeOverrides[nodeUUID]; ok && !override {
+		return false
+	}
+	return true
+}
+
+func formatWGSubscriptionName(node *database.NodePool, useFlag bool) string {
+	baseName := "WG"
+	if node != nil && strings.TrimSpace(node.Name) != "" {
+		baseName = strings.TrimSpace(node.Name)
+		upper := strings.ToUpper(baseName)
+		if !strings.HasSuffix(upper, " WG") && !strings.HasSuffix(upper, "-WG") && !strings.HasSuffix(upper, "_WG") && !strings.HasSuffix(upper, "[WG]") {
+			baseName = baseName + " WG"
+		}
+	}
+	finalName := baseName
+	if useFlag && node != nil && strings.TrimSpace(node.Region) != "" {
+		flag := getEmojiFlag(node.Region)
+		finalName = fmt.Sprintf("%s %s", flag, strings.ReplaceAll(baseName, flag, ""))
+	}
+	return strings.TrimSpace(finalName)
+}
+
+func lookupNodeByUUID(nodes []database.NodePool, uuid string) *database.NodePool {
+	for i := range nodes {
+		if nodes[i].UUID == uuid {
+			return &nodes[i]
+		}
+	}
+	if database.DB != nil && uuid != "" {
+		var n database.NodePool
+		if err := database.DB.First(&n, "uuid = ?", uuid).Error; err == nil {
+			return &n
+		}
+	}
+	return nil
+}
+
 // GenerateRawNodesYAML 动态生成指定路由类型的节点 YAML
 // routingType: 1=直连, 2=落地
 func GenerateRawNodesYAML(routingType int, useFlag bool) (string, error) {
@@ -32,6 +130,8 @@ func GenerateRawNodesYAML(routingType int, useFlag bool) (string, error) {
 		logger.Log.Error("从数据库获取 Raw 节点列表失败", "error", err, "routing_type", routingType)
 		return "", err
 	}
+
+	visCfg := LoadSubscriptionVisibilityConfig()
 
 	var strategyConfig database.SysConfig
 	database.DB.Where("key = ?", "pref_ip_strategy").First(&strategyConfig)
@@ -48,13 +148,20 @@ func GenerateRawNodesYAML(routingType int, useFlag bool) (string, error) {
 
 	for i := range nodes {
 		node := &nodes[i]
+		if !visCfg.ShouldIncludeNodeInClashSub(node.UUID) {
+			continue
+		}
 		if shouldExcludeNodeByTrafficThreshold(node) {
 			continue
 		}
 		realityAllowed := WGRealitySubscriptionAllowed(node.UUID)
+		landingSSBlocked := WGLandingSSSubscriptionBlocked(node.UUID)
 		enabledProtocolCount := 0
 		for p, l := range node.Links {
 			if p == "reality" && !realityAllowed {
+				continue
+			}
+			if p == "ss" && landingSSBlocked {
 				continue
 			}
 			if strings.TrimSpace(l) == "" {
@@ -67,6 +174,9 @@ func GenerateRawNodesYAML(routingType int, useFlag bool) (string, error) {
 
 		for proto, link := range node.Links {
 			if proto == "reality" && !realityAllowed {
+				continue
+			}
+			if proto == "ss" && landingSSBlocked {
 				continue
 			}
 			if strings.TrimSpace(link) == "" {
@@ -157,8 +267,15 @@ func GenerateRawNodesYAML(routingType int, useFlag bool) (string, error) {
 	}
 
 	// Pair-owned links are ephemeral subscription output, never NodePool.Links or CustomNode rows.
-	for _, link := range wgSubscriptionLinks(routingType) {
-		if node := ParseLinkToClashNode(link, ""); node != nil {
+	for _, entry := range wgActiveSubscriptionEntries(routingType) {
+		if !visCfg.ShouldIncludeNodeInClashSub(entry.EntryUUID) {
+			continue
+		}
+		entryNode := lookupNodeByUUID(nodes, entry.EntryUUID)
+		if node := ParseLinkToClashNode(entry.Link, ""); node != nil {
+			if entryNode != nil {
+				node.Name = formatWGSubscriptionName(entryNode, useFlag)
+			}
 			proxyList = append(proxyList, node)
 		}
 	}
@@ -217,14 +334,25 @@ func contains(slice []string, item string) bool {
 	return false
 }
 
-// GenerateV2RaySubBase64 生成通用 Base64 订阅 (包含直连和落地)
+// GenerateV2RaySubBase64 生成通用 Base64 订阅（默认隐藏落地节点，并遵循订阅节点勾选配置）
 func GenerateV2RaySubBase64(useFlag bool) (string, error) {
+	return GenerateV2RaySubBase64WithOptions(useFlag, nil)
+}
+
+// GenerateV2RaySubBase64WithOptions 生成通用 Base64 订阅，可选按请求覆盖是否包含落地节点。
+func GenerateV2RaySubBase64WithOptions(useFlag bool, includeLandingOverride *bool) (string, error) {
 	var nodes []database.NodePool
 	// 取出直连(1)和落地(2)的节点，排除被屏蔽的
 	if err := database.DB.Where("routing_type IN ? AND is_blocked = ?", []int{1, 2}, false).
 		Order("sort_index ASC").Find(&nodes).Error; err != nil {
 		logger.Log.Error("从数据库获取全量聚合节点失败", "error", err)
 		return "", err
+	}
+
+	visCfg := LoadSubscriptionVisibilityConfig()
+	includeLandingEffective := visCfg.V2RayIncludeLanding
+	if includeLandingOverride != nil {
+		includeLandingEffective = *includeLandingOverride
 	}
 
 	var strategyConfig database.SysConfig
@@ -242,13 +370,20 @@ func GenerateV2RaySubBase64(useFlag bool) (string, error) {
 
 	for i := range nodes {
 		node := &nodes[i]
+		if !visCfg.ShouldIncludeNodeInV2RaySub(*node, includeLandingOverride) {
+			continue
+		}
 		if shouldExcludeNodeByTrafficThreshold(node) {
 			continue
 		}
 		realityAllowed := WGRealitySubscriptionAllowed(node.UUID)
+		landingSSBlocked := WGLandingSSSubscriptionBlocked(node.UUID)
 		enabledProtocolCount := 0
 		for p, l := range node.Links {
 			if p == "reality" && !realityAllowed {
+				continue
+			}
+			if p == "ss" && landingSSBlocked {
 				continue
 			}
 			if strings.TrimSpace(l) == "" {
@@ -261,6 +396,9 @@ func GenerateV2RaySubBase64(useFlag bool) (string, error) {
 
 		for proto, link := range node.Links {
 			if proto == "reality" && !realityAllowed {
+				continue
+			}
+			if proto == "ss" && landingSSBlocked {
 				continue
 			}
 			if strings.TrimSpace(link) == "" {
@@ -322,10 +460,14 @@ func GenerateV2RaySubBase64(useFlag bool) (string, error) {
 		}
 	}
 
+	allowedRoutingTypes := []int{1}
+	if includeLandingEffective {
+		allowedRoutingTypes = []int{1, 2}
+	}
+
 	// 注入机场订阅节点 (Airport Nodes)
 	var airportNodes []database.AirportNode
-	// 获取所有启用的机场节点 (包括直连1 和 落地2)
-	if err := database.DB.Where("routing_type IN ?", []int{1, 2}).
+	if err := database.DB.Where("routing_type IN ?", allowedRoutingTypes).
 		Order("sub_id, original_index ASC").Find(&airportNodes).Error; err == nil {
 
 		for _, anode := range airportNodes {
@@ -338,9 +480,9 @@ func GenerateV2RaySubBase64(useFlag bool) (string, error) {
 		}
 	}
 
-	// 注入自定义节点 (Custom Nodes) - V2Ray 订阅中，只要不是屏蔽(0)的都加入
+	// 注入自定义节点 (Custom Nodes) - 默认随直连/落地筛选策略输出
 	var customNodes []database.CustomNode
-	if err := database.DB.Where("routing_type IN ?", []int{1, 2}).
+	if err := database.DB.Where("routing_type IN ?", allowedRoutingTypes).
 		Order("created_at ASC").Find(&customNodes).Error; err == nil {
 
 		for _, cnode := range customNodes {
@@ -349,7 +491,16 @@ func GenerateV2RaySubBase64(useFlag bool) (string, error) {
 		}
 	}
 
-	lines = append(lines, wgSubscriptionLinks(0)...)
+	for _, entry := range wgActiveSubscriptionEntries(0) {
+		entryNode := lookupNodeByUUID(nodes, entry.EntryUUID)
+		if entryNode != nil && !visCfg.ShouldIncludeNodeInV2RaySub(*entryNode, includeLandingOverride) {
+			continue
+		}
+		cleanLink := strings.Split(entry.Link, "#")[0]
+		finalName := formatWGSubscriptionName(entryNode, useFlag)
+		safeName := strings.ReplaceAll(url.QueryEscape(finalName), "+", "%20")
+		lines = append(lines, fmt.Sprintf("%s#%s", cleanLink, safeName))
+	}
 
 	// 用换行符拼接并进行 Base64 编码
 	rawStr := strings.Join(lines, "\n")

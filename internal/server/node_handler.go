@@ -101,6 +101,67 @@ func apiUpdateNodeRegion(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// apiRenameNode POST /api/node/rename
+// 仅更新节点显示名称，不改动任何协议、端口、IP 或路由配置，即使节点正处于 WG 配对中也可安全修改。
+func apiRenameNode(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		UUID string `json:"uuid"`
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		sendJSON(w, "error", "无效的数据格式")
+		return
+	}
+	req.UUID = strings.TrimSpace(req.UUID)
+	req.Name = strings.TrimSpace(req.Name)
+	if req.UUID == "" {
+		sendJSON(w, "error", "缺少节点 UUID")
+		return
+	}
+	if req.Name == "" {
+		sendJSON(w, "error", "节点名称不能为空")
+		return
+	}
+	if len([]rune(req.Name)) > 80 {
+		sendJSON(w, "error", "节点名称不能超过 80 个字符")
+		return
+	}
+
+	var targetNode database.NodePool
+	if err := database.DB.First(&targetNode, "uuid = ?", req.UUID).Error; err != nil {
+		sendJSON(w, "error", "节点不存在")
+		return
+	}
+
+	if err := database.DB.Model(&database.NodePool{}).
+		Where("uuid = ?", targetNode.UUID).
+		Updates(map[string]interface{}{
+			"name":       req.Name,
+			"updated_at": time.Now(),
+		}).Error; err != nil {
+		logger.Log.Error("更新节点名称失败", "uuid", targetNode.UUID, "error", err)
+		sendJSON(w, "error", "保存节点名称失败")
+		return
+	}
+
+	logger.Log.Info("更新节点名称成功",
+		"uuid", targetNode.UUID,
+		"old_name", targetNode.Name,
+		"new_name", req.Name,
+		"ip", r.RemoteAddr,
+	)
+
+	sendJSON(w, "success", map[string]interface{}{
+		"uuid": targetNode.UUID,
+		"name": req.Name,
+	})
+}
+
 // apiUpdateNode 更新节点信息
 // 功能：接收前端请求，更新节点的基础信息和协议链接，包含演示模式下对内置节点核心资产的保护与专业提示
 func apiUpdateNode(w http.ResponseWriter, r *http.Request) {

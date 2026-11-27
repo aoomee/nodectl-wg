@@ -1127,12 +1127,32 @@ func (c *wgPairCoordinator) run(ctx context.Context, interval time.Duration, wor
 	}
 }
 
+type wgSubscriptionEntry struct {
+	EntryUUID string
+	PeerUUID  string
+	Link      string
+}
+
 // wgSubscriptionLinks never publishes a persisted-only claim of activation.
 // Dependency checks run on each request, independently of reconciler cadence.
 func wgSubscriptionLinks(routingType int) []string {
 	return wgDefault.subscriptionLinks(routingType)
 }
+func wgActiveSubscriptionEntries(routingType int) []wgSubscriptionEntry {
+	return wgDefault.activeSubscriptionEntries(routingType)
+}
 func (c *wgPairCoordinator) subscriptionLinks(routingType int) []string {
+	entries := c.activeSubscriptionEntries(routingType)
+	if len(entries) == 0 {
+		return nil
+	}
+	links := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		links = append(links, entry.Link)
+	}
+	return links
+}
+func (c *wgPairCoordinator) activeSubscriptionEntries(routingType int) []wgSubscriptionEntry {
 	unlock := WGAcquireNodeLocks()
 	defer unlock()
 	if routingType != 0 && routingType != 1 || c.database() == nil {
@@ -1143,15 +1163,74 @@ func (c *wgPairCoordinator) subscriptionLinks(routingType int) []string {
 		return nil
 	}
 	sort.Slice(pairs, func(i, j int) bool { return pairs[i].ID < pairs[j].ID })
-	var links []string
+	var entries []wgSubscriptionEntry
 	for _, p := range pairs {
 		if c.confirmed[p.ID] != p.DesiredRevision || p.AppliedRevision != p.DesiredRevision || c.now().Sub(p.HealthCheckedAt) > wgSubscriptionFreshness || !c.valid(p) {
 			continue
 		}
 		// Publish the original A REALITY link, never B credentials or a new listener.
-		links = append(links, p.RealityLink)
+		entries = append(entries, wgSubscriptionEntry{
+			EntryUUID: p.EntryUUID,
+			PeerUUID:  p.PeerUUID,
+			Link:      p.RealityLink,
+		})
 	}
-	return links
+	return entries
+}
+
+// WGLandingSSSubscriptionBlocked returns true while a landing node participates
+// in any non-released WG pair so its internal Shadowsocks inbound is never
+// leaked to client direct-connect subscriptions.
+func WGLandingSSSubscriptionBlocked(id string) bool {
+	return wgDefault.landingSSSubscriptionBlocked(id)
+}
+func (c *wgPairCoordinator) landingSSSubscriptionBlocked(id string) bool {
+	unlock := WGAcquireNodeLocks()
+	defer unlock()
+	if c.database() == nil || strings.TrimSpace(id) == "" {
+		return false
+	}
+	var pairs []database.WGPair
+	if err := c.database().Where("peer_uuid = ?", id).Find(&pairs).Error; err != nil {
+		return true
+	}
+	for _, p := range pairs {
+		if !(p.Status == "disabled" && (p.TopologyVersion != 2 || p.RestoreDirect)) {
+			return true
+		}
+	}
+	return false
+}
+
+// WGNodePairSummary describes a node's active/pending WireGuard role for UI display.
+type WGNodePairSummary struct {
+	Role     string `json:"role"` // "entry" | "landing"
+	Status   string `json:"status"`
+	PeerUUID string `json:"peer_uuid"`
+}
+
+// WGNodePairSummaries returns a map of node UUID -> active/non-released WG pair summary.
+func WGNodePairSummaries() map[string]WGNodePairSummary {
+	unlock := WGAcquireNodeLocks()
+	defer unlock()
+	out := make(map[string]WGNodePairSummary)
+	if wgDefault.database() == nil {
+		return out
+	}
+	var pairs []database.WGPair
+	if wgDefault.database().Find(&pairs).Error != nil {
+		return out
+	}
+	for _, p := range pairs {
+		if p.Status == "disabled" && (p.TopologyVersion != 2 || p.RestoreDirect) {
+			continue
+		}
+		out[p.EntryUUID] = WGNodePairSummary{Role: "entry", Status: p.Status, PeerUUID: p.PeerUUID}
+		if p.PeerUUID != "" {
+			out[p.PeerUUID] = WGNodePairSummary{Role: "landing", Status: p.Status, PeerUUID: p.EntryUUID}
+		}
+	}
+	return out
 }
 
 // WGRealitySubscriptionAllowed fences ordinary REALITY publication whenever a

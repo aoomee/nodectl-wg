@@ -12,6 +12,8 @@ import (
 	"wirearc/internal/logger"
 	"wirearc/internal/requestmeta"
 	"wirearc/internal/service"
+
+	"gorm.io/gorm/clause"
 )
 
 // ------------------- [订阅与分流规则 API] -------------------
@@ -94,7 +96,18 @@ func apiSubV2ray(w http.ResponseWriter, r *http.Request) {
 	database.DB.Where("key = ?", "pref_use_emoji_flag").First(&flagConfig)
 	useFlag := flagConfig.Value != "false"
 
-	b64Content, err := service.GenerateV2RaySubBase64(useFlag)
+	var includeLandingOverride *bool
+	if rawInclude := strings.TrimSpace(strings.ToLower(r.URL.Query().Get("include_landing"))); rawInclude != "" {
+		if rawInclude == "1" || rawInclude == "true" {
+			v := true
+			includeLandingOverride = &v
+		} else if rawInclude == "0" || rawInclude == "false" {
+			v := false
+			includeLandingOverride = &v
+		}
+	}
+
+	b64Content, err := service.GenerateV2RaySubBase64WithOptions(useFlag, includeLandingOverride)
 	if err != nil {
 		logger.Log.Error("生成 V2Ray Base64 订阅失败", "error", err, "ip", clientIP, "path", reqPath)
 		http.Error(w, "订阅生成失败", http.StatusInternalServerError)
@@ -152,6 +165,148 @@ func apiSubRaw(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/yaml; charset=utf-8")
 	w.Write([]byte(yamlContent))
+}
+
+// apiGetSubNodes GET /api/sub/nodes
+// 返回可用于订阅分发中心展示与勾选的节点清单及当前订阅显隐配置。
+func apiGetSubNodes(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var nodes []database.NodePool
+	if err := database.DB.Where("is_blocked = ?", false).
+		Order("routing_type ASC, sort_index ASC, created_at ASC").
+		Find(&nodes).Error; err != nil {
+		logger.Log.Error("获取订阅节点列表失败", "error", err)
+		sendJSON(w, "error", "获取节点列表失败")
+		return
+	}
+
+	visCfg := service.LoadSubscriptionVisibilityConfig()
+	wgSummaries := service.WGNodePairSummaries()
+	nameByUUID := make(map[string]string, len(nodes))
+	for _, n := range nodes {
+		nameByUUID[n.UUID] = n.Name
+	}
+
+	type subNodeItem struct {
+		UUID               string `json:"uuid"`
+		Name               string `json:"name"`
+		Region             string `json:"region"`
+		RoutingType        int    `json:"routing_type"`
+		WGRole             string `json:"wg_role,omitempty"`
+		WGStatus           string `json:"wg_status,omitempty"`
+		WGPeerName         string `json:"wg_peer_name,omitempty"`
+		LandingSSProtected bool   `json:"landing_ss_protected"`
+		Visible            bool   `json:"visible"`
+		Override           *bool  `json:"override,omitempty"`
+	}
+
+	items := make([]subNodeItem, 0, len(nodes))
+	for _, n := range nodes {
+		summary := wgSummaries[n.UUID]
+		peerName := ""
+		if summary.PeerUUID != "" {
+			peerName = nameByUUID[summary.PeerUUID]
+		}
+		var ov *bool
+		if v, ok := visCfg.NodeOverrides[n.UUID]; ok {
+			vv := v
+			ov = &vv
+		}
+		landingSSProtected := summary.Role == "landing" && service.WGLandingSSSubscriptionBlocked(n.UUID)
+		visible := visCfg.ShouldIncludeNodeInV2RaySub(n, nil)
+		items = append(items, subNodeItem{
+			UUID:               n.UUID,
+			Name:               n.Name,
+			Region:             n.Region,
+			RoutingType:        n.RoutingType,
+			WGRole:             summary.Role,
+			WGStatus:           summary.Status,
+			WGPeerName:         peerName,
+			LandingSSProtected: landingSSProtected,
+			Visible:            visible,
+			Override:           ov,
+		})
+	}
+
+	w.Header().Set("Cache-Control", "no-store")
+	sendJSON(w, "success", map[string]interface{}{
+		"v2ray_include_landing": visCfg.V2RayIncludeLanding,
+		"node_overrides":        visCfg.NodeOverrides,
+		"nodes":                 items,
+	})
+}
+
+// apiUpdateSubVisibility POST /api/sub/visibility
+// 更新订阅显隐配置（独立于节点运行态，WG 配对中亦可随时调整）。
+func apiUpdateSubVisibility(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		V2RayIncludeLanding *bool           `json:"v2ray_include_landing"`
+		NodeOverrides       map[string]bool `json:"node_overrides"`
+		Reset               bool            `json:"reset"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		sendJSON(w, "error", "请求格式错误")
+		return
+	}
+
+	cur := service.LoadSubscriptionVisibilityConfig()
+	if req.Reset {
+		cur.V2RayIncludeLanding = false
+		cur.NodeOverrides = make(map[string]bool)
+	}
+	if req.V2RayIncludeLanding != nil {
+		cur.V2RayIncludeLanding = *req.V2RayIncludeLanding
+	}
+	if req.NodeOverrides != nil {
+		clean := make(map[string]bool, len(req.NodeOverrides))
+		for k, v := range req.NodeOverrides {
+			id := strings.TrimSpace(k)
+			if id != "" && len(id) <= 64 {
+				clean[id] = v
+			}
+		}
+		cur.NodeOverrides = clean
+	}
+
+	overridesJSON, err := json.Marshal(cur.NodeOverrides)
+	if err != nil {
+		sendJSON(w, "error", "序列化订阅配置失败")
+		return
+	}
+
+	includeVal := "false"
+	if cur.V2RayIncludeLanding {
+		includeVal = "true"
+	}
+
+	rows := []database.SysConfig{
+		{Key: service.SubV2RayIncludeLandingKey, Value: includeVal, Description: "V2Ray/Base64 订阅默认是否包含落地节点"},
+		{Key: service.SubNodeVisibilityKey, Value: string(overridesJSON), Description: "订阅分发中心节点显隐覆盖配置"},
+	}
+	for _, row := range rows {
+		if err := database.DB.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "key"}},
+			DoUpdates: clause.AssignmentColumns([]string{"value", "description"}),
+		}).Create(&row).Error; err != nil {
+			logger.Log.Error("保存订阅节点显隐配置失败", "key", row.Key, "error", err)
+			sendJSON(w, "error", "保存订阅配置失败")
+			return
+		}
+	}
+
+	sendJSON(w, "success", map[string]interface{}{
+		"v2ray_include_landing": cur.V2RayIncludeLanding,
+		"node_overrides":        cur.NodeOverrides,
+	})
 }
 
 // ------------------- [自定义分流规则 API] -------------------

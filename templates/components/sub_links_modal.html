@@ -383,6 +383,225 @@
         background: #e5e5ea;
     }
 
+    /* ================= 订阅节点管理区 ================= */
+    .sub-nodes-banner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 9px 12px;
+        margin-bottom: 16px;
+        border-radius: 10px;
+        background: #f5f7fb;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        font-size: 12px;
+        color: #48484a;
+    }
+    .sub-nodes-banner-link {
+        border: none;
+        background: transparent;
+        color: #007aff;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        padding: 2px 4px;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    .sub-nodes-banner-link:hover {
+        text-decoration: underline;
+    }
+    .sub-nodes-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 10px 12px;
+        margin-bottom: 14px;
+        border-radius: 12px;
+        background: #f7f8fa;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    .sub-landing-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12.5px;
+        font-weight: 600;
+        color: #1d1d1f;
+        cursor: pointer;
+        user-select: none;
+    }
+    .sub-landing-toggle input {
+        width: 15px;
+        height: 15px;
+        accent-color: #007aff;
+        cursor: pointer;
+        margin: 0;
+    }
+    .sub-tool-btn {
+        border: 1px solid rgba(0, 0, 0, 0.09);
+        background: #ffffff;
+        color: #48484a;
+        border-radius: 8px;
+        padding: 5px 10px;
+        font-size: 11.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .sub-tool-btn:hover {
+        background: #f0f7ff;
+        color: #007aff;
+        border-color: rgba(0, 122, 255, 0.25);
+    }
+    .sub-node-group {
+        margin-bottom: 14px;
+    }
+    .sub-node-group-title {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: #8e8e93;
+        margin: 0 0 8px 2px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .sub-node-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .sub-node-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 9px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        background: #ffffff;
+        transition: border-color 0.15s, background-color 0.15s;
+    }
+    .sub-node-row:hover {
+        border-color: rgba(0, 122, 255, 0.22);
+        background: #fafcff;
+    }
+    .sub-node-row.is-hidden {
+        background: #fafafb;
+        opacity: 0.72;
+    }
+    .sub-node-left {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        min-width: 0;
+        flex: 1;
+    }
+    .sub-node-check {
+        width: 16px;
+        height: 16px;
+        accent-color: #007aff;
+        cursor: pointer;
+        flex-shrink: 0;
+        margin: 0;
+    }
+    .sub-node-flag {
+        width: 18px;
+        height: 13px;
+        border-radius: 3px;
+        object-fit: cover;
+        background: #f2f3f7;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+        flex-shrink: 0;
+    }
+    .sub-node-name-wrap {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        flex: 1;
+    }
+    .sub-node-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: #1d1d1f;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .sub-node-rename-input {
+        width: 100%;
+        min-width: 90px;
+        height: 26px;
+        padding: 0 8px;
+        border-radius: 7px;
+        border: 1px solid #007aff;
+        font-size: 12.5px;
+        font-weight: 600;
+        color: #1d1d1f;
+        background: #ffffff;
+        outline: none;
+        box-sizing: border-box;
+        box-shadow: 0 0 0 2.5px rgba(0, 122, 255, 0.12);
+    }
+    .sub-node-right {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+    }
+    .sub-node-badge {
+        display: inline-flex;
+        align-items: center;
+        height: 20px;
+        padding: 0 7px;
+        border-radius: 999px;
+        font-size: 10.5px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+    .sub-node-badge.wg-active {
+        background: #e8fdf0;
+        color: #16803d;
+    }
+    .sub-node-badge.wg-pending {
+        background: #fff4e5;
+        color: #b45309;
+    }
+    .sub-node-badge.wg-landing {
+        background: #f3e8ff;
+        color: #7e22ce;
+    }
+    .sub-node-badge.landing {
+        background: #f2f3f7;
+        color: #6e6e73;
+    }
+    .sub-node-edit-btn {
+        width: 24px;
+        height: 24px;
+        border: none;
+        border-radius: 7px;
+        background: transparent;
+        color: #8e8e93;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.15s, color 0.15s;
+    }
+    .sub-node-edit-btn:hover {
+        background: #eef3fc;
+        color: #007aff;
+    }
+    .sub-nodes-empty {
+        text-align: center;
+        padding: 28px 12px;
+        font-size: 12.5px;
+        color: #8e8e93;
+    }
+
     /* ================= 移动端适配 ================= */
     @media (max-width: 768px) {
         .sub-modal-card {
@@ -478,7 +697,21 @@
                     <div class="sub-format-card" onclick="selectSubFormat('v2ray', this)">
                         <div class="sub-format-info">
                             <div class="sub-format-name">🌐 V2Ray / Base64</div>
-                            <div class="sub-format-desc">最适合手机使用的订阅格式</div>
+                            <div class="sub-format-desc">小火箭等通用订阅 · 默认隐藏落地</div>
+                        </div>
+                        <div class="sub-expand-indicator"><svg viewBox="0 0 24 24" width="18" height="18" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg></div>
+                    </div>
+                </div>
+
+                <label class="sub-section-label" style="margin-top: 18px;">🎛️ 导出节点控制</label>
+                <div class="format-wrapper" id="wrap_nodes">
+                    <div class="sub-format-card" onclick="selectSubFormat('nodes', this)">
+                        <div class="sub-format-info">
+                            <div class="sub-format-name">📋 订阅节点与名称</div>
+                            <div class="sub-format-desc" id="subNodesCardSummary">勾选导出节点、随时修改节点名</div>
                         </div>
                         <div class="sub-expand-indicator"><svg viewBox="0 0 24 24" width="18" height="18" fill="none"
                                 stroke="currentColor" stroke-width="2">
@@ -516,17 +749,208 @@
     let currentBaseUrl = '';
     let currentToken = '';
     let currentFormatKey = null;
+    let subNodesState = {
+        loaded: false,
+        v2rayIncludeLanding: false,
+        nodeOverrides: {},
+        nodes: []
+    };
+
+    function escapeSubHtml(str) {
+        return String(str || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function showSubSaveNotice(text, isError = false) {
+        const indicator = document.getElementById('subSaveIndicator');
+        if (!indicator) return;
+        if (isError) {
+            const span = document.createElement('span');
+            span.style.color = '#ff3b30';
+            span.textContent = text;
+            indicator.replaceChildren(span);
+        } else {
+            indicator.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg> ${escapeSubHtml(text)}`;
+        }
+        indicator.style.opacity = '1';
+        clearTimeout(indicator._hideTimer);
+        if (!isError) {
+            indicator._hideTimer = setTimeout(() => { indicator.style.opacity = '0'; }, 2000);
+        }
+    }
+
+    function computeSubNodeEffectiveVisible(node) {
+        if (Object.prototype.hasOwnProperty.call(subNodesState.nodeOverrides, node.uuid)) {
+            return !!subNodesState.nodeOverrides[node.uuid];
+        }
+        if (node.routing_type === 2) {
+            return !!subNodesState.v2rayIncludeLanding;
+        }
+        return true;
+    }
+
+    function updateSubNodesSummary() {
+        const el = document.getElementById('subNodesCardSummary');
+        if (!el) return;
+        if (!subNodesState.loaded) {
+            el.textContent = '勾选导出节点、随时修改节点名';
+            return;
+        }
+        const total = subNodesState.nodes.length;
+        const visibleCount = subNodesState.nodes.filter(n => computeSubNodeEffectiveVisible(n) && !n.landing_ss_protected).length;
+        const suffix = subNodesState.v2rayIncludeLanding ? '已开启落地' : '落地默认隐藏';
+        el.textContent = `当前导出 ${visibleCount} / ${total} 个 · ${suffix}`;
+    }
+
+    async function loadSubNodesState() {
+        try {
+            const res = await fetch('/api/sub/nodes', { cache: 'no-store' });
+            const json = await res.json();
+            if (json.status === 'success' && json.data) {
+                subNodesState.loaded = true;
+                subNodesState.v2rayIncludeLanding = !!json.data.v2ray_include_landing;
+                subNodesState.nodeOverrides = json.data.node_overrides || {};
+                subNodesState.nodes = Array.isArray(json.data.nodes) ? json.data.nodes : [];
+                updateSubNodesSummary();
+                if (currentFormatKey === 'nodes' || currentFormatKey === 'v2ray') {
+                    renderRightPanel(currentFormatKey);
+                }
+            }
+        } catch (e) {
+            console.error('加载订阅节点配置失败', e);
+        }
+    }
+
+    async function persistSubVisibility(payload, noticeText = '订阅配置已保存') {
+        try {
+            const res = await fetch('/api/sub/visibility', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const json = await res.json();
+            if (!res.ok || json.status !== 'success') {
+                throw new Error(json.message || '保存失败');
+            }
+            if (json.data) {
+                subNodesState.v2rayIncludeLanding = !!json.data.v2ray_include_landing;
+                subNodesState.nodeOverrides = json.data.node_overrides || {};
+            }
+            updateSubNodesSummary();
+            if (currentFormatKey === 'nodes') renderRightPanel('nodes');
+            showSubSaveNotice(noticeText);
+        } catch (e) {
+            showSubSaveNotice(e.message || '保存失败', true);
+        }
+    }
+
+    function toggleSubNodeVisible(uuid, checked) {
+        const node = subNodesState.nodes.find(n => n.uuid === uuid);
+        if (!node) return;
+        const defaultVisible = node.routing_type === 2 ? !!subNodesState.v2rayIncludeLanding : true;
+        const nextOverrides = { ...subNodesState.nodeOverrides };
+        if (checked === defaultVisible) {
+            delete nextOverrides[uuid];
+        } else {
+            nextOverrides[uuid] = checked;
+        }
+        subNodesState.nodeOverrides = nextOverrides;
+        updateSubNodesSummary();
+        if (currentFormatKey === 'nodes') renderRightPanel('nodes');
+        persistSubVisibility({ node_overrides: nextOverrides }, checked ? '已加入订阅' : '已从订阅隐藏');
+    }
+
+    function toggleV2RayIncludeLanding(checked) {
+        subNodesState.v2rayIncludeLanding = checked;
+        updateSubNodesSummary();
+        if (currentFormatKey === 'nodes') renderRightPanel('nodes');
+        persistSubVisibility({ v2ray_include_landing: checked }, checked ? 'V2Ray 默认包含落地' : 'V2Ray 默认隐藏落地');
+    }
+
+    function resetSubVisibilityDefaults() {
+        subNodesState.v2rayIncludeLanding = false;
+        subNodesState.nodeOverrides = {};
+        updateSubNodesSummary();
+        if (currentFormatKey === 'nodes') renderRightPanel('nodes');
+        persistSubVisibility({ reset: true }, '已恢复默认（隐藏落地）');
+    }
+
+    function startSubNodeRename(uuid) {
+        const row = document.querySelector(`.sub-node-row[data-uuid="${CSS.escape(uuid)}"]`);
+        const node = subNodesState.nodes.find(n => n.uuid === uuid);
+        if (!row || !node) return;
+        const wrap = row.querySelector('.sub-node-name-wrap');
+        if (!wrap || wrap.querySelector('input')) return;
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'sub-node-rename-input';
+        input.value = node.name || '';
+        input.maxLength = 80;
+        let committed = false;
+
+        const finish = async (save) => {
+            if (committed) return;
+            committed = true;
+            const nextName = input.value.trim();
+            if (!save || !nextName || nextName === node.name) {
+                renderRightPanel('nodes');
+                return;
+            }
+            try {
+                const res = await fetch('/api/node/rename', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ uuid, name: nextName })
+                });
+                const json = await res.json();
+                if (!res.ok || json.status !== 'success') {
+                    throw new Error(json.message || '改名失败');
+                }
+                node.name = nextName;
+                if (window.allNodesData && window.allNodesData[uuid]) {
+                    window.allNodesData[uuid].name = nextName;
+                }
+                renderRightPanel('nodes');
+                showSubSaveNotice('节点名已更新');
+                if (typeof loadNodesList === 'function') loadNodesList();
+                if (typeof window.trafficStatsRefresh === 'function') window.trafficStatsRefresh();
+            } catch (e) {
+                renderRightPanel('nodes');
+                showSubSaveNotice(e.message || '改名失败', true);
+            }
+        };
+
+        input.addEventListener('keydown', (ev) => {
+            if (ev.key === 'Enter') { ev.preventDefault(); finish(true); }
+            else if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); finish(false); }
+        });
+        input.addEventListener('blur', () => finish(true));
+
+        wrap.replaceChildren(input);
+        input.focus();
+        input.select();
+    }
+
+    function openSubNodesManager() {
+        const card = document.querySelector('#wrap_nodes .sub-format-card');
+        if (card) selectSubFormat('nodes', card);
+    }
 
     // 预定义的链接与展示文案数据
     const subFormatData = {
         clash: {
             title: "😼 Clash Meta 订阅",
-            desc: "推荐使用 <b>Clash Verge Rev</b> 或 <b>OpenClash</b>。<br>手机端可直接扫描下方二维码添加。",
+            desc: "推荐使用 <b>Clash Verge Rev</b> 或 <b>OpenClash</b>。<br>已激活 WG 的入口节点自动附加 <b>WG</b> 标识，WG 落地内部 SS 自动隐藏。",
             getLink: () => `${currentBaseUrl}/sub/clash?token=${currentToken}`
         },
         v2ray: {
             title: "🌐 V2Ray / 通用 Base64",
-            desc: "适用于 <b>v2rayN</b>、<b>v2rayNG</b>、<b>Shadowrocket</b> 等绝大多数基础代理工具。",
+            desc: "适用于 <b>Shadowrocket（小火箭）</b>、<b>v2rayN</b>、<b>v2rayNG</b>。<br>默认自动隐藏落地节点，可在左侧「订阅节点与名称」自由勾选。",
             getLink: () => `${currentBaseUrl}/sub/v2ray?token=${currentToken}`
         }
     };
@@ -602,12 +1026,16 @@
         }
     }
 
-    // 核心渲染逻辑：生成一键导入按钮和二维码
-    // 核心渲染逻辑：生成一键导入按钮和二维码
+    // 核心渲染逻辑：生成一键导入按钮、二维码或节点管理面板
     function renderRightPanel(formatKey) {
+        const contentDiv = document.getElementById('subRightContent');
+        if (formatKey === 'nodes') {
+            renderSubNodesManagerPanel(contentDiv);
+            return;
+        }
+
         const data = subFormatData[formatKey];
         const link = data.getLink();
-        const contentDiv = document.getElementById('subRightContent');
         const subName = document.getElementById('inputSubName').value.trim() || 'WireArc';
 
         let importBtnHtml = '';
@@ -624,8 +1052,18 @@
                     导入 Clash
                 </a>
             `;
-        } else if (formatKey === 'v2ray') {
-            // V2Ray 下什么都不做，importBtnHtml 保持为空，界面上只会显示一个宽的复制按钮
+        }
+
+        let summaryBannerHtml = '';
+        if (formatKey === 'v2ray' && subNodesState.loaded) {
+            const visibleCount = subNodesState.nodes.filter(n => computeSubNodeEffectiveVisible(n) && !n.landing_ss_protected).length;
+            const landingHint = subNodesState.v2rayIncludeLanding ? '已开启导出落地' : '落地节点默认隐藏';
+            summaryBannerHtml = `
+                <div class="sub-nodes-banner">
+                    <span>当前导出 <b>${visibleCount}</b> 个节点（${landingHint}）</span>
+                    <button type="button" class="sub-nodes-banner-link" onclick="openSubNodesManager()">管理节点 →</button>
+                </div>
+            `;
         }
 
         contentDiv.innerHTML = `
@@ -633,7 +1071,7 @@
                 <div class="sub-right-title">${data.title}</div>
                 <div class="sub-right-desc">${data.desc}</div>
             </div>
-            
+            ${summaryBannerHtml}
             <div class="qr-wrapper">
                 <div class="qr-box" id="qrCodeContainer"></div>
             </div>
@@ -661,6 +1099,85 @@
         });
     }
 
+    function renderSubNodesManagerPanel(contentDiv) {
+        const directNodes = subNodesState.nodes.filter(n => n.routing_type !== 2);
+        const landingNodes = subNodesState.nodes.filter(n => n.routing_type === 2);
+
+        const renderRow = (node) => {
+            const visible = computeSubNodeEffectiveVisible(node);
+            const effectiveChecked = visible && !node.landing_ss_protected;
+            const iso = String(node.region || '').trim().toLowerCase();
+            const flagHtml = /^[a-z]{2}$/.test(iso)
+                ? `<img class="sub-node-flag" src="https://flagcdn.com/${iso}.svg" width="18" height="13" alt="${iso}" loading="lazy">`
+                : '';
+
+            let badgeHtml = '';
+            if (node.wg_role === 'entry') {
+                const isActive = node.wg_status === 'active';
+                badgeHtml = `<span class="sub-node-badge ${isActive ? 'wg-active' : 'wg-pending'}" title="已激活 WG 时订阅名自动追加 WG 标识">WG</span>`;
+            } else if (node.landing_ss_protected) {
+                badgeHtml = `<span class="sub-node-badge wg-landing" title="该节点正在作为 WG 落地，内部 SS 链接已自动保护不输出到客户端订阅">WG 落地 · SS已保护</span>`;
+            } else if (node.routing_type === 2) {
+                badgeHtml = `<span class="sub-node-badge landing">落地</span>`;
+            }
+
+            const safeUuid = escapeSubHtml(node.uuid);
+            const safeName = escapeSubHtml(node.name || node.uuid);
+            const checkDisabled = node.landing_ss_protected ? 'disabled title="WG 落地节点内部 SS 已自动隐藏，防止直连暴露"' : '';
+            return `
+                <div class="sub-node-row ${effectiveChecked ? '' : 'is-hidden'}" data-uuid="${safeUuid}">
+                    <div class="sub-node-left">
+                        <input type="checkbox" class="sub-node-check" ${effectiveChecked ? 'checked' : ''} ${checkDisabled} onchange="toggleSubNodeVisible('${safeUuid}', this.checked)">
+                        ${flagHtml}
+                        <div class="sub-node-name-wrap">
+                            <span class="sub-node-name" title="${safeName}" ondblclick="startSubNodeRename('${safeUuid}')">${safeName}</span>
+                        </div>
+                    </div>
+                    <div class="sub-node-right">
+                        ${badgeHtml}
+                        <button type="button" class="sub-node-edit-btn" title="修改节点名称（WG 运行中也可直接改名）" onclick="startSubNodeRename('${safeUuid}')">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            `;
+        };
+
+        const renderGroup = (title, list, hint) => {
+            if (list.length === 0) return '';
+            return `
+                <div class="sub-node-group">
+                    <div class="sub-node-group-title">
+                        <span>${title}（${list.length}）</span>
+                        <span style="font-weight:500; color:#a1a1a6;">${hint}</span>
+                    </div>
+                    <div class="sub-node-list">${list.map(renderRow).join('')}</div>
+                </div>
+            `;
+        };
+
+        const bodyHtml = !subNodesState.loaded
+            ? '<div class="sub-nodes-empty">正在加载节点列表...</div>'
+            : subNodesState.nodes.length === 0
+                ? '<div class="sub-nodes-empty">暂无可配置订阅的节点</div>'
+                : renderGroup('直连 / WG 专线', directNodes, '默认导出') + renderGroup('落地节点', landingNodes, 'V2Ray 默认隐藏');
+
+        contentDiv.innerHTML = `
+            <div class="sub-right-header" style="margin-bottom: 14px; padding-bottom: 12px;">
+                <div class="sub-right-title">📋 订阅节点与名称</div>
+                <div class="sub-right-desc">勾选控制哪些节点出现在订阅中，点击右侧铅笔即可随时改名；改动自动保存，<b>不会中断运行中的 WG 隧道</b>。</div>
+            </div>
+            <div class="sub-nodes-toolbar">
+                <label class="sub-landing-toggle">
+                    <input type="checkbox" ${subNodesState.v2rayIncludeLanding ? 'checked' : ''} onchange="toggleV2RayIncludeLanding(this.checked)">
+                    <span>V2Ray 订阅默认包含落地节点</span>
+                </label>
+                <button type="button" class="sub-tool-btn" onclick="resetSubVisibilityDefaults()">恢复默认</button>
+            </div>
+            ${bodyHtml}
+        `;
+    }
+
     // 打开弹窗并默认直接展开第一项 (修复动画带来的高度错误)
     async function openSubLinksModal() {
         // 先为卡片加上 has-content，让弹窗初始就呈现 800px 宽度
@@ -674,7 +1191,10 @@
         document.querySelectorAll('.sub-format-card').forEach(c => c.classList.remove('active'));
 
         try {
-            const res = await fetch('/api/get-settings');
+            const [res] = await Promise.all([
+                fetch('/api/get-settings'),
+                loadSubNodesState()
+            ]);
             const result = await res.json();
 
             if (result.status === 'success') {

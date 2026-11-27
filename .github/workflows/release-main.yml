@@ -60,7 +60,10 @@ jobs:
           mkdir -p bin dist digests
           go build -trimpath -ldflags="-s -w -X nodectl/internal/version.Version=$VERSION" -o "bin/nodectl-linux-$ARCH" .
           cp "bin/nodectl-linux-$ARCH" "dist/wirearc-linux-$ARCH"
-          go build -trimpath -ldflags="-s -w -X nodectl/internal/agent.AgentVersion=$VERSION -X nodectl/internal/agent.GitCommit=$GITHUB_SHA -X nodectl/internal/agent.UpdateRepoOwner=aoomee -X nodectl/internal/agent.UpdateRepoName=wirearc" -o "dist/nodectl-agent-linux-$ARCH-$VERSION" ./cmd/nodectl-agent
+          go build -trimpath -ldflags="-s -w -X nodectl/internal/agent.AgentVersion=$VERSION -X nodectl/internal/agent.GitCommit=$GITHUB_SHA -X nodectl/internal/agent.UpdateRepoOwner=aoomee -X nodectl/internal/agent.UpdateRepoName=wirearc" -o "dist/wirearc-agent-linux-$ARCH-$VERSION" ./cmd/wirearc-agent
+          (cd dist && sha256sum "wirearc-agent-linux-$ARCH-$VERSION" > "wirearc-agent-linux-$ARCH-$VERSION.sha256")
+          # 过渡期保留旧版 nodectl-agent 文件名副本，保证已部署的旧节点可通过「检查更新」无缝在线升级
+          cp "dist/wirearc-agent-linux-$ARCH-$VERSION" "dist/nodectl-agent-linux-$ARCH-$VERSION"
           (cd dist && sha256sum "nodectl-agent-linux-$ARCH-$VERSION" > "nodectl-agent-linux-$ARCH-$VERSION.sha256")
       - uses: docker/setup-buildx-action@v3
       - name: Build image for native smoke test
@@ -181,7 +184,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cp compose.yaml dist/compose.yaml
-          (cd dist && sha256sum wirearc-*-linux-*.tar.gz wirearc-linux-* nodectl-agent-linux-* | grep -v '\.sha256$' > SHA256SUMS)
+          (cd dist && sha256sum wirearc-*-linux-*.tar.gz wirearc-linux-* wirearc-agent-linux-* nodectl-agent-linux-* | grep -v '\.sha256$' > SHA256SUMS)
           cat > dist/release-notes.md <<NOTES
           ### Docker 快速部署
 
@@ -198,7 +201,7 @@ jobs:
           | \`ghcr.io/aoomee/wirearc:${VERSION}\` | 官方多架构容器镜像（\`linux/amd64\` / \`linux/arm64\`） |
           | \`wirearc-${VERSION}-linux-<arch>.tar.gz\` | 离线 Docker 镜像包（\`docker load -i\` 导入） |
           | \`wirearc-linux-<arch>\` | 面板原生二进制程序 |
-          | \`nodectl-agent-linux-<arch>-${VERSION}\` | 节点端受管 Agent 二进制 |
+          | \`wirearc-agent-linux-<arch>-${VERSION}\` | 节点端受管 Agent 二进制（同时附带旧名 \`nodectl-agent-linux-*\` 兼容在线升级） |
           | \`compose.yaml\` / \`SHA256SUMS\` | 标准编排文件与完整 SHA-256 校验清单 |
           NOTES
           if gh release view "$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
@@ -206,4 +209,4 @@ jobs:
           else
             gh release create "$VERSION" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "WireArc $VERSION" --notes-file dist/release-notes.md --latest
           fi
-          gh release upload "$VERSION" dist/*.tar.gz dist/wirearc-linux-* dist/nodectl-agent-linux-* dist/compose.yaml dist/SHA256SUMS --repo "$GITHUB_REPOSITORY" --clobber
+          gh release upload "$VERSION" dist/*.tar.gz dist/wirearc-linux-* dist/wirearc-agent-linux-* dist/nodectl-agent-linux-* dist/compose.yaml dist/SHA256SUMS --repo "$GITHUB_REPOSITORY" --clobber

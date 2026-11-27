@@ -63,6 +63,7 @@ func enrollAgent(ctx context.Context, configPath, token string, client *http.Cli
 	if !validAgentToken(token) {
 		return errors.New("invalid enrollment token")
 	}
+	configPath = ResolveDefaultConfigPath(configPath)
 	cfg, err := LoadConfig(configPath)
 	if err != nil {
 		return err

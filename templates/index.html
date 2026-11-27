@@ -2513,9 +2513,32 @@
             .wa-select-item-label {
                 flex: 1;
                 min-width: 0;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
+            }
+            .wa-select-flag {
+                width: 18px;
+                height: 13px;
+                border-radius: 3.5px;
+                object-fit: cover;
+                background: #f2f3f7;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+                flex-shrink: 0;
+            }
+            .wa-select-globe {
+                width: 18px;
+                height: 18px;
+                border-radius: 50%;
+                background: #eaf4ff;
+                color: #007aff;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
             }
             .wa-select-item-check {
                 width: 14px;
@@ -2943,7 +2966,27 @@
                     }
                     const label = document.createElement("span");
                     label.className = "wa-select-item-label";
-                    label.textContent = opt.textContent || opt.label || "";
+                    const flagCode = (opt.dataset && opt.dataset.flag) ? String(opt.dataset.flag).trim().toLowerCase() : "";
+                    if (flagCode === "auto") {
+                        const globe = document.createElement("span");
+                        globe.className = "wa-select-globe";
+                        globe.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>';
+                        label.appendChild(globe);
+                    } else if (/^[a-z]{2}$/.test(flagCode)) {
+                        const img = document.createElement("img");
+                        img.className = "wa-select-flag";
+                        img.src = "https://flagcdn.com/" + flagCode + ".svg";
+                        img.width = 18;
+                        img.height = 13;
+                        img.decoding = "async";
+                        img.alt = flagCode.toUpperCase();
+                        label.appendChild(img);
+                    }
+                    const textNode = document.createElement("span");
+                    textNode.style.overflow = "hidden";
+                    textNode.style.textOverflow = "ellipsis";
+                    textNode.textContent = opt.textContent || opt.label || "";
+                    label.appendChild(textNode);
                     const check = document.createElement("span");
                     check.className = "wa-select-item-check";
                     check.innerHTML =

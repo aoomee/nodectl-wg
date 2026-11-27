@@ -1,4 +1,4 @@
-// 路径: cmd/nodectl-agent/main.go
+// 路径: cmd/wirearc-agent/main.go
 package main
 
 import (
@@ -24,8 +24,11 @@ func main() {
 	if len(os.Args) > 1 && os.Args[1] == "enroll" {
 		fs := flag.NewFlagSet("enroll", flag.ExitOnError)
 		path := fs.String("config", agent.DefaultConfigPath, "配置文件路径")
-		token := fs.String("token", "", "one-time enrollment token (prefer NODECTL_ENROLLMENT_TOKEN or stdin)")
+		token := fs.String("token", "", "one-time enrollment token (prefer WIREARC_ENROLLMENT_TOKEN or stdin)")
 		_ = fs.Parse(os.Args[2:])
+		if *token == "" {
+			*token = os.Getenv("WIREARC_ENROLLMENT_TOKEN")
+		}
 		if *token == "" {
 			*token = os.Getenv("NODECTL_ENROLLMENT_TOKEN")
 		}
@@ -39,7 +42,7 @@ func main() {
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
 		defer cancel()
-		if err := agent.EnrollAgent(ctx, *path, *token); err != nil {
+		if err := agent.EnrollAgent(ctx, agent.ResolveDefaultConfigPath(*path), *token); err != nil {
 			log.Fatal(err)
 		}
 		fmt.Println("Agent enrolled; permanent credential saved with mode 0600.")
@@ -50,7 +53,7 @@ func main() {
 	flag.Parse()
 
 	if *showVersion {
-		fmt.Printf("nodectl-agent %s (commit=%s, built=%s)\n",
+		fmt.Printf("wirearc-agent %s (commit=%s, built=%s)\n",
 			agent.AgentVersion, agent.GitCommit, agent.BuildTime)
 		os.Exit(0)
 	}
@@ -60,7 +63,7 @@ func main() {
 
 	// 统一日志：同时写入 stdout 和一个有大小上限的文件。
 	// 服务管理器不要再把 stdout 重定向到同一个文件，否则每条日志会重复写入。
-	agentLogPath := "/var/log/nodectl-agent.log"
+	agentLogPath := "/var/log/wirearc-agent.log"
 	if dir := filepath.Dir(agentLogPath); dir != "" {
 		if err := os.MkdirAll(dir, 0755); err == nil {
 			logFile := &lumberjack.Logger{
@@ -102,8 +105,8 @@ func main() {
 		}
 	}
 
-	// 1. 加载配置
-	cfg, err := agent.LoadConfig(*configPath)
+	// 1. 加载配置（兼容旧版 /etc/nodectl-agent/config.json 平滑升级）
+	cfg, err := agent.LoadConfig(agent.ResolveDefaultConfigPath(*configPath))
 	if err != nil {
 		log.Fatalf("[Agent] 加载配置失败: %v", err)
 	}

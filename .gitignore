@@ -1,6 +1,7 @@
 data/
 tmp.exe
 nodectl.exe
+wirearc-agent.exe
 nodectl-agent.exe
 AGENT_MEMORY_OPTIMIZATION_PLAN.md
 更新计划.txt

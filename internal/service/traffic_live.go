@@ -642,7 +642,7 @@ func HandleAgentWS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
-		Subprotocols:   []string{"nodectl-agent"},
+		Subprotocols:   []string{"wirearc-agent", "nodectl-agent"},
 		OriginPatterns: []string{"*"},
 	})
 	if err != nil {

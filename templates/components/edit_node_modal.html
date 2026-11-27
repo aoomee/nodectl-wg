@@ -983,43 +983,43 @@
                         style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
                         <label class="section-label"
                             style="margin-bottom: 0; white-space: nowrap; width: 70px;">地区旗帜</label>
-                        <select id="editNodeRegion" class="title-input" onchange="triggerNodeAutoSave(true)" style="flex: 1;">
-                            <option value="">自动识别 (GeoIP)</option>
-                            <option value="HK">🇭🇰 香港 (HK)</option>
-                            <option value="TW">🇹🇼 台湾 (TW)</option>
-                            <option value="MO">🇲🇴 澳门 (MO)</option>
-                            <option value="CN">🇨🇳 中国大陆 (CN)</option>
-                            <option value="JP">🇯🇵 日本 (JP)</option>
-                            <option value="SG">🇸🇬 新加坡 (SG)</option>
-                            <option value="KR">🇰🇷 韩国 (KR)</option>
-                            <option value="US">🇺🇸 美国 (US)</option>
-                            <option value="CA">🇨🇦 加拿大 (CA)</option>
-                            <option value="GB">🇬🇧 英国 (GB)</option>
-                            <option value="DE">🇩🇪 德国 (DE)</option>
-                            <option value="FR">🇫🇷 法国 (FR)</option>
-                            <option value="NL">🇳🇱 荷兰 (NL)</option>
-                            <option value="AU">🇦🇺 澳大利亚 (AU)</option>
-                            <option value="RU">🇷🇺 俄罗斯 (RU)</option>
-                            <option value="IN">🇮🇳 印度 (IN)</option>
-                            <option value="MY">🇲🇾 马来西亚 (MY)</option>
-                            <option value="TH">🇹🇭 泰国 (TH)</option>
-                            <option value="VN">🇻🇳 越南 (VN)</option>
-                            <option value="PH">🇵🇭 菲律宾 (PH)</option>
-                            <option value="ID">🇮🇩 印度尼西亚 (ID)</option>
-                            <option value="TR">🇹🇷 土耳其 (TR)</option>
-                            <option value="AE">🇦🇪 阿联酋 (AE)</option>
-                            <option value="CH">🇨🇭 瑞士 (CH)</option>
-                            <option value="SE">🇸🇪 瑞典 (SE)</option>
-                            <option value="FI">🇫🇮 芬兰 (FI)</option>
-                            <option value="NO">🇳🇴 挪威 (NO)</option>
-                            <option value="IT">🇮🇹 意大利 (IT)</option>
-                            <option value="ES">🇪🇸 西班牙 (ES)</option>
-                            <option value="PL">🇵🇱 波兰 (PL)</option>
-                            <option value="IE">🇮🇪 爱尔兰 (IE)</option>
-                            <option value="LU">🇱🇺 卢森堡 (LU)</option>
-                            <option value="BR">🇧🇷 巴西 (BR)</option>
-                            <option value="AR">🇦🇷 阿根廷 (AR)</option>
-                            <option value="ZA">🇿🇦 南非 (ZA)</option>
+                        <select id="editNodeRegion" class="title-input" onchange="saveNodeRegionOverride()" style="flex: 1;">
+                            <option value="" data-flag="auto">自动识别 (GeoIP)</option>
+                            <option value="HK" data-flag="hk">香港 (HK)</option>
+                            <option value="TW" data-flag="tw">台湾 (TW)</option>
+                            <option value="MO" data-flag="mo">澳门 (MO)</option>
+                            <option value="CN" data-flag="cn">中国大陆 (CN)</option>
+                            <option value="JP" data-flag="jp">日本 (JP)</option>
+                            <option value="SG" data-flag="sg">新加坡 (SG)</option>
+                            <option value="KR" data-flag="kr">韩国 (KR)</option>
+                            <option value="US" data-flag="us">美国 (US)</option>
+                            <option value="CA" data-flag="ca">加拿大 (CA)</option>
+                            <option value="GB" data-flag="gb">英国 (GB)</option>
+                            <option value="DE" data-flag="de">德国 (DE)</option>
+                            <option value="FR" data-flag="fr">法国 (FR)</option>
+                            <option value="NL" data-flag="nl">荷兰 (NL)</option>
+                            <option value="AU" data-flag="au">澳大利亚 (AU)</option>
+                            <option value="RU" data-flag="ru">俄罗斯 (RU)</option>
+                            <option value="IN" data-flag="in">印度 (IN)</option>
+                            <option value="MY" data-flag="my">马来西亚 (MY)</option>
+                            <option value="TH" data-flag="th">泰国 (TH)</option>
+                            <option value="VN" data-flag="vn">越南 (VN)</option>
+                            <option value="PH" data-flag="ph">菲律宾 (PH)</option>
+                            <option value="ID" data-flag="id">印度尼西亚 (ID)</option>
+                            <option value="TR" data-flag="tr">土耳其 (TR)</option>
+                            <option value="AE" data-flag="ae">阿联酋 (AE)</option>
+                            <option value="CH" data-flag="ch">瑞士 (CH)</option>
+                            <option value="SE" data-flag="se">瑞典 (SE)</option>
+                            <option value="FI" data-flag="fi">芬兰 (FI)</option>
+                            <option value="NO" data-flag="no">挪威 (NO)</option>
+                            <option value="IT" data-flag="it">意大利 (IT)</option>
+                            <option value="ES" data-flag="es">西班牙 (ES)</option>
+                            <option value="PL" data-flag="pl">波兰 (PL)</option>
+                            <option value="IE" data-flag="ie">爱尔兰 (IE)</option>
+                            <option value="LU" data-flag="lu">卢森堡 (LU)</option>
+                            <option value="BR" data-flag="br">巴西 (BR)</option>
+                            <option value="AR" data-flag="ar">阿根廷 (AR)</option>
+                            <option value="ZA" data-flag="za">南非 (ZA)</option>
                         </select>
                     </div>
 
@@ -1945,6 +1945,58 @@
         .finally(() => {
             if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
         });
+    }
+
+    // 独立保存节点地区旗帜（纯面板展示字段，WG 运行中也可即时自动保存，无需推送）
+    async function saveNodeRegionOverride() {
+        if (isInitializingEdit) return;
+        const modal = document.getElementById('editNodeModal');
+        if (!modal || !modal.classList.contains('active')) return;
+        const uuid = document.getElementById('editNodeUUID')?.value || '';
+        const regionSelectEl = document.getElementById('editNodeRegion');
+        if (!uuid || !regionSelectEl) return;
+
+        const regionOverride = regionSelectEl.value || '';
+        const indicator = document.getElementById('editSaveIndicator');
+        if (indicator) {
+            indicator.innerHTML = '<span style="color:#888;">保存中...</span>';
+            indicator.style.opacity = '1';
+        }
+
+        try {
+            const response = await fetch('/api/node/region', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ uuid, region_override: regionOverride })
+            });
+            const res = await response.json();
+            if (res.status === 'success') {
+                const nextRegion = String(res.region || '').trim().toUpperCase();
+                const nextManual = !!res.region_manual;
+                if (window.allNodesData && window.allNodesData[uuid]) {
+                    window.allNodesData[uuid].region = nextRegion;
+                    window.allNodesData[uuid].region_manual = nextManual;
+                }
+                const autoOpt = regionSelectEl.options[0];
+                if (autoOpt) {
+                    autoOpt.textContent = (!nextManual && nextRegion)
+                        ? `自动识别 (当前: ${nextRegion})`
+                        : '自动识别 (GeoIP)';
+                }
+                if (indicator) {
+                    indicator.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg> 已保存`;
+                    setTimeout(() => { indicator.style.opacity = '0'; }, 2000);
+                }
+                if (typeof loadNodesList === 'function') loadNodesList();
+                if (typeof window.trafficStatsRefresh === 'function') window.trafficStatsRefresh();
+            } else if (indicator) {
+                indicator.innerHTML = `<span style="color:#ff3b30;">保存失败: ${res.message || '未知错误'}</span>`;
+            }
+        } catch (err) {
+            if (indicator) {
+                indicator.innerHTML = '<span style="color:#ff3b30;">网络错误</span>';
+            }
+        }
     }
 
     // 自动保存函数 (适配 HTTPS 和 HTTP 模式)

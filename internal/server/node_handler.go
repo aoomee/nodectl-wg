@@ -24,6 +24,83 @@ var nodeDeleteMu sync.Map // key: node UUID (string) → value: *sync.Mutex
 
 // ------------------- [节点管理 API] -------------------
 
+// apiUpdateNodeRegion 独立更新节点展示地区/旗帜（纯面板展示元数据，不触碰代理协议或 WG 隧道，WG 运行中也可即时保存）
+func apiUpdateNodeRegion(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		UUID           string `json:"uuid"`
+		RegionOverride string `json:"region_override"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		sendJSON(w, "error", "无效的数据格式")
+		return
+	}
+	req.UUID = strings.TrimSpace(req.UUID)
+	if req.UUID == "" {
+		sendJSON(w, "error", "缺少节点 UUID")
+		return
+	}
+
+	var targetNode database.NodePool
+	if err := database.DB.First(&targetNode, "uuid = ?", req.UUID).Error; err != nil {
+		sendJSON(w, "error", "节点不存在")
+		return
+	}
+
+	code := strings.ToUpper(strings.TrimSpace(req.RegionOverride))
+	switch {
+	case code == "" || code == "AUTO":
+		targetNode.RegionManual = false
+		if service.GlobalGeoIP != nil {
+			detected := ""
+			if targetNode.IPV4 != "" {
+				detected = service.GlobalGeoIP.GetCountryIsoCode(targetNode.IPV4)
+			}
+			if detected == "" && targetNode.IPV6 != "" {
+				detected = service.GlobalGeoIP.GetCountryIsoCode(targetNode.IPV6)
+			}
+			if detected != "" {
+				targetNode.Region = detected
+			}
+		}
+	case len(code) == 2 && code[0] >= 'A' && code[0] <= 'Z' && code[1] >= 'A' && code[1] <= 'Z':
+		targetNode.RegionManual = true
+		targetNode.Region = code
+	default:
+		sendJSON(w, "error", "无效的地区代码")
+		return
+	}
+
+	if err := database.DB.Model(&database.NodePool{}).
+		Where("uuid = ?", targetNode.UUID).
+		Updates(map[string]interface{}{
+			"region":        targetNode.Region,
+			"region_manual": targetNode.RegionManual,
+			"updated_at":    time.Now(),
+		}).Error; err != nil {
+		logger.Log.Error("更新节点地区旗帜失败", "uuid", targetNode.UUID, "error", err)
+		sendJSON(w, "error", "保存地区失败")
+		return
+	}
+
+	logger.Log.Info("更新节点地区旗帜成功",
+		"uuid", targetNode.UUID,
+		"name", targetNode.Name,
+		"region", targetNode.Region,
+		"region_manual", targetNode.RegionManual,
+		"ip", r.RemoteAddr,
+	)
+
+	sendJSON(w, "success", map[string]interface{}{
+		"region":        targetNode.Region,
+		"region_manual": targetNode.RegionManual,
+	})
+}
+
 // apiUpdateNode 更新节点信息
 // 功能：接收前端请求，更新节点的基础信息和协议链接，包含演示模式下对内置节点核心资产的保护与专业提示
 func apiUpdateNode(w http.ResponseWriter, r *http.Request) {

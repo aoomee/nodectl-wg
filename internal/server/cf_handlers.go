@@ -608,7 +608,7 @@ func apiCFTunnelStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 // apiCFTunnelList GET /api/cf/tunnel/list
-// 按前缀查询 Tunnel 列表（默认 prefix=nodectl）
+// 按前缀查询 Tunnel 列表（默认 prefix=wirearc）
 func apiCFTunnelList(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
@@ -617,7 +617,7 @@ func apiCFTunnelList(w http.ResponseWriter, r *http.Request) {
 
 	prefix := strings.TrimSpace(r.URL.Query().Get("prefix"))
 	if prefix == "" {
-		prefix = "nodectl"
+		prefix = "wirearc"
 	}
 
 	items, err := service.ListCFTunnelsByPrefix(prefix)

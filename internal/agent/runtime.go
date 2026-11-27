@@ -139,6 +139,7 @@ func (rt *Runtime) Run() error {
 
 	// 启动自动更新检查循环（后台 goroutine）
 	if rt.updater != nil {
+		rt.updater.SetSkipBackgroundUpdate(rt.shouldSkipBackgroundUpdate)
 		go rt.updater.Run(ctx)
 	}
 
@@ -188,6 +189,20 @@ func (rt *Runtime) Run() error {
 			debug.FreeOSMemory()
 		}
 	}
+}
+
+// shouldSkipBackgroundUpdate 判断当前节点是否应跳过后台定时自动更新。
+// 当节点配置了非直连（active/blocked）的 WG 转发路由时，进程原地重启会清空内存授权并触发 fail-closed 拒流，
+// 因此跳过后台静默更新，仅允许管理员在面板显式确认后手动升级。
+func (rt *Runtime) shouldSkipBackgroundUpdate() bool {
+	if rt == nil || rt.singboxMgr == nil {
+		return false
+	}
+	route, err := rt.singboxMgr.GetConfigManager().GetWGRoute()
+	if err != nil {
+		return true
+	}
+	return route != nil && route.Mode != "direct"
 }
 
 // ensureSingboxManager 确保 singboxMgr 已初始化，若为 nil 则自动创建

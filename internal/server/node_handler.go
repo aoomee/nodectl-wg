@@ -587,30 +587,36 @@ func apiAddNode(w http.ResponseWriter, r *http.Request) {
 	sendJSON(w, "success", "节点添加成功")
 }
 
-// apiGetNodes 获取所有节点列表
-func apiGetNodes(w http.ResponseWriter, r *http.Request) {
-	// 1. 从数据库查询所有节点，按 SortIndex 排序
+// buildNodesResponseData 组装首页与 /api/get-nodes 共用的节点列表数据（含安全环境脱敏与 WG 配对摘要）
+func buildNodesResponseData(r *http.Request, preloaded []database.NodePool) (map[string]interface{}, error) {
 	var nodes []database.NodePool
-	if err := database.DB.Order("sort_index ASC").Find(&nodes).Error; err != nil {
-		logger.Log.Error("获取节点列表失败", "error", err)
-		sendJSON(w, "error", "获取节点数据失败")
-		return
+	if preloaded != nil {
+		nodes = make([]database.NodePool, len(preloaded))
+		copy(nodes, preloaded)
+	} else {
+		if err := database.DB.Order("sort_index ASC").Find(&nodes).Error; err != nil {
+			return nil, err
+		}
 	}
 
-	// 2. 安全检查：判断是否处于安全环境 (HTTPS 协议 或 用户开启了强制 HTTP)
+	// 批量读取面板配置，避免多次独立查库
+	var cfgRows []database.SysConfig
+	database.DB.Where("key IN ?", []string{"sys_force_http", "panel_url", "cf_tunnel_subdomain"}).Find(&cfgRows)
+	cfgMap := make(map[string]string, len(cfgRows))
+	for _, row := range cfgRows {
+		cfgMap[row.Key] = row.Value
+	}
+
+	// 安全检查：判断是否处于安全环境 (HTTPS 协议 或 用户开启了强制 HTTP)
 	isSecure := service.CheckRequestSecure(r)
-	if !isSecure {
-		var config database.SysConfig
-		database.DB.Where("key = ?", "sys_force_http").First(&config)
-		if config.Value == "true" {
-			isSecure = true // 用户选择忽略风险，视为安全
-		}
+	if !isSecure && cfgMap["sys_force_http"] == "true" {
+		isSecure = true
 	}
 
 	// 如果依然不安全，则脱敏(隐藏)真实链接
 	if !isSecure {
 		for i := range nodes {
-			maskedLinks := make(map[string]string)
+			maskedLinks := make(map[string]string, len(nodes[i].Links))
 			for k := range nodes[i].Links {
 				maskedLinks[k] = "🔒 安全保护: 仅 HTTPS 可见"
 			}
@@ -618,9 +624,9 @@ func apiGetNodes(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// 3. [核心修复] 将节点分类为直连和落地，适配前端展示需求
-	var directNodes []database.NodePool
-	var landNodes []database.NodePool
+	// 将节点分类为直连和落地，适配前端展示需求
+	directNodes := make([]database.NodePool, 0)
+	landNodes := make([]database.NodePool, 0)
 
 	for _, node := range nodes {
 		if node.RoutingType == 1 {
@@ -630,31 +636,26 @@ func apiGetNodes(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// 确保空切片序列化为 [] 而不是 null
-	if directNodes == nil {
-		directNodes = []database.NodePool{}
+	return map[string]interface{}{
+		"direct_nodes":     directNodes,
+		"land_nodes":       landNodes,
+		"wg_pairs":         service.ListWGPairNodeSummaries(),
+		"panel_url":        cfgMap["panel_url"],
+		"tunnel_subdomain": cfgMap["cf_tunnel_subdomain"],
+	}, nil
+}
+
+// apiGetNodes 获取所有节点列表
+func apiGetNodes(w http.ResponseWriter, r *http.Request) {
+	payload, err := buildNodesResponseData(r, nil)
+	if err != nil {
+		logger.Log.Error("获取节点列表失败", "error", err)
+		sendJSON(w, "error", "获取节点数据失败")
+		return
 	}
-	if landNodes == nil {
-		landNodes = []database.NodePool{}
-	}
 
-	// 获取面板地址 (前端复制链接时需要)
-	var config database.SysConfig
-	database.DB.Where("key = ?", "panel_url").First(&config)
-
-	// 获取 tunnel 子域名（用于前端生成安装命令时选择回调地址模式）
-	var tunnelSubdomainConfig database.SysConfig
-	database.DB.Where("key = ?", "cf_tunnel_subdomain").First(&tunnelSubdomainConfig)
-
-	// 4. 返回结构化数据（附带活跃 WG 配对摘要供首页直接标记）
 	sendJSON(w, "success", map[string]interface{}{
-		"data": map[string]interface{}{
-			"direct_nodes":     directNodes,
-			"land_nodes":       landNodes,
-			"wg_pairs":         service.ListWGPairNodeSummaries(),
-			"panel_url":        config.Value,
-			"tunnel_subdomain": tunnelSubdomainConfig.Value,
-		},
+		"data": payload,
 	})
 }
 

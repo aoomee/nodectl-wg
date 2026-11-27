@@ -7,7 +7,7 @@
 
     .ts-layout {
         display: grid;
-        grid-template-columns: minmax(0, 3.15fr) minmax(0, 1.0fr);
+        grid-template-columns: minmax(0, 2.95fr) minmax(305px, 1.05fr);
         gap: 14px;
         align-items: stretch;
     }
@@ -218,6 +218,7 @@
     }
 
     .ts-loading-overlay.is-hidden {
+        display: none;
         opacity: 0;
         pointer-events: none;
     }
@@ -593,11 +594,13 @@
     }
 
     .ts-rank-list {
-        overflow: auto;
+        overflow-y: auto;
+        overflow-x: hidden;
         display: flex;
         flex-direction: column;
-        gap: 8px;
-        padding: 0;
+        gap: 7px;
+        padding: 4px 3px 6px;
+        margin: -4px -3px 0;
         box-sizing: border-box;
         scrollbar-width: none;
         -ms-overflow-style: none;
@@ -611,11 +614,11 @@
 
     .ts-rank-item {
         border: 1px solid rgba(0, 0, 0, 0.055);
-        border-radius: 14px;
-        padding: 10px 12px;
+        border-radius: 13px;
+        padding: 8px 10px;
         flex-shrink: 0;
         cursor: pointer;
-        transition: all 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+        transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
         background: #ffffff;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.015);
     }
@@ -666,6 +669,7 @@
         display: inline-flex;
         align-items: center;
         gap: 6px;
+        min-width: 0;
     }
 
     .ts-rank-total {
@@ -673,13 +677,14 @@
         font-weight: 700;
         color: #48484a;
         font-variant-numeric: tabular-nums;
+        flex-shrink: 0;
     }
 
     .ts-rank-bar {
-        height: 6px;
+        height: 5.5px;
         border-radius: 999px;
         background: #eceef1;
-        margin-top: 7px;
+        margin-top: 6px;
         overflow: hidden;
     }
 
@@ -699,31 +704,40 @@
     }
 
     .ts-rank-meta {
-        margin-top: 7px;
+        margin-top: 6px;
         display: flex;
-        flex-direction: column;
         align-items: center;
-        gap: 3px;
-        font-size: 11.5px;
+        justify-content: space-between;
+        flex-wrap: nowrap;
+        gap: 4px;
+        font-size: 10.5px;
+        line-height: 1.3;
         color: #86868b;
         font-variant-numeric: tabular-nums;
+        letter-spacing: -0.015em;
     }
     .ts-rank-meta-totals,
     .ts-live-rate {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
+        display: inline-flex;
         align-items: center;
-        text-align: center;
-        width: 100%;
-        gap: 6px;
+        gap: 5px;
+        min-width: 0;
+    }
+    .ts-live-rate {
+        justify-content: flex-end;
+    }
+    .ts-meta-sep {
+        width: 1px;
+        height: 10px;
+        background: rgba(0, 0, 0, 0.1);
+        flex-shrink: 0;
     }
     .ts-rank-meta-totals span,
     .ts-live-rate span {
         white-space: nowrap;
-        text-align: center;
     }
     .ts-live-rate .ts-rate-offline {
-        grid-column: 1 / -1;
+        color: #c7c7cc;
     }
 
     .ts-status {
@@ -1182,12 +1196,12 @@
         function flagEmoji(regionCode) {
             const code = String(regionCode || '').trim().toUpperCase();
             if (!/^[A-Z]{2}$/.test(code)) {
-                return `<img src="${buildFlagFallbackDataUri('')}" alt="globe" style="width: 18px; height: 18px; vertical-align: middle; display: inline-block; border-radius: 50%;">`;
+                return `<img src="${buildFlagFallbackDataUri('')}" width="18" height="18" alt="globe" style="width: 18px; height: 18px; vertical-align: middle; display: inline-block; border-radius: 50%; flex-shrink: 0;">`;
             }
 
             const isoCode = code.toLowerCase();
             const fallback = buildFlagFallbackDataUri(code);
-            return `<img src="https://flagcdn.com/${isoCode}.svg" loading="lazy" alt="${isoCode}" onerror="this.onerror=null;this.src='${fallback}'" style="width: 18px; height: 13px; object-fit: cover; vertical-align: middle; display: inline-block; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.12);">`;
+            return `<img src="https://flagcdn.com/${isoCode}.svg" width="18" height="13" decoding="async" alt="${isoCode}" onerror="this.onerror=null;this.src='${fallback}'" style="width: 18px; height: 13px; object-fit: cover; vertical-align: middle; display: inline-block; border-radius: 4px; background: #f2f3f7; box-shadow: 0 1px 2px rgba(0,0,0,0.12); flex-shrink: 0;">`;
         }
 
         function fmtBytes(v, noUnit) {
@@ -1261,7 +1275,20 @@
             document.getElementById('ts-rank-total-all').textContent = fmtBytes(totalUp + totalDown);
         }
 
+        function isTodayView() {
+            return !state.rankDate || state.rankDate === todayDateStr();
+        }
+
+        function buildLiveRateHtml(nodeUUID, offline) {
+            const live = state.liveRates[nodeUUID];
+            if (live && !offline) {
+                return '<span style="color:#34c759;">↑' + fmtRate(live.tx_rate_bps) + '</span><span style="color:#1e88ff;">↓' + fmtRate(live.rx_rate_bps) + '</span>';
+            }
+            return '<span class="ts-rate-offline">--</span>';
+        }
+
         function applyLiveTotalToRank(nodeUUID, totalRXBytes, totalTXBytes) {
+            if (!isTodayView()) return;
             const rank = state.rank;
             if (!rank || !Array.isArray(rank.items)) return;
             const target = rank.items.find(x => x.uuid === nodeUUID);
@@ -1282,7 +1309,7 @@
 
         function isNodeOffline(nodeUUID) {
             const status = state.nodeStatus[nodeUUID];
-            if (!status) return true;
+            if (!status) return false;
             return !!status.offline;
         }
 
@@ -1334,8 +1361,10 @@
                                 traffic_down: msg.total_rx_bytes || 0,
                                 total_bytes: (msg.total_tx_bytes || 0) + (msg.total_rx_bytes || 0)
                             };
-                            applyLiveTotalToRank(msg.node_uuid, msg.total_rx_bytes || 0, msg.total_tx_bytes || 0);
-                            scheduleRankRerender();
+                            if (isTodayView()) {
+                                applyLiveTotalToRank(msg.node_uuid, msg.total_rx_bytes || 0, msg.total_tx_bytes || 0);
+                                scheduleRankRerender();
+                            }
                         }
                         // 仅更新该节点的速率文字和离线状态，不整体重渲染
                         updateRankItemLive(msg.node_uuid);
@@ -1369,13 +1398,13 @@
             const rateEl = el.querySelector('.ts-live-rate');
             if (!rateEl) return;
 
-            const live = state.liveRates[nodeUUID];
-            const nextHtml = (live && !offline)
-                ? ('<span style="color:#34c759;">↑ ' + fmtRate(live.tx_rate_bps) + '</span><span style="color:#1e88ff;">↓ ' + fmtRate(live.rx_rate_bps) + '</span>')
-                : '<span class="ts-rate-offline" style="color:#ccc;">--</span>';
+            const nextHtml = buildLiveRateHtml(nodeUUID, offline);
             if (rateEl.innerHTML !== nextHtml) {
+                const prevH = el.offsetHeight;
                 rateEl.innerHTML = nextHtml;
-                syncRankListHeight();
+                if (el.offsetHeight !== prevH) {
+                    syncRankListHeight();
+                }
             }
         }
 
@@ -1402,10 +1431,11 @@
 
             const rankItems = (state.rank && Array.isArray(state.rank.items)) ? state.rank.items : [];
             const selectedItem = rankItems.find(x => x.uuid === state.selectedNodeUUID);
-            const todayTotal = selectedItem
-                ? Number(selectedItem.today_total_bytes || selectedItem.total_bytes || 0)
+            const dayTotal = selectedItem
+                ? Number((selectedItem.today_total_bytes !== undefined && selectedItem.today_total_bytes !== null) ? selectedItem.today_total_bytes : (selectedItem.total_bytes || 0))
                 : 0;
-            el.innerHTML = `<span class="dot"></span><span class="ts-node-main">${flagEmoji(node.region)} <span class="ts-node-name">${esc(node.name || '--')}</span><span class="ts-node-sub">今日流量: ${fmtBytes(todayTotal)}</span></span>`;
+            const dayLabel = isTodayView() ? '今日流量' : '当日流量';
+            el.innerHTML = `<span class="dot"></span><span class="ts-node-main">${flagEmoji(node.region)} <span class="ts-node-name">${esc(node.name || '--')}</span><span class="ts-node-sub">${dayLabel}: ${fmtBytes(dayTotal)}</span></span>`;
         }
 
         function computeUsedByLimitType(up, down, limitType) {
@@ -1448,12 +1478,8 @@
             }
         }
 
-        async function loadLandingNodes() {
-            const res = await fetch('/api/traffic/landing-nodes');
-            const data = await res.json();
-            if (!data || data.status !== 'success') throw new Error((data && data.message) || '读取节点失败');
-
-            state.nodes = Array.isArray(data.nodes) ? data.nodes : [];
+        function applyLandingNodesData(nodes) {
+            state.nodes = Array.isArray(nodes) ? nodes : [];
             state.nodes.forEach(n => {
                 const existing = state.nodeMap[n.uuid] || {};
                 state.nodeMap[n.uuid] = {
@@ -1464,18 +1490,109 @@
                     traffic_limit: n.traffic_limit || existing.traffic_limit || 0,
                     traffic_limit_type: n.traffic_limit_type || existing.traffic_limit_type || 'total'
                 };
-                if (!state.nodeStatus[n.uuid]) {
-                    state.nodeStatus[n.uuid] = {
-                        offline: true,
-                        last_live_at: 0,
-                        updated_at_ms: 0
-                    };
-                }
             });
 
             if (nodeSelect()) {
                 nodeSelect().innerHTML = state.nodes.map(n => `<option value="${esc(n.uuid)}">${esc(n.name || n.uuid)}</option>`).join('');
             }
+        }
+
+        async function loadLandingNodes() {
+            const res = await fetch('/api/traffic/landing-nodes');
+            const data = await res.json();
+            if (!data || data.status !== 'success') throw new Error((data && data.message) || '读取节点失败');
+            applyLandingNodesData(data.nodes);
+        }
+
+        function applyRankData(rankData, preferredUUID) {
+            state.rank = rankData || null;
+            state.rankDate = (state.rank && state.rank.generated_at) || state.rankDate || todayDateStr();
+            if (rankDatePicker()) rankDatePicker().value = state.rankDate;
+            syncCustomDateDisplay();
+
+            const items = (state.rank && Array.isArray(state.rank.items)) ? state.rank.items : [];
+            const todayMode = isTodayView();
+            items.forEach(it => {
+                if (it.today_total_bytes === undefined || it.today_total_bytes === null) {
+                    it.today_total_bytes = Number(it.total_bytes || 0);
+                }
+
+                // 仅在尚未收到实时 WS 状态更新时采用后端返回的真实在线态，彻底杜绝首屏假离线闪红
+                const prevStatus = state.nodeStatus[it.uuid];
+                if (!prevStatus || !prevStatus.updated_at_ms) {
+                    state.nodeStatus[it.uuid] = {
+                        offline: !!it.offline,
+                        last_live_at: Number(it.live_last_at || 0),
+                        updated_at_ms: 0
+                    };
+                }
+
+                if (it.has_live_total && !state.liveTotals[it.uuid]) {
+                    const liveUp = Number(it.live_total_up || 0);
+                    const liveDown = Number(it.live_total_down || 0);
+                    state.liveTotals[it.uuid] = {
+                        traffic_up: liveUp,
+                        traffic_down: liveDown,
+                        total_bytes: Number(it.live_total_bytes || (liveUp + liveDown))
+                    };
+                }
+
+                if (!it.offline && (!state.liveRates[it.uuid] || !state.liveRates[it.uuid].updated_at_ms)) {
+                    state.liveRates[it.uuid] = {
+                        rx_rate_bps: Number(it.live_rx_rate_bps || 0),
+                        tx_rate_bps: Number(it.live_tx_rate_bps || 0),
+                        last_live_at: Number(it.live_last_at || 0),
+                        updated_at_ms: 0
+                    };
+                }
+
+                if (todayMode && state.liveTotals[it.uuid]) {
+                    const lt = state.liveTotals[it.uuid];
+                    it.traffic_up = Number(lt.traffic_up || 0);
+                    it.traffic_down = Number(lt.traffic_down || 0);
+                    it.total_bytes = Number(lt.total_bytes || 0);
+                    it.upload_ratio = it.traffic_up > 0 ? (it.traffic_down / it.traffic_up).toFixed(2) : '0.00';
+                }
+
+                if (!state.nodeMap[it.uuid]) {
+                    state.nodeMap[it.uuid] = {
+                        uuid: it.uuid,
+                        name: it.name,
+                        region: it.region || '',
+                        traffic_limit: it.traffic_limit || 0,
+                        traffic_limit_type: it.traffic_limit_type || 'total'
+                    };
+                } else {
+                    state.nodeMap[it.uuid].name = it.name || state.nodeMap[it.uuid].name;
+                    state.nodeMap[it.uuid].region = it.region || state.nodeMap[it.uuid].region;
+                    state.nodeMap[it.uuid].traffic_limit = it.traffic_limit || 0;
+                    state.nodeMap[it.uuid].traffic_limit_type = it.traffic_limit_type || 'total';
+                }
+            });
+
+            if (todayMode && items.length > 1) {
+                items.sort((a, b) => Number(b.total_bytes || 0) - Number(a.total_bytes || 0));
+            }
+
+            if (preferredUUID && items.some(x => x.uuid === preferredUUID)) {
+                state.selectedNodeUUID = preferredUUID;
+            }
+            const inRank = items.some(x => x.uuid === state.selectedNodeUUID);
+            if (!state.selectedNodeUUID || !inRank) {
+                if (items.length) state.selectedNodeUUID = items[0].uuid;
+                else if (state.nodes.length) state.selectedNodeUUID = state.nodes[0].uuid;
+            }
+
+            if (items.length > 0) {
+                recalcRankSummaryFromItems(items);
+            } else {
+                document.getElementById('ts-rank-total-up').textContent = fmtBytes((state.rank && state.rank.total_up) || 0);
+                document.getElementById('ts-rank-total-down').textContent = fmtBytes((state.rank && state.rank.total_down) || 0);
+                document.getElementById('ts-rank-total-all').textContent = fmtBytes((state.rank && state.rank.total_bytes) || 0);
+            }
+
+            updateSelectedBadge();
+            updateTrendUsageMetric();
         }
 
         async function loadRank() {
@@ -1486,51 +1603,7 @@
             const res = await fetch('/api/traffic/consumption-rank?' + q.toString());
             const data = await res.json();
             if (!data || data.status !== 'success') throw new Error((data && data.message) || '读取流量排行失败');
-
-            state.rank = data.rank || null;
-            state.rankDate = (state.rank && state.rank.generated_at) || state.rankDate || todayDateStr();
-            if (rankDatePicker()) rankDatePicker().value = state.rankDate;
-            syncCustomDateDisplay();
-
-            const items = (state.rank && Array.isArray(state.rank.items)) ? state.rank.items : [];
-            items.forEach(it => {
-                const prevStatus = state.nodeStatus[it.uuid] || {};
-                state.nodeStatus[it.uuid] = {
-                    offline: (typeof prevStatus.offline === 'boolean') ? !!prevStatus.offline : !!it.offline,
-                    last_live_at: Number(prevStatus.last_live_at || 0),
-                    updated_at_ms: Number(prevStatus.updated_at_ms || 0)
-                };
-                if (it.today_total_bytes === undefined || it.today_total_bytes === null) {
-                    it.today_total_bytes = Number(it.total_bytes || 0);
-                }
-            });
-            items.forEach(it => {
-                if (!state.nodeMap[it.uuid]) {
-                    state.nodeMap[it.uuid] = {
-                        uuid: it.uuid,
-                        name: it.name,
-                        region: it.region || '',
-                        traffic_limit: it.traffic_limit || 0,
-                        traffic_limit_type: it.traffic_limit_type || 'total'
-                    };
-                } else {
-                    state.nodeMap[it.uuid].traffic_limit = it.traffic_limit || 0;
-                    state.nodeMap[it.uuid].traffic_limit_type = it.traffic_limit_type || 'total';
-                }
-            });
-
-            const inRank = items.some(x => x.uuid === state.selectedNodeUUID);
-            if (!state.selectedNodeUUID || !inRank) {
-                if (items.length) state.selectedNodeUUID = items[0].uuid;
-                else if (state.nodes.length) state.selectedNodeUUID = state.nodes[0].uuid;
-            }
-
-            document.getElementById('ts-rank-total-up').textContent = fmtBytes((state.rank && state.rank.total_up) || 0);
-            document.getElementById('ts-rank-total-down').textContent = fmtBytes((state.rank && state.rank.total_down) || 0);
-            document.getElementById('ts-rank-total-all').textContent = fmtBytes((state.rank && state.rank.total_bytes) || 0);
-
-            updateSelectedBadge();
-            updateTrendUsageMetric();
+            applyRankData(data.rank || null);
         }
 
         function renderRank() {
@@ -1542,12 +1615,13 @@
                 return;
             }
 
+            const todayMode = isTodayView();
             items.forEach(item => {
                 const liveTotal = state.liveTotals[item.uuid];
                 if (item.today_total_bytes === undefined || item.today_total_bytes === null) {
                     item.today_total_bytes = Number(item.total_bytes || 0);
                 }
-                if (liveTotal) {
+                if (todayMode && liveTotal) {
                     item.traffic_up = Number(liveTotal.traffic_up || 0);
                     item.traffic_down = Number(liveTotal.traffic_down || 0);
                     item.total_bytes = Number(liveTotal.total_bytes || 0);
@@ -1567,7 +1641,6 @@
             updateSelectedBadge();
             updateTrendUsageMetric();
 
-            const maxTotal = Math.max(1, ...items.map(x => Number(x.total_bytes || 0)));
             const computeRankBarWidthPct = (item, up, down, total) => {
                 const limit = Number(item.traffic_limit || 0);
                 if (limit > 0) {
@@ -1609,35 +1682,41 @@
                     const barDown = el.querySelector('.ts-rank-bar-down');
                     if (barDown) barDown.style.width = (100 - upPct).toFixed(2) + '%';
 
-                    const metaDiv = el.querySelector('.ts-rank-meta > div');
-                    if (metaDiv) {
-                        const spans = metaDiv.querySelectorAll('span');
-                        if (spans[0]) spans[0].textContent = '↑ ' + fmtGb(up);
-                        if (spans[1]) spans[1].textContent = '↓ ' + fmtGb(down);
+                    const totalsDiv = el.querySelector('.ts-rank-meta-totals');
+                    if (totalsDiv) {
+                        const spans = totalsDiv.querySelectorAll('span');
+                        if (spans[0]) spans[0].textContent = '↑' + fmtGb(up);
+                        if (spans[1]) spans[1].textContent = '↓' + fmtGb(down);
                     }
 
-                    // 更新活跃指示点
+                    // 同步节点名称、国旗与活跃指示点（例如在编辑节点弹窗修改名称或手动地区旗帜后立即生效）
                     const nameEl = el.querySelector('.ts-rank-name');
                     if (nameEl) {
-                        const dot = nameEl.querySelector('.ts-dot');
-                        if (isActive && !dot) {
-                            const newDot = document.createElement('i');
-                            newDot.className = 'ts-dot';
-                            newDot.style.cssText = 'background:#34c759; margin:0; width:6px; height:6px;';
-                            nameEl.appendChild(newDot);
-                        } else if (!isActive && dot) {
-                            dot.remove();
+                        const nextName = String(item.name || item.uuid || '');
+                        const nextRegion = String(item.region || '').trim().toUpperCase();
+                        if (el.getAttribute('data-name') !== nextName || el.getAttribute('data-region') !== nextRegion) {
+                            el.setAttribute('data-name', nextName);
+                            el.setAttribute('data-region', nextRegion);
+                            nameEl.innerHTML = `${flagEmoji(nextRegion)} <span style="margin-right:4px">${esc(nextName)}</span>${isActive ? '<i class="ts-dot" style="background:#34c759; margin:0; width:6px; height:6px;"></i>' : ''}`;
+                        } else {
+                            const dot = nameEl.querySelector('.ts-dot');
+                            if (isActive && !dot) {
+                                const newDot = document.createElement('i');
+                                newDot.className = 'ts-dot';
+                                newDot.style.cssText = 'background:#34c759; margin:0; width:6px; height:6px;';
+                                nameEl.appendChild(newDot);
+                            } else if (!isActive && dot) {
+                                dot.remove();
+                            }
                         }
                     }
 
                     // 更新实时速率
                     const rateEl = el.querySelector('.ts-live-rate');
                     if (rateEl) {
-                        const live = state.liveRates[item.uuid];
-                        if (live && !offline) {
-                            rateEl.innerHTML = '<span style="color:#34c759;">↑ ' + fmtRate(live.tx_rate_bps) + '</span><span style="color:#1e88ff;">↓ ' + fmtRate(live.rx_rate_bps) + '</span>';
-                        } else {
-                            rateEl.innerHTML = '<span class="ts-rate-offline" style="color:#ccc;">--</span>';
+                        const nextRateHtml = buildLiveRateHtml(item.uuid, offline);
+                        if (rateEl.innerHTML !== nextRateHtml) {
+                            rateEl.innerHTML = nextRateHtml;
                         }
                     }
                 });
@@ -1655,18 +1734,10 @@
                 const upPct = total > 0 ? up / total * 100 : 0;
                 const offline = isNodeOffline(item.uuid);
                 const offlineCls = offline ? 'offline' : '';
-
-                // 实时速率
-                const live = state.liveRates[item.uuid];
-                let rateHtml;
-                if (live && !offline) {
-                    rateHtml = '<span style="color:#34c759;">↑ ' + fmtRate(live.tx_rate_bps) + '</span><span style="color:#1e88ff;">↓ ' + fmtRate(live.rx_rate_bps) + '</span>';
-                } else {
-                    rateHtml = '<span class="ts-rate-offline" style="color:#ccc;">--</span>';
-                }
+                const rateHtml = buildLiveRateHtml(item.uuid, offline);
 
                 return `
-                    <div class="ts-rank-item ${active} ${offlineCls}" data-uuid="${esc(item.uuid)}">
+                    <div class="ts-rank-item ${active} ${offlineCls}" data-uuid="${esc(item.uuid)}" data-name="${esc(item.name || item.uuid)}" data-region="${esc(String(item.region || '').trim().toUpperCase())}">
                         <div class="ts-rank-top">
                             <div class="ts-rank-name">
                                 ${flagEmoji(item.region)} 
@@ -1683,10 +1754,11 @@
                         </div>
                         <div class="ts-rank-meta">
                             <div class="ts-rank-meta-totals">
-                                <span style="color:#34c759;">↑ ${fmtGb(up)}</span>
-                                <span style="color:#007aff;">↓ ${fmtGb(down)}</span>
+                                <span style="color:#34c759;">↑${fmtGb(up)}</span>
+                                <span style="color:#007aff;">↓${fmtGb(down)}</span>
                             </div>
-                            <div class="ts-live-rate" style="font-size:11px; font-variant-numeric:tabular-nums;">${rateHtml}</div>
+                            <span class="ts-meta-sep" aria-hidden="true"></span>
+                            <div class="ts-live-rate">${rateHtml}</div>
                         </div>
                     </div>
                 `;
@@ -2418,12 +2490,66 @@
 
         async function initTrafficStats() {
             try {
-                state.rankDate = todayDateStr();
+                const browserToday = todayDateStr();
+                const boot = window.__WA_BOOTSTRAP__ && window.__WA_BOOTSTRAP__.traffic;
+
+                if (boot && boot.rank) {
+                    state.rankDate = boot.date || browserToday;
+                    if (rankDatePicker()) rankDatePicker().value = state.rankDate;
+                    syncCustomDateDisplay();
+                    bindEvents();
+
+                    if (typeof boot.point_persist_interval_sec === 'number') {
+                        state.pointPersistIntervalSec = boot.point_persist_interval_sec;
+                    }
+
+                    applyLandingNodesData(boot.landing_nodes || []);
+                    applyRankData(boot.rank, boot.selected_node_uuid || '');
+                    if (!state.selectedNodeUUID && state.nodes.length) {
+                        state.selectedNodeUUID = state.nodes[0].uuid;
+                    }
+                    if (nodeSelect()) nodeSelect().value = state.selectedNodeUUID;
+
+                    state.barPoints = Array.isArray(boot.bar_points) ? boot.bar_points : [];
+                    state.linePoints = normalizeLineSeries(Array.isArray(boot.line_points) ? boot.line_points : []);
+
+                    setChartLoading('both', false);
+                    setStatus('', false);
+                    updateSelectedBadge();
+                    updateTrendUsageMetric();
+                    renderRank();
+                    const initialBarW = (barSvg() && barSvg().clientWidth) || 0;
+                    const initialLineW = (lineSvg() && lineSvg().clientWidth) || 0;
+                    renderBar();
+                    renderLine();
+
+                    connectLiveWS();
+
+                    // 若首帧渲染时容器尺寸尚未稳定（如移动端旋转容器），下一帧自动校准一次
+                    requestAnimationFrame(function () {
+                        const nextBarW = (barSvg() && barSvg().clientWidth) || 0;
+                        const nextLineW = (lineSvg() && lineSvg().clientWidth) || 0;
+                        if (Math.abs(nextBarW - initialBarW) > 4) renderBar();
+                        if (Math.abs(nextLineW - initialLineW) > 4) renderLine();
+                        syncRankListHeight();
+                    });
+
+                    // 若服务端与浏览器跨零点处于不同日期，静默同步至浏览器当天数据
+                    if (boot.date && boot.date !== browserToday) {
+                        state.rankDate = browserToday;
+                        if (rankDatePicker()) rankDatePicker().value = browserToday;
+                        syncCustomDateDisplay();
+                        window.trafficStatsRefresh().catch(() => {});
+                    }
+                    return;
+                }
+
+                state.rankDate = browserToday;
                 if (rankDatePicker()) rankDatePicker().value = state.rankDate;
                 syncCustomDateDisplay();
                 bindEvents();
 
-                // 立即并行建立实时 WS 订阅与拉取节点/排行数据，彻底消除串行瀑布等待
+                // 无内联引导数据时，立即并行建立实时 WS 订阅与拉取节点/排行数据
                 connectLiveWS();
                 await Promise.all([loadLandingNodes(), loadRank()]);
 

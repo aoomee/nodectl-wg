@@ -39,7 +39,7 @@ func TestReporterDirectAgentDispatchesWGCommandsOverWS(t *testing.T) {
 	replyCh := make(chan CommandResult, 1)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{Subprotocols: []string{"nodectl-agent"}})
+		conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{Subprotocols: []string{"wirearc-agent"}})
 		if err != nil {
 			return
 		}

@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"log"
 
-	"nodectl/internal/agent/singbox"
+	"wirearc/internal/agent/singbox"
 )
 
 // ResetHandler 协议重置处理器

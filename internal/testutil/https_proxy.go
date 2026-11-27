@@ -21,11 +21,11 @@ import (
 
 // HTTPSProxy terminates TLS and forwards plain HTTP, preserving Host and the
 // WebSocket upgrade. nginx mode uses a real local process and an ephemeral CA.
-// CI sets NODECTL_TEST_NGINX to require nginx; local runs may skip that variant.
+// CI sets WIREARC_TEST_NGINX to require nginx; local runs may skip that variant.
 func HTTPSProxy(t *testing.T, upstream, kind string) (string, *http.Client) {
 	t.Helper()
-	if kind == "nginx" && os.Getenv("NODECTL_TEST_NGINX") == "" {
-		t.Skip("set NODECTL_TEST_NGINX to run the real NGINX transport test")
+	if kind == "nginx" && os.Getenv("WIREARC_TEST_NGINX") == "" {
+		t.Skip("set WIREARC_TEST_NGINX to run the real NGINX transport test")
 	}
 	target, err := url.Parse(upstream)
 	if err != nil {
@@ -93,7 +93,7 @@ http {
 	if err := os.WriteFile(confPath, []byte(config), 0600); err != nil {
 		t.Fatal(err)
 	}
-	cmd := exec.Command(os.Getenv("NODECTL_TEST_NGINX"), "-p", dir+string(os.PathSeparator), "-c", confPath)
+	cmd := exec.Command(os.Getenv("WIREARC_TEST_NGINX"), "-p", dir+string(os.PathSeparator), "-c", confPath)
 	var output bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &output, &output
 	if err := cmd.Start(); err != nil {

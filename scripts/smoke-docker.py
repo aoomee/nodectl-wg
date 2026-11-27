@@ -55,7 +55,7 @@ def login(base, password, accepted=True):
     form = urllib.parse.urlencode({"username": "admin", "password": password}).encode()
     with opener.open(base + "/login", form, timeout=15) as response:
         page = response.read().decode()
-    assert bool(any(c.name == "nodectl_token" for c in jar)) == accepted, "Unexpected login result"
+    assert bool(any(c.name == "wirearc_token" for c in jar)) == accepted, "Unexpected login result"
     return opener, jar, page
 
 
@@ -71,8 +71,8 @@ def main(image):
     work = Path(tempfile.mkdtemp(prefix=project + "-"))
     data = work / "data"
     data.mkdir()
-    env = dict(os.environ, NODECTL_IMAGE=image, NODECTL_BIND="127.0.0.1", NODECTL_PORT="0",
-               NODECTL_INITIAL_ADMIN_PASSWORD="", NODECTL_TRUSTED_PROXIES="")
+    env = dict(os.environ, WIREARC_IMAGE=image, WIREARC_BIND="127.0.0.1", WIREARC_PORT="0",
+               WIREARC_INITIAL_ADMIN_PASSWORD="", WIREARC_TRUSTED_PROXIES="")
     override = work / "test.json"
     override.write_text(json.dumps({"services": {"wirearc": {"volumes": [
         {"type": "bind", "source": str(data), "target": "/app/data"}
@@ -140,7 +140,7 @@ def main(image):
             assert headers["X-Content-Type-Options"] == "nosniff"
             assert "sha384-" + base64.b64encode(hashlib.sha384(body).digest()).decode() == integrity
         status, _, _, _ = request(session, base + "/api/node/wg/push", {},
-                                  {"Content-Type": "application/json", "X-NodeCtl-WG": "1"})
+                                  {"Content-Type": "application/json", "X-WireArc-WG": "1"})
         assert status == 400, f"Invalid WG pair push request returned {status}"
         print("PASS: private initial password, authentication, embedded assets and Agent WG API", flush=True)
 
@@ -168,17 +168,17 @@ def main(image):
 
         # Existing data must survive replacement and take precedence over a new
         # bootstrap password supplied in the deployment environment.
-        env["NODECTL_INITIAL_ADMIN_PASSWORD"] = secrets.token_urlsafe(24)
+        env["WIREARC_INITIAL_ADMIN_PASSWORD"] = secrets.token_urlsafe(24)
         second, base = start()
         assert second != container, "Container was not recreated"
-        login(base, env["NODECTL_INITIAL_ADMIN_PASSWORD"], accepted=False)
+        login(base, env["WIREARC_INITIAL_ADMIN_PASSWORD"], accepted=False)
         session, _, _ = login(base, password)
         stored = api(session, base, "/api/get-settings")["data"]
         assert all(stored[k] == v for k, v in saved.items()), "Recreation lost saved settings"
         run("docker", "exec", second, "test", "!", "-e", "/app/data/initial-admin-password")
-        check_logs(second, secret_values + [env["NODECTL_INITIAL_ADMIN_PASSWORD"]])
+        check_logs(second, secret_values + [env["WIREARC_INITIAL_ADMIN_PASSWORD"]])
         stop(second)
-        con = sqlite3.connect(f"file:{data / 'nodectl.db'}?mode=ro", uri=True)
+        con = sqlite3.connect(f"file:{data / 'wirearc.db'}?mode=ro", uri=True)
         try:
             assert con.execute("PRAGMA integrity_check").fetchall() == [("ok",)]
         finally:

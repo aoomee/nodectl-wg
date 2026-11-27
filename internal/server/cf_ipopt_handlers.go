@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"nodectl/internal/logger"
-	"nodectl/internal/service"
+	"wirearc/internal/logger"
+	"wirearc/internal/service"
 )
 
 // ===================== 设置类 API =====================

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"nodectl/internal/agent/singbox"
+	"wirearc/internal/agent/singbox"
 )
 
 func TestShouldSkipBackgroundUpdateForWGRoutes(t *testing.T) {

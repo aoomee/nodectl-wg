@@ -16,7 +16,7 @@ import (
 
 	"gopkg.in/natefinch/lumberjack.v2"
 
-	"nodectl/internal/agent"
+	"wirearc/internal/agent"
 )
 
 func main() {
@@ -30,7 +30,7 @@ func main() {
 			*token = os.Getenv("WIREARC_ENROLLMENT_TOKEN")
 		}
 		if *token == "" {
-			*token = os.Getenv("NODECTL_ENROLLMENT_TOKEN")
+			*token = os.Getenv("WIREARC_ENROLLMENT_TOKEN")
 		}
 		if *token == "" {
 			fmt.Fprint(os.Stderr, "请输入一次性绑定令牌并按回车：")

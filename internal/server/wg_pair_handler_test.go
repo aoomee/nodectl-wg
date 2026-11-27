@@ -11,8 +11,8 @@ import (
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-	"nodectl/internal/database"
-	"nodectl/internal/requestmeta"
+	"wirearc/internal/database"
+	"wirearc/internal/requestmeta"
 )
 
 func wgHandlerDB(t *testing.T) {
@@ -95,7 +95,7 @@ func TestWGPairHandlerRejectsInvalidRequests(t *testing.T) {
 			}
 			r.Header.Set("Content-Type", "application/json")
 			if tc.header {
-				r.Header.Set("X-NodeCtl-WG", "1")
+				r.Header.Set("X-WireArc-WG", "1")
 			}
 			if tc.origin != "" {
 				r.Header.Set("Origin", tc.origin)
@@ -123,7 +123,7 @@ func TestWGPairPushPersistsDisableWithoutCommands(t *testing.T) {
 	r.RemoteAddr = "127.0.0.1:123"
 	r.Header.Set("X-Forwarded-Proto", "https")
 	r.Header.Set("Content-Type", "application/json")
-	r.Header.Set("X-NodeCtl-WG", "1")
+	r.Header.Set("X-WireArc-WG", "1")
 	w := httptest.NewRecorder()
 	apiWGPairPush(w, r)
 	if w.Code != 200 || !strings.Contains(w.Body.String(), `"status":"success"`) || strings.Contains(w.Body.String(), "SECRET") {
@@ -145,7 +145,7 @@ func TestWGPairV2HandlerExplicitDisable(t *testing.T) {
 	r := httptest.NewRequest("POST", "https://panel.test/api/wg/push", strings.NewReader(`{"uuid":"entry","revision":2,"enabled":false}`))
 	r.TLS = &tls.ConnectionState{}
 	r.Header.Set("Content-Type", "application/json")
-	r.Header.Set("X-NodeCtl-WG", "1")
+	r.Header.Set("X-WireArc-WG", "1")
 	w := httptest.NewRecorder()
 	apiWGPairPush(w, r)
 	if w.Code != 200 {

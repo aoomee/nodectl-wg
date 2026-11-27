@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"nodectl/internal/requestmeta"
-	"nodectl/internal/service"
+	"wirearc/internal/requestmeta"
+	"wirearc/internal/service"
 )
 
 // Admin handlers MUST be registered behind withAuthAndSecure. All credential
@@ -22,7 +22,7 @@ func agentIdentityRequest(w http.ResponseWriter, r *http.Request, admin bool, bo
 		return false
 	}
 	if !requestmeta.IsSecure(r) {
-		agentIdentityError(w, 400, "HTTPS required; configure NODECTL_TRUSTED_PROXIES for HTTPS reverse proxies")
+		agentIdentityError(w, 400, "HTTPS required; configure WIREARC_TRUSTED_PROXIES for HTTPS reverse proxies")
 		return false
 	}
 	media, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
@@ -31,7 +31,7 @@ func agentIdentityRequest(w http.ResponseWriter, r *http.Request, admin bool, bo
 		return false
 	}
 	if admin {
-		if r.Header.Get("X-NodeCtl-WG") != "1" || r.Header.Get("Sec-Fetch-Site") == "cross-site" {
+		if r.Header.Get("X-WireArc-WG") != "1" || r.Header.Get("Sec-Fetch-Site") == "cross-site" {
 			agentIdentityError(w, 403, "request origin rejected")
 			return false
 		}

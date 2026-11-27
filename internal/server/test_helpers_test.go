@@ -10,8 +10,8 @@ import (
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
-	"nodectl/internal/database"
-	"nodectl/internal/logger"
+	"wirearc/internal/database"
+	"wirearc/internal/logger"
 )
 
 func wgTestDB(t *testing.T) {

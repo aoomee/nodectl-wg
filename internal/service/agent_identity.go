@@ -15,16 +15,16 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"nhooyr.io/websocket"
-	"nodectl/internal/agent/wgrelay"
-	"nodectl/internal/database"
-	"nodectl/internal/logger"
-	"nodectl/internal/requestmeta"
+	"wirearc/internal/agent/wgrelay"
+	"wirearc/internal/database"
+	"wirearc/internal/logger"
+	"wirearc/internal/requestmeta"
 )
 
 const WGRelayCapability = "wg-relay-v1"
 const WGRelayV2Capability = "wg-reality-ss-v2"
-const AgentCapabilityHeader = "X-NodeCtl-Capabilities"
-const AgentInstallIDHeader = "X-NodeCtl-Install-ID"
+const AgentCapabilityHeader = "X-WireArc-Capabilities"
+const AgentInstallIDHeader = "X-WireArc-Install-ID"
 
 var ErrAgentIdentity = errors.New("invalid or revoked agent credentials")
 

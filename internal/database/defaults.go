@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"nodectl/internal/logger"
+	"wirearc/internal/logger"
 )
 
 // SupportedProtocols 定义系统支持的节点协议列表 (全局变量，供前端和逻辑使用)
@@ -91,12 +91,12 @@ func initBasicSettings() {
 		{Key: "sys_log_level", Value: "info", Description: "系统日志等级 (debug/info/warn/error)"},
 		// Cloudflare Tunnel 配置
 		{Key: "cf_account_id", Value: "", Description: "Cloudflare Account ID（创建 Tunnel 必需）"},
-		{Key: "cf_tunnel_name", Value: "nodectl", Description: "Cloudflare Tunnel 名称"},
+		{Key: "cf_tunnel_name", Value: "wirearc", Description: "Cloudflare Tunnel 名称"},
 		{Key: "cf_tunnel_id", Value: "", Description: "Cloudflare Tunnel ID（创建成功后回填）"},
 		{Key: "cf_tunnel_token", Value: "", Description: "Cloudflare Tunnel 运行 Token（API 获取，用于 --token 模式）"},
 		{Key: "cf_tunnel_subdomain", Value: "", Description: "Tunnel 公网子域名（如 panel.example.com）"},
 		{Key: "cf_tunnel_origin_url", Value: "http://127.0.0.1:8080", Description: "Tunnel 回源本地地址"},
-		{Key: "cf_tunnel_bind_main_process", Value: "true", Description: "Tunnel 是否跟随 NodeCTL 主进程启停"},
+		{Key: "cf_tunnel_bind_main_process", Value: "true", Description: "Tunnel 是否跟随 WireArc 主进程启停"},
 		{Key: "cf_tunnel_enabled", Value: "false", Description: "Tunnel 总开关（已配置且启用）"},
 		// Cloudflare IP 优选配置
 		{Key: "cf_ipopt_schedule_interval", Value: "0", Description: "CF 优选定时间隔（小时，0表示关闭）"},

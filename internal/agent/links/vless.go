@@ -5,7 +5,7 @@ package links
 import (
 	"fmt"
 
-	"nodectl/internal/agent/singbox"
+	"wirearc/internal/agent/singbox"
 )
 
 // generateReality 生成 VLESS+Reality 链接

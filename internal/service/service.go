@@ -3,8 +3,8 @@ package service
 import (
 	"crypto/rand"
 	"fmt"
-	"nodectl/internal/database"
-	"nodectl/internal/logger"
+	"wirearc/internal/database"
+	"wirearc/internal/logger"
 
 	"gorm.io/gorm"
 )

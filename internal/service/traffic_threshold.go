@@ -4,8 +4,8 @@ import (
 	"strings"
 	"sync"
 
-	"nodectl/internal/database"
-	"nodectl/internal/logger"
+	"wirearc/internal/database"
+	"wirearc/internal/logger"
 )
 
 type trafficThresholdRuntimeConfig struct {

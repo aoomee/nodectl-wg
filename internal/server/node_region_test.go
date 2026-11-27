@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"nodectl/internal/database"
+	"wirearc/internal/database"
 )
 
 func TestAPIUpdateNodeRegionOverride(t *testing.T) {

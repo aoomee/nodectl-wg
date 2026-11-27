@@ -5,7 +5,7 @@ package links
 import (
 	"fmt"
 
-	"nodectl/internal/agent/singbox"
+	"wirearc/internal/agent/singbox"
 )
 
 // generateSocks5 生成 SOCKS5 链接

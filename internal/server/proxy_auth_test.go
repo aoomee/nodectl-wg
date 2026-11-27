@@ -10,10 +10,10 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
-	"nodectl/internal/database"
-	"nodectl/internal/logger"
-	"nodectl/internal/middleware"
-	"nodectl/internal/requestmeta"
+	"wirearc/internal/database"
+	"wirearc/internal/logger"
+	"wirearc/internal/middleware"
+	"wirearc/internal/requestmeta"
 )
 
 func TestLoginCookieTransport(t *testing.T) {

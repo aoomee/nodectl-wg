@@ -14,9 +14,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"nodectl/internal/database"
-	"nodectl/internal/logger"
-	"nodectl/internal/requestmeta"
+	"wirearc/internal/database"
+	"wirearc/internal/logger"
+	"wirearc/internal/requestmeta"
 
 	"nhooyr.io/websocket"
 )
@@ -642,7 +642,7 @@ func HandleAgentWS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
-		Subprotocols:   []string{"wirearc-agent", "nodectl-agent"},
+		Subprotocols:   []string{"wirearc-agent"},
 		OriginPatterns: []string{"*"},
 	})
 	if err != nil {

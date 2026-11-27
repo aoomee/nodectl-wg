@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"nodectl/internal/database"
+	"wirearc/internal/database"
 )
 
 func awaitWG(t *testing.T, ch <-chan struct{}, what string) {

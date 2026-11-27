@@ -3497,7 +3497,7 @@
                                         display: block;
                                         margin-bottom: 4px;
                                     ">数据库名</label>
-                                <input type="text" id="db_pg_dbname" class="sys-input" placeholder="例如: nodectl"
+                                <input type="text" id="db_pg_dbname" class="sys-input" placeholder="例如: wirearc"
                                     oninput="checkDBTestBtnVisibility()" />
                             </div>
                             <div style="
@@ -5330,14 +5330,14 @@
         empty.style.display = "none";
 
         const rootProcess =
-            items.find((p) => p.role === "nodectl" || p.role === "root") ||
+            items.find((p) => p.role === "wirearc" || p.role === "root") ||
             items[0];
         const childProcesses = items.filter((p) => p !== rootProcess);
 
         const renderCard = (p, isRoot) => {
             const role = (p.role || "child").toString();
             let roleClass = "";
-            if (role === "nodectl") roleClass = "root";
+            if (role === "wirearc") roleClass = "root";
             else if (role === "cloudflare") roleClass = "cloudflare";
             else if (role === "mihomo") roleClass = "mihomo";
 

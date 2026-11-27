@@ -54,7 +54,7 @@ func IsDev() bool {
 func GetBranchName() string {
 	switch GetChannel() {
 	case ChannelAlpha:
-		return "nodectl-Alpha"
+		return "wirearc-Alpha"
 	case ChannelStable:
 		return "main"
 	default:

@@ -33,13 +33,13 @@ jobs:
           npx playwright install --with-deps chromium
       - run: go test ./...
         env:
-          NODECTL_TEST_NGINX: /usr/sbin/nginx
+          WIREARC_TEST_NGINX: /usr/sbin/nginx
       - name: Linux kernel WireGuard integration
-        run: sudo unshare -n env "PATH=$PATH" NODECTL_TEST_KERNEL_WG=1 "$(which go)" test -v -run TestRealLinuxKernelWireGuard ./internal/agent/wgrelay
+        run: sudo unshare -n env "PATH=$PATH" WIREARC_TEST_KERNEL_WG=1 "$(which go)" test -v -run TestRealLinuxKernelWireGuard ./internal/agent/wgrelay
       - run: go vet ./...
       - run: go test -race ./internal/database ./internal/requestmeta ./internal/service ./internal/agent/wgrelay ./internal/server
         env:
-          NODECTL_TEST_NGINX: /usr/sbin/nginx
+          WIREARC_TEST_NGINX: /usr/sbin/nginx
       - name: Browser interaction regressions
         run: |
           export CHROME_PATH="$(node -e 'process.stdout.write(require("playwright").chromium.executablePath())')"
@@ -75,7 +75,7 @@ jobs:
           mkdir -p bin
           container=$(docker create wirearc:local)
           trap 'docker rm -v "$container" >/dev/null' EXIT
-          docker cp "$container:/app/nodectl" "bin/nodectl-linux-$ARCH"
+          docker cp "$container:/app/wirearc" "bin/wirearc-linux-$ARCH"
           docker build --build-arg "TARGETARCH=$ARCH" -f .github/Dockerfile -t wirearc:release-smoke .
       - name: Verify release image
         run: bash scripts/smoke-docker.sh wirearc:release-smoke

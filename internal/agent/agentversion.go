@@ -2,9 +2,9 @@
 // Agent 独立版本变量，与主程序 internal/version 解耦
 // 通过 -ldflags 注入:
 //
-//	-X nodectl/internal/agent.AgentVersion=...
-//	-X nodectl/internal/agent.GitCommit=...
-//	-X nodectl/internal/agent.BuildTime=...
+//	-X wirearc/internal/agent.AgentVersion=...
+//	-X wirearc/internal/agent.GitCommit=...
+//	-X wirearc/internal/agent.BuildTime=...
 package agent
 
 import "strings"
@@ -66,7 +66,7 @@ func IsDev() bool {
 func GetBranchName() string {
 	switch GetChannel() {
 	case ChannelAlpha:
-		return "nodectl-Alpha"
+		return "wirearc-Alpha"
 	case ChannelStable:
 		return "main"
 	default:

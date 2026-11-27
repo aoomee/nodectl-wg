@@ -9,8 +9,8 @@ import (
 	"io"
 	"time"
 
-	"nodectl/internal/agent/singbox"
-	"nodectl/internal/agent/wgrelay"
+	"wirearc/internal/agent/singbox"
+	"wirearc/internal/agent/wgrelay"
 )
 
 type wgV2Request struct {

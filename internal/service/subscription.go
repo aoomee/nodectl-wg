@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"strings"
 
-	"nodectl/internal/database"
-	"nodectl/internal/logger"
+	"wirearc/internal/database"
+	"wirearc/internal/logger"
 
 	"gopkg.in/yaml.v3"
 )

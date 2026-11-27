@@ -1,4 +1,4 @@
-module nodectl
+module wirearc
 
 go 1.25.6
 

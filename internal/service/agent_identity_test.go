@@ -17,9 +17,9 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"nhooyr.io/websocket"
-	"nodectl/internal/database"
-	"nodectl/internal/requestmeta"
-	"nodectl/internal/testutil"
+	"wirearc/internal/database"
+	"wirearc/internal/requestmeta"
+	"wirearc/internal/testutil"
 )
 
 func identityTestDB(t *testing.T) *TrafficHub {

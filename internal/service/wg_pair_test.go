@@ -17,8 +17,8 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"nhooyr.io/websocket"
-	"nodectl/internal/agent/wgrelay"
-	"nodectl/internal/database"
+	"wirearc/internal/agent/wgrelay"
+	"wirearc/internal/database"
 )
 
 type wgFake struct {

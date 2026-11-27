@@ -5,7 +5,7 @@ package links
 import (
 	"fmt"
 
-	"nodectl/internal/agent/singbox"
+	"wirearc/internal/agent/singbox"
 )
 
 // generateTUIC 生成 TUIC 链接

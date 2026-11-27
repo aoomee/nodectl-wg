@@ -59,7 +59,7 @@ REALITY 在 A 终结；B 不要求 REALITY。订阅保留 A 的原地址、端�
 go test ./...
 go vet ./...
 go test -race ./internal/agent/... ./internal/service ./internal/server
-NODECTL_TEST_SINGBOX=/path/to/sing-box-1.13.2 go test ./internal/agent/singbox -run TestWGConfigPinnedBinary -v
+WIREARC_TEST_SINGBOX=/path/to/sing-box-1.13.2 go test ./internal/agent/singbox -run TestWGConfigPinnedBinary -v
 bun tests/node-wg-ui.cjs
 bun tests/wg-ui.cjs
 bun tests/traffic-calendar-ui.cjs

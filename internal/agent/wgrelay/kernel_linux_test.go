@@ -16,8 +16,8 @@ import (
 )
 
 func TestRealLinuxKernelWireGuard(t *testing.T) {
-	if os.Getenv("NODECTL_TEST_KERNEL_WG") != "1" {
-		t.Skip("set NODECTL_TEST_KERNEL_WG=1 inside isolated Linux netns")
+	if os.Getenv("WIREARC_TEST_KERNEL_WG") != "1" {
+		t.Skip("set WIREARC_TEST_KERNEL_WG=1 inside isolated Linux netns")
 	}
 	if err := exec.Command("ip", "link", "set", "lo", "up").Run(); err != nil {
 		t.Fatalf("bring up lo: %v", err)

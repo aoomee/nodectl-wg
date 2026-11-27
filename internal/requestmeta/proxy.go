@@ -11,7 +11,7 @@ import (
 	"sync/atomic"
 )
 
-const TrustedProxiesEnv = "NODECTL_TRUSTED_PROXIES"
+const TrustedProxiesEnv = "WIREARC_TRUSTED_PROXIES"
 
 type policy struct{ proxies []netip.Prefix }
 

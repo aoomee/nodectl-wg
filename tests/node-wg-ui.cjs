@@ -29,14 +29,14 @@ const makeNode=(uuid,landing=false)=>({uuid,name:uuid==='a'?'入口 A':'落地 B
      if(optionFailure)return route.fulfill({status:503,json:{status:'error',message:'连接检查暂时失败，请刷新重试'}});
      const data={pair:url.searchParams.get('uuid')==='a'?pair:null,ready,peers:[{uuid:'b',name:'落地 B',ready:true},{uuid:'c',name:'落地 C',ready:true}]};
      if(diagnostics) {
-      data.readiness={role:'entry',ready,enrollment_mode:'none',checks:[{code:'node',label:'节点条件',ready:true},{code:'protocol',label:'REALITY 部署',ready:true},{code:'agent',label:'Agent 连接',ready,detail:'Agent 未连接；请确认服务器上的 nodectl-agent 服务正在运行。'}]};
+      data.readiness={role:'entry',ready,enrollment_mode:'none',checks:[{code:'node',label:'节点条件',ready:true},{code:'protocol',label:'REALITY 部署',ready:true},{code:'agent',label:'Agent 连接',ready,detail:'Agent 未连接；请确认服务器上的 wirearc-agent 服务正在运行。'}]};
       if(unavailablePeer)data.peers[1]={uuid:'c',name:'落地 C <img src=x onerror=alert(1)>',ready:false,readiness:{checks:[{code:'protocol',label:'SS 部署',ready:false,detail:'请先启用并推送 SS，等待成功。'}]}};
      }
      const delay=optionDelay; if(delay)await new Promise(r=>setTimeout(r,delay));
      return route.fulfill({json:{status:'success',data}});
     }
     if(url.pathname==='/api/node/wg/push') {
-     assert.equal(req.headers()['x-nodectl-wg'],'1'); const body=req.postDataJSON();requests.push(body);
+     assert.equal(req.headers()['x-wirearc-wg'],'1'); const body=req.postDataJSON();requests.push(body);
      pair={...body,id:'mock-pair',topology_version:2,source_protocol:'reality',target_protocol:'ss',restore_direct:!body.enabled,status:body.enabled?'active':'disabled',phase:body.enabled?'active':'disabled'};
      return route.fulfill({json:{status:'success',data:{pair}}});
     }

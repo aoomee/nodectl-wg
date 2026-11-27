@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"nodectl/internal/logger"
+	"wirearc/internal/logger"
 )
 
 type RecentLogEntry struct {
@@ -114,7 +114,7 @@ func GetRecentLogs(limit int) ([]RecentLogEntry, error) {
 		limit = 1000
 	}
 
-	lines, err := readRecentLogLines(filepath.Join("data", "logs", "nodectl.log"), limit)
+	lines, err := readRecentLogLines(filepath.Join("data", "logs", "wirearc.log"), limit)
 	if err != nil {
 		return nil, err
 	}

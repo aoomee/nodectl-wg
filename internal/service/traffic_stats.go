@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"nodectl/internal/database"
+	"wirearc/internal/database"
 
 	"gorm.io/gorm"
 )

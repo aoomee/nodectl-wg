@@ -10,10 +10,10 @@ import (
 	"strings"
 	"sync"
 
-	"nodectl/internal/database"
-	"nodectl/internal/logger"
-	"nodectl/internal/middleware"
-	"nodectl/internal/service"
+	"wirearc/internal/database"
+	"wirearc/internal/logger"
+	"wirearc/internal/middleware"
+	"wirearc/internal/service"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"

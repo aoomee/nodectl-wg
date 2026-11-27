@@ -19,11 +19,11 @@ import (
 	"sync"
 	"time"
 
-	"nodectl/internal/database"
-	"nodectl/internal/logger"
-	"nodectl/internal/middleware"
-	"nodectl/internal/service"
-	"nodectl/internal/webassets"
+	"wirearc/internal/database"
+	"wirearc/internal/logger"
+	"wirearc/internal/middleware"
+	"wirearc/internal/service"
+	"wirearc/internal/webassets"
 )
 
 // tmpl 设为包级全局变量，供同包下的 handlers.go 使用渲染页面

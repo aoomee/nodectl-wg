@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"nodectl/internal/database"
-	"nodectl/internal/logger"
+	"wirearc/internal/database"
+	"wirearc/internal/logger"
 )
 
 // ------------------- [数据库管理 API] -------------------

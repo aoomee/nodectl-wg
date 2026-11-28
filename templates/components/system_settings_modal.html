@@ -4172,90 +4172,90 @@
     }
 
     async function loadAllSystemSettings(options = {}) {
-        const silent = !!options.silent;
-        if (sysInflight.settings) return sysInflight.settings;
-        if (!silent) clearTimeout(sysAutoSaveTimer);
+        const silent = !!(options && options.silent);
+        const inflight = typeof sysInflight !== "undefined" ? sysInflight : null;
+        if (inflight && inflight.settings) return inflight.settings;
+        if (!silent) {
+            sysSettingsLoaded = false;
+            clearTimeout(sysAutoSaveTimer);
+        }
 
-        sysInflight.settings = (async () => {
+        const setField = (id, val) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (silent && document.activeElement === el) return;
+            el.value = val;
+        };
+
+        const run = (async () => {
             try {
                 const res = await fetch("/api/get-settings");
                 const result = await res.json();
                 if (!res.ok || result.status !== "success") throw new Error("设置读取失败");
                 if (result.status === "success") {
                     const data = result.data;
-                    sysApplyingSettings = true;
+                    if (typeof sysApplyingSettings !== "undefined") sysApplyingSettings = true;
                     try {
                         // 1. 基础配置
-                        setSysFieldValueSafely("sys_panel_url", data.panel_url || "", silent);
-                        setSysFieldValueSafely("sys_sub_token", data.sub_token || "", silent);
+                        setField("sys_panel_url", data.panel_url || "");
+                        setField("sys_sub_token", data.sub_token || "");
                         document.getElementById("sys_pref_flag").checked =
                             data.pref_use_emoji_flag !== "false";
                         document.getElementById(
                             "sys_pref_force_protocol_prefix",
                         ).checked = data.pref_force_protocol_prefix === "true";
-                        setSysFieldValueSafely(
+                        setField(
                             "sys_pref_ip_strategy",
                             data.pref_ip_strategy || "ipv4_prefer",
-                            silent,
                         );
                         document.getElementById("sys_airport_filter_invalid").checked =
                             data.airport_filter_invalid === "true";
                         document.getElementById(
                             "sys_agent_startup_silent_update_enabled",
                         ).checked = data.agent_startup_silent_update_enabled === "true";
-                        setSysFieldValueSafely(
+                        setField(
                             "sys_pref_speed_test_file_size",
                             data.pref_speed_test_file_size || "50",
-                            silent,
                         );
-                        setSysFieldValueSafely(
+                        setField(
                             "sys_pref_traffic_stats_retention_days",
                             data.pref_traffic_stats_retention_days || "30",
-                            silent,
                         );
-                        setSysFieldValueSafely(
+                        setField(
                             "sys_pref_traffic_point_persist_interval_sec",
                             data.pref_traffic_point_persist_interval_sec || "0",
-                            silent,
                         );
-                        setSysFieldValueSafely(
+                        setField(
                             "sys_auth_cookie_ttl_mode",
                             data.auth_cookie_ttl_mode || "1d",
-                            silent,
                         );
                         document.getElementById("sys_force_http").checked =
                             parseSysBool(data.sys_force_http, false);
-                        setSysFieldValueSafely(
+                        setField(
                             "sys_login_ip_retry_window_sec",
                             data.login_ip_retry_window_sec || "600",
-                            silent,
                         );
-                        setSysFieldValueSafely(
+                        setField(
                             "sys_login_ip_max_retries",
                             data.login_ip_max_retries || "5",
-                            silent,
                         );
-                        setSysFieldValueSafely(
+                        setField(
                             "sys_login_ip_block_ttl_sec",
                             data.login_ip_block_ttl_sec || "900",
-                            silent,
                         );
-                        setSysFieldValueSafely(
+                        setField(
                             "sys_clash_proxies_update_interval",
                             data.clash_proxies_update_interval || "300",
-                            silent,
                         );
-                        setSysFieldValueSafely(
+                        setField(
                             "sys_clash_rules_update_interval",
                             data.clash_rules_update_interval || "3600",
-                            silent,
                         );
-                        setSysFieldValueSafely(
+                        setField(
                             "sys_clash_public_rules_update_interval",
                             data.clash_public_rules_update_interval || "86400",
-                            silent,
                         );
-                        setSysFieldValueSafely("sys_log_level", data.sys_log_level || "info", silent);
+                        setField("sys_log_level", data.sys_log_level || "info");
                         loadSysDefaultInstallProtocols(
                             data.pref_default_install_protocols || "[]",
                         );
@@ -4281,20 +4281,17 @@
                         document.getElementById(
                             "sys_tg_bot_socks5_enabled",
                         ).checked = parseSysBool(data.tg_bot_socks5_enabled, false);
-                        setSysFieldValueSafely(
+                        setField(
                             "sys_tg_bot_socks5_addr",
                             data.tg_bot_socks5_addr || "",
-                            silent,
                         );
-                        setSysFieldValueSafely(
+                        setField(
                             "sys_tg_bot_socks5_user",
                             data.tg_bot_socks5_user || "",
-                            silent,
                         );
-                        setSysFieldValueSafely(
+                        setField(
                             "sys_tg_bot_socks5_pass",
                             data.tg_bot_socks5_pass || "",
-                            silent,
                         );
                         document.getElementById(
                             "sys_tg_speedtest_notify_enabled",
@@ -4313,7 +4310,7 @@
                             (parseSysBool(data.tg_login_notify_enabled, false)
                                 ? "all"
                                 : "off");
-                        setSysFieldValueSafely(
+                        setField(
                             "sys_tg_login_notify_mode",
                             [
                                 "off",
@@ -4323,7 +4320,6 @@
                             ].includes(loginNotifyMode)
                                 ? loginNotifyMode
                                 : "off",
-                            silent,
                         );
                         updateTgBotSettingsVisibility();
                         if (!silent) toggleTgProxyPanel(false);
@@ -4404,11 +4400,20 @@
                             renderTgWhitelist();
                         }
                         sysSettingsLoaded = true;
-                        sysLastFetched.settings = Date.now();
+                        if (typeof sysLastFetched !== "undefined") {
+                            sysLastFetched.settings = Date.now();
+                        }
                     } finally {
-                        sysApplyingSettings = false;
+                        if (typeof sysApplyingSettings !== "undefined") {
+                            sysApplyingSettings = false;
+                        }
                     }
-                    revealActiveSysForm(sysActiveCatId);
+                    if (
+                        typeof revealActiveSysForm === "function" &&
+                        typeof sysActiveCatId !== "undefined"
+                    ) {
+                        revealActiveSysForm(sysActiveCatId);
+                    }
                 }
             } catch (e) {
                 if (!silent || !sysSettingsLoaded) {
@@ -4417,11 +4422,12 @@
                     indicator.style.opacity = "1";
                 }
             } finally {
-                sysInflight.settings = null;
+                if (inflight) inflight.settings = null;
             }
         })();
 
-        return sysInflight.settings;
+        if (inflight) inflight.settings = run;
+        return run;
     }
 
     async function openSystemSettingsModal() {
@@ -5150,7 +5156,7 @@
             return;
         }
 
-        if (sysApplyingSettings) return;
+        if (typeof sysApplyingSettings !== "undefined" && sysApplyingSettings) return;
         if (!sysSettingsLoaded) {
             const indicator = document.getElementById("sysSaveIndicator");
             indicator.textContent = "设置尚未加载，请关闭后重新打开";

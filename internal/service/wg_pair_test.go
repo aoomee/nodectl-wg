@@ -643,28 +643,39 @@ func TestWGPairV2ActiveToleratesTransientProbeFailures(t *testing.T) {
 	}
 	f.failErr = errWGTransient
 	now := c.now()
-	advance := func() {
-		now = now.Add(wgHealthRetryDelay)
+	advanceToNext := func() {
+		row := wgStored(t, c, p.ID)
+		if row.NextRetryAt.After(now) {
+			now = row.NextRetryAt
+		} else {
+			now = now.Add(wgHealthRetryDelay)
+		}
 		c.now = func() time.Time { return now }
 	}
 	f.fail = "aaaaaaaaaaaa:wg-v2-status"
+	confirmed := wgStored(t, c, p.ID).HealthCheckedAt
 	for i := 1; i < wgActiveFailureLimit; i++ {
-		advance()
+		advanceToNext()
 		wgSteps(t, c, p.ID, 1)
 		row := wgStored(t, c, p.ID)
-		if row.Status != "active" || int(row.RetryCount) != i {
-			t.Fatalf("transient failure %d tore down tunnel: %+v", i, wgDTO(row))
+		if row.Status != "active" || int(row.RetryCount) != i || !row.HealthCheckedAt.Equal(confirmed) {
+			t.Fatalf("transient failure %d tore down tunnel or renewed proof: %+v", i, wgDTO(row))
 		}
 	}
+	// Verify cumulative backoff tolerates >20s transient outage while staying strictly under 90s lease.
+	if elapsed := now.Sub(confirmed); elapsed < 20*time.Second || elapsed >= 90*time.Second {
+		t.Fatalf("unexpected transient backoff span: %v", elapsed)
+	}
 	f.fail = ""
-	advance()
+	advanceToNext()
 	wgSteps(t, c, p.ID, 1)
-	if row := wgStored(t, c, p.ID); row.Status != "active" || row.RetryCount != 0 {
+	if row := wgStored(t, c, p.ID); row.Status != "active" || row.RetryCount != 0 || !row.HealthCheckedAt.Equal(now) {
 		t.Fatalf("recovery did not reset retries: %+v", wgDTO(row))
 	}
+	// Persistent failure beyond retry limit or grace budget must fail closed.
 	f.fail = "aaaaaaaaaaaa:wg-v2-status"
 	for i := 0; i < wgActiveFailureLimit; i++ {
-		advance()
+		advanceToNext()
 		wgSteps(t, c, p.ID, 1)
 	}
 	if wgStored(t, c, p.ID).Status != "cleanup_pending" {
@@ -710,6 +721,10 @@ func TestWGHealthFailureWireFormat(t *testing.T) {
 		{"wg-v2-status", `{"status":"error","error_code":"wg_probe_timeout"}`, true},
 		{"wg-verify", `{"status":"error","error_code":"wg_probe_timeout"}`, true},
 		{"wg-v2-ss", `{"status":"error","error_code":"wg_probe_timeout"}`, false},
+		{"wg-v2-ss", `{"status":"error","error_code":"wg_agent_busy"}`, true},
+		{"wg-verify", `{"status":"error","error_code":"wg_agent_busy"}`, true},
+		{"wg-v2-status", `{"status":"error","error_code":"wg_agent_busy"}`, true},
+		{"wg-v2-route", `{"status":"error","error_code":"wg_agent_busy"}`, false},
 		{"wg-v2-status", `{"status":"error","message":"agent disconnected","disconnected":true}`, false},
 		{"wg-v2-status", `{"status":"error","error_code":"unknown"}`, false},
 	} {

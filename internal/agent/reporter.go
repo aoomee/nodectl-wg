@@ -16,6 +16,7 @@ import (
 	"wirearc/internal/agent/reporter"
 
 	"nhooyr.io/websocket"
+	"wirearc/internal/agent/wgrelay"
 )
 
 // TrafficMessage WebSocket 上报消息结构（动态 JSON）
@@ -245,10 +246,15 @@ func (r *Reporter) startReadLoop(ctx context.Context, conn *websocket.Conn) {
 		select {
 		case r.cmdCh <- cmdTask{ctx: ctx, cmd: cmd, replyFunc: replyFunc}:
 		default:
+			errCode := ""
+			if strings.HasPrefix(cmd.Action, "wg-") {
+				errCode = wgrelay.QueueBusyCode
+			}
 			replyFunc(CommandResult{
-				Type:    "result",
-				Status:  "error",
-				Message: "命令队列已满，请稍后重试",
+				Type:      "result",
+				Status:    "error",
+				ErrorCode: errCode,
+				Message:   "命令队列已满，请稍后重试",
 			})
 		}
 	}

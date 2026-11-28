@@ -191,18 +191,34 @@ func (rt *Runtime) Run() error {
 	}
 }
 
+// wgRelayStateDir 返回当前节点 wg-relay 状态目录路径。
+func (rt *Runtime) wgRelayStateDir() string {
+	configPath := filepath.Join(singbox.ResolveWorkDir(), "singbox-config.json")
+	if rt != nil && rt.cfg != nil && rt.cfg.Singbox != nil && rt.cfg.Singbox.ConfigPath != "" {
+		configPath = rt.cfg.Singbox.ConfigPath
+	} else if rt != nil && rt.singboxMgr != nil {
+		if p := rt.singboxMgr.GetConfigManager().GetConfigPath(); p != "" {
+			configPath = p
+		}
+	}
+	return filepath.Join(filepath.Dir(configPath), "wg-relay")
+}
+
 // shouldSkipBackgroundUpdate 判断当前节点是否应跳过后台定时自动更新。
-// 当节点配置了非直连（active/blocked）的 WG 转发路由时，进程原地重启会清空内存授权并触发 fail-closed 拒流，
-// 因此跳过后台静默更新，仅允许管理员在面板显式确认后手动升级。
+// 覆盖入口节点（非直连 WG 路由）与落地节点（wg-relay 持有未释放配对）两端，
+// 防止任意一端后台静默重启导致配对断链或入口触发 fail-closed 拒流；
+// 管理员在面板显式确认的手动更新不受影响。
 func (rt *Runtime) shouldSkipBackgroundUpdate() bool {
-	if rt == nil || rt.singboxMgr == nil {
+	if rt == nil {
 		return false
 	}
-	route, err := rt.singboxMgr.GetConfigManager().GetWGRoute()
-	if err != nil {
-		return true
+	if rt.singboxMgr != nil {
+		route, err := rt.singboxMgr.GetConfigManager().GetWGRoute()
+		if err != nil || (route != nil && route.Mode != "direct") {
+			return true
+		}
 	}
-	return route != nil && route.Mode != "direct"
+	return wgrelay.HasActivePairInDir(rt.wgRelayStateDir())
 }
 
 // ensureSingboxManager 确保 singboxMgr 已初始化，若为 nil 则自动创建

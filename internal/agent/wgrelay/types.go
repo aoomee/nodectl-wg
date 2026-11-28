@@ -15,8 +15,12 @@ import (
 	"regexp"
 )
 
-// ProbeTimeoutCode is the only remote failure eligible for active health retries.
-const ProbeTimeoutCode = "wg_probe_timeout"
+const (
+	// ProbeTimeoutCode marks transient WG probe timeouts/unreachable errors eligible for bounded active retries.
+	ProbeTimeoutCode = "wg_probe_timeout"
+	// QueueBusyCode marks an Agent command queue saturation that should be retried without tearing down an active pair.
+	QueueBusyCode = "wg_agent_busy"
+)
 
 var (
 	ErrProbeTimeout     = errors.New("WireGuard probe timed out")

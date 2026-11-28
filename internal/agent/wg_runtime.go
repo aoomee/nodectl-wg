@@ -60,7 +60,14 @@ func (rt *Runtime) executeWGCommand(cmd ServerCommand, reply func(CommandResult)
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	ctx, cancel := context.WithTimeout(ctx, 75*time.Second)
+	cmdTimeout := 75 * time.Second
+	switch cmd.Action {
+	case "wg-v2-status", "wg-v2-ss", "wg-verify", "wg-status":
+		// Keep periodic health probes bounded well below the 90s local WG route lease
+		// so a stuck probe can never hold commandMu past lease expiry.
+		cmdTimeout = 25 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(ctx, cmdTimeout)
 	defer cancel()
 
 	if strings.HasPrefix(cmd.Action, "wg-v2-") {

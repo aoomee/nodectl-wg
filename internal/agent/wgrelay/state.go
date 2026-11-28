@@ -57,6 +57,38 @@ func secureRead(path string) ([]byte, error) {
 }
 func (m *Manager) statePath(id string) string { return filepath.Join(m.dir, id+".json") }
 func (m *Manager) keyPath(id string) string   { return filepath.Join(m.dir, id+".key") }
+
+// HasActivePairInDir reports whether stateDir contains any non-removed WG relay
+// pair record (covering both entry and landing roles) without acquiring the
+// exclusive manager lock. Corrupted or unreadable state files fail safe (true)
+// so background auto-updates never silently restart a node holding WG state.
+func HasActivePairInDir(stateDir string) bool {
+	if strings.TrimSpace(stateDir) == "" {
+		return false
+	}
+	entries, err := os.ReadDir(stateDir)
+	if err != nil {
+		return !errors.Is(err, os.ErrNotExist)
+	}
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasSuffix(name, ".json") {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(stateDir, name))
+		if err != nil {
+			return true
+		}
+		var r record
+		if err := json.Unmarshal(data, &r); err != nil {
+			return true
+		}
+		if r.Phase != "removed" {
+			return true
+		}
+	}
+	return false
+}
 func (m *Manager) save(r *record) error {
 	b, err := json.Marshal(r)
 	if err != nil {

@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -423,7 +424,11 @@ func (m *Manager) verify(ctx context.Context, r *record) error {
 		c, err := m.dial(vctx, r.Interface, strings.TrimSuffix(r.Config.LocalAddress, "/32"), net.JoinHostPort(strings.TrimSuffix(r.Config.PeerAddress, "/32"), strconv.Itoa(r.Config.TargetPort)))
 		if err != nil {
 			var timeout net.Error
-			if errors.As(err, &timeout) && timeout.Timeout() {
+			if (errors.As(err, &timeout) && timeout.Timeout()) ||
+				errors.Is(err, syscall.ECONNREFUSED) ||
+				errors.Is(err, syscall.ENETUNREACH) ||
+				errors.Is(err, syscall.EHOSTUNREACH) ||
+				errors.Is(err, syscall.ECONNRESET) {
 				return fmt.Errorf("bound WireGuard target TCP verification failed: %w", ErrProbeTimeout)
 			}
 			return errors.New("bound WireGuard target TCP verification failed")

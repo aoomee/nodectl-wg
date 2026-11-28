@@ -82,3 +82,48 @@ func TestShouldSkipBackgroundUpdateForWGRoutes(t *testing.T) {
 		t.Fatal("expected background update to be skipped when WG route state is corrupted")
 	}
 }
+
+func TestShouldSkipBackgroundUpdateForLandingNodeWGRelayState(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "singbox-config.json")
+	cfgMgr := singbox.NewConfigManagerWithPaths(cfgPath, "", "")
+	rt := &Runtime{
+		cfg:        &Config{Singbox: &SingboxProcessConfig{ConfigPath: cfgPath}},
+		singboxMgr: singbox.NewManagerWithConfig(cfgMgr, singbox.NewInstaller(filepath.Join(dir, "sing-box"))),
+	}
+
+	// 1. 纯落地节点无 wg-relay 目录时，允许后台自动更新
+	if rt.shouldSkipBackgroundUpdate() {
+		t.Fatal("expected background update allowed when no wg-relay state exists")
+	}
+
+	relayDir := filepath.Join(dir, "wg-relay")
+	if err := os.MkdirAll(relayDir, 0o700); err != nil {
+		t.Fatalf("mkdir wg-relay: %v", err)
+	}
+	pairFile := filepath.Join(relayDir, "0123456789abcdef.json")
+
+	// 2. 落地节点持有 verified/active 的 WG 配对（无 wg-route.json）必须跳过后台静默更新
+	if err := os.WriteFile(pairFile, []byte(`{"config":{"pair_id":"0123456789abcdef","revision":1,"role":"landing"},"phase":"verified"}`), 0o600); err != nil {
+		t.Fatalf("write landing pair state: %v", err)
+	}
+	if !rt.shouldSkipBackgroundUpdate() {
+		t.Fatal("expected background update skipped while landing node holds verified WG pair")
+	}
+
+	// 3. 配对彻底移除（phase=removed）后恢复允许后台自动更新
+	if err := os.WriteFile(pairFile, []byte(`{"config":{"pair_id":"0123456789abcdef","revision":2,"role":"landing"},"phase":"removed"}`), 0o600); err != nil {
+		t.Fatalf("write removed pair state: %v", err)
+	}
+	if rt.shouldSkipBackgroundUpdate() {
+		t.Fatal("expected background update allowed after landing WG pair is removed")
+	}
+
+	// 4. wg-relay 状态文件损坏时保守跳过后台更新
+	if err := os.WriteFile(pairFile, []byte(`{corrupted`), 0o600); err != nil {
+		t.Fatalf("write corrupted relay state: %v", err)
+	}
+	if !rt.shouldSkipBackgroundUpdate() {
+		t.Fatal("expected background update skipped when wg-relay state is corrupted")
+	}
+}

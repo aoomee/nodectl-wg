@@ -360,7 +360,17 @@ func SendWGCommand(ctx context.Context, installID, action string, payload interf
 
 // Older agents omit error_code. An unclassified remote rejection must fail closed.
 func (r AgentCommandResult) retryableWGFailure(action string) bool {
-	return r.disconnected || r.ErrorCode == wgrelay.ProbeTimeoutCode && (action == "wg-verify" || action == "wg-v2-status")
+	if r.disconnected {
+		return true
+	}
+	switch r.ErrorCode {
+	case wgrelay.ProbeTimeoutCode:
+		return action == "wg-verify" || action == "wg-v2-status"
+	case wgrelay.QueueBusyCode:
+		return action == "wg-v2-ss" || action == "wg-verify" || action == "wg-v2-status"
+	default:
+		return false
+	}
 }
 
 // A result belongs to the current connection and command owner, not merely to

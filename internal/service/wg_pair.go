@@ -683,14 +683,31 @@ func (c *wgPairCoordinator) command(ctx context.Context, p database.WGPair, entr
 }
 
 const (
-	wgStepTimeout           = 20 * time.Second
-	wgRecoveryWindow        = 30 * time.Second
+	wgStepTimeout           = 30 * time.Second
+	wgRecoveryWindow        = 90 * time.Second
 	wgHealthInterval        = 15 * time.Second
 	wgHealthRetryDelay      = 3 * time.Second
+	wgHealthRetryMaxDelay   = 15 * time.Second
+	wgActiveGraceBudget     = 75 * time.Second
 	wgSubscriptionFreshness = 60 * time.Second
-	wgActiveFailureLimit    = 3
+	wgActiveFailureLimit    = 6
 	wgWorkerCount           = 8
 )
+
+func wgRetryBackoff(retryCount uint) time.Duration {
+	if retryCount <= 1 {
+		return wgHealthRetryDelay
+	}
+	shift := retryCount - 1
+	if shift > 4 {
+		shift = 4
+	}
+	d := wgHealthRetryDelay << shift
+	if d > wgHealthRetryMaxDelay {
+		return wgHealthRetryMaxDelay
+	}
+	return d
+}
 
 // failWG changes only a work snapshot; persistence requires the revision fence.
 func failWG(p *database.WGPair) {
@@ -796,11 +813,67 @@ func (c *wgPairCoordinator) activeDependencies(p database.WGPair) error {
 }
 
 func (c *wgPairCoordinator) healthFailure(p *database.WGPair, err error) {
-	if p.Status == "active" && (errors.Is(err, errWGTransient) || errors.Is(err, context.DeadlineExceeded)) && p.RetryCount+1 < wgActiveFailureLimit {
+	now := c.now()
+	transient := errors.Is(err, errWGTransient) || errors.Is(err, context.DeadlineExceeded)
+	elapsed := time.Duration(0)
+	if !p.HealthCheckedAt.IsZero() && now.After(p.HealthCheckedAt) {
+		elapsed = now.Sub(p.HealthCheckedAt)
+	}
+
+	if p.Status == "recovering" && transient && !p.RecoveryDeadline.IsZero() && now.Before(p.RecoveryDeadline) {
 		p.RetryCount++
-		p.NextRetryAt = c.now().Add(wgHealthRetryDelay)
-		p.Error = "WG 探活暂未确认，稍后重试"
+		delay := wgRetryBackoff(p.RetryCount)
+		if delay > 5*time.Second {
+			delay = 5 * time.Second
+		}
+		p.NextRetryAt = now.Add(delay)
+		p.Error = "WG 恢复核验暂未确认，稍后重试"
+		if logger.Log != nil {
+			logger.Log.Warn("WG 恢复核验遇到瞬时故障，等待重试",
+				"pair_id", p.ID,
+				"status", p.Status,
+				"phase", p.Phase,
+				"retry", p.RetryCount,
+				"next_retry_in", delay.String(),
+				"decision", "retry_recovering",
+				"error", err,
+			)
+		}
 		return
+	}
+
+	withinGrace := p.HealthCheckedAt.IsZero() || elapsed < wgActiveGraceBudget
+	if p.Status == "active" && transient && p.RetryCount+1 < wgActiveFailureLimit && withinGrace {
+		p.RetryCount++
+		delay := wgRetryBackoff(p.RetryCount)
+		p.NextRetryAt = now.Add(delay)
+		p.Error = "WG 探活暂未确认，稍后重试"
+		if logger.Log != nil {
+			logger.Log.Warn("WG 活跃巡检遇到瞬时故障，退避重试（不续租）",
+				"pair_id", p.ID,
+				"status", p.Status,
+				"phase", p.Phase,
+				"retry", p.RetryCount,
+				"next_retry_in", delay.String(),
+				"elapsed_since_ok", elapsed.Round(time.Second).String(),
+				"decision", "retry_active",
+				"error", err,
+			)
+		}
+		return
+	}
+
+	if logger.Log != nil {
+		logger.Log.Warn("WG 巡检失败达到阻断阈值或出现不可重试错误，进入安全阻断清理",
+			"pair_id", p.ID,
+			"status", p.Status,
+			"phase", p.Phase,
+			"retry", p.RetryCount,
+			"transient", transient,
+			"elapsed_since_ok", elapsed.Round(time.Second).String(),
+			"decision", "fail_closed_cleanup",
+			"error", err,
+		)
 	}
 	failWG(p)
 }
@@ -811,22 +884,25 @@ func (c *wgPairCoordinator) checkActive(ctx context.Context, p database.WGPair) 
 	if p.DesiredRevision == 0 || p.AppliedRevision != p.DesiredRevision || p.RealityDigest == "" {
 		return ErrWGUnavailable
 	}
+	started := time.Now()
 	secret, err := c.canonicalSS(ctx, p)
 	if err != nil {
-		return err
+		return fmt.Errorf("landing wg-v2-ss failed (%s): %w", time.Since(started).Round(time.Millisecond), err)
 	}
 	if p.SSDigest == "" || secret.Digest != p.SSDigest {
-		return ErrWGUnavailable
+		return fmt.Errorf("landing ss digest drift: %w", ErrWGUnavailable)
 	}
 	landing, err := c.command(ctx, p, false, "wg-verify")
 	if err != nil {
-		return err
+		return fmt.Errorf("landing wg-verify failed (%s): %w", time.Since(started).Round(time.Millisecond), err)
 	}
 	if p.PeerPublicKey == "" || landing.PublicKey != p.PeerPublicKey {
-		return ErrWGUnavailable
+		return fmt.Errorf("landing peer public key drift: %w", ErrWGUnavailable)
 	}
-	_, err = c.command(ctx, p, true, "wg-v2-status")
-	return err
+	if _, err = c.command(ctx, p, true, "wg-v2-status"); err != nil {
+		return fmt.Errorf("entry wg-v2-status failed (%s): %w", time.Since(started).Round(time.Millisecond), err)
+	}
+	return nil
 }
 
 func (c *wgPairCoordinator) advance(ctx context.Context, p *database.WGPair) {

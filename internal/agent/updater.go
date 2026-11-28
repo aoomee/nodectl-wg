@@ -226,7 +226,7 @@ func (u *Updater) TriggerCheckWithNotify(ctx context.Context, onBeforeReexec fun
 	if AgentVersion == "dev" || AgentVersion == "" {
 		return fmt.Errorf("dev 版本不支持更新检查")
 	}
-	u.checkAndUpdateWithNotify(ctx, onBeforeReexec)
+	u.checkAndUpdateWithNotify(ctx, false, onBeforeReexec)
 	return nil
 }
 
@@ -251,10 +251,10 @@ func (u *Updater) checkAndUpdate(ctx context.Context) {
 		log.Printf("[Updater] 当前节点处于 WireGuard 转发配对状态，跳过后台自动更新（如需升级请在面板手动操作或先解除配对）")
 		return
 	}
-	u.checkAndUpdateWithNotify(ctx, nil)
+	u.checkAndUpdateWithNotify(ctx, true, nil)
 }
 
-func (u *Updater) checkAndUpdateWithNotify(ctx context.Context, onBeforeReexec func(targetVersion string)) {
+func (u *Updater) checkAndUpdateWithNotify(ctx context.Context, isBackground bool, onBeforeReexec func(targetVersion string)) {
 	if !u.mu.TryLock() {
 		return // 另一个更新流程正在进行
 	}
@@ -357,6 +357,13 @@ func (u *Updater) checkAndUpdateWithNotify(ctx context.Context, onBeforeReexec f
 	// 7. staging: 设置可执行权限
 	if err := os.Chmod(tmpPath, 0755); err != nil {
 		log.Printf("[Updater] chmod 失败: %v", err)
+		os.Remove(tmpPath)
+		return
+	}
+
+	// 二次复检：防止在下载二进制期间刚建立 WG 配对，绝不在配对态下静默替换进程
+	if isBackground && u.skipBackgroundUpdate != nil && u.skipBackgroundUpdate() {
+		log.Printf("[Updater] 下载期间检测到节点进入 WireGuard 配对状态，取消本次后台自动替换")
 		os.Remove(tmpPath)
 		return
 	}

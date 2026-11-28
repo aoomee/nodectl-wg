@@ -235,3 +235,31 @@ func TestWGRouteStatusRequiresStoredRealityDigest(t *testing.T) {
 		t.Fatal("wrong source digest activated")
 	}
 }
+
+func TestWGRecoveryRetriesTransientProbeFailureWithinDeadline(t *testing.T) {
+	c, f := newWGTest(t)
+	p := createWG(t, c)
+	wgSteps(t, c, p.ID, 8)
+	if err := c.recover(); err != nil {
+		t.Fatal(err)
+	}
+	deadline := wgStored(t, c, p.ID).RecoveryDeadline
+	now := c.now()
+	c.now = func() time.Time { return now }
+
+	// First transient probe blip during recovery must retry without tearing down or extending deadline.
+	f.fail, f.failErr = "bbbbbbbbbbbb:wg-verify", errWGTransient
+	wgSteps(t, c, p.ID, 1)
+	row := wgStored(t, c, p.ID)
+	if row.Status != "recovering" || row.RetryCount != 1 || !row.RecoveryDeadline.Equal(deadline) || len(c.subscriptionLinks(0)) != 0 {
+		t.Fatalf("transient recovery failure tore down pair or mutated deadline: %+v", wgDTO(row))
+	}
+
+	// Clearing the transient fault before RecoveryDeadline lets recovery succeed cleanly.
+	f.fail = ""
+	now = row.NextRetryAt
+	wgSteps(t, c, p.ID, 1)
+	if row = wgStored(t, c, p.ID); row.Status != "active" || row.RetryCount != 0 || len(c.subscriptionLinks(0)) != 1 {
+		t.Fatalf("pair failed to recover after transient probe cleared: %+v", wgDTO(row))
+	}
+}

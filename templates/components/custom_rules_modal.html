@@ -181,13 +181,15 @@
     }
 
     .cr-rule-item:hover {
-        background: #f0f2f7;
+        background: #ffffff;
+        border-color: rgba(0, 122, 255, 0.34);
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.08);
     }
 
     .cr-rule-item.active {
         background: #eaf4ff;
-        border-color: rgba(0, 122, 255, 0.28);
-        box-shadow: 0 2px 8px rgba(0, 122, 255, 0.06);
+        border-color: rgba(0, 122, 255, 0.36);
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
     }
 
     .cr-rule-item-header {
@@ -238,7 +240,7 @@
 
     .cr-group-icon-picker:not(.active):hover {
         background: #e0efff;
-        transform: scale(1.1);
+        box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.14);
     }
 
     .cr-group-icon-picker.active {
@@ -277,8 +279,8 @@
     }
 
     .cr-emoji-item:hover {
-        background: #f0f0f5;
-        transform: scale(1.1);
+        background: #eaf4ff;
+        box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.14);
     }
 
     .cr-group-input {
@@ -362,7 +364,11 @@
     .cr-btn-add-rule:hover {
         background: #e2f0ff;
         border-color: #007aff;
-        transform: translateY(-1px);
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+    }
+
+    .cr-btn-add-rule:active {
+        transform: scale(0.985);
     }
 
     /* 右侧规则编辑器：与左侧严格上下齐平 */
@@ -415,8 +421,9 @@
     }
 
     .cr-item-row:hover {
-        background: #f0f2f7;
-        border-color: rgba(0, 0, 0, 0.08);
+        background: #ffffff;
+        border-color: rgba(0, 122, 255, 0.32);
+        box-shadow: 0 0 0 2.5px rgba(0, 122, 255, 0.08);
     }
 
     .cr-item-remark {

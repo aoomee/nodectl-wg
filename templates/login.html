@@ -54,17 +54,19 @@
             border: 1px solid rgba(255, 255, 255, 0.8);
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.03);
             text-align: center;
-            animation: cardFloatIn 0.55s var(--ease-spring) forwards;
+            animation: cardFloatIn 0.52s var(--ease-spring) backwards;
         }
 
         @keyframes cardFloatIn {
             from {
                 opacity: 0;
-                transform: translateY(16px) scale(0.97);
+                filter: blur(7px);
+                transform: translateY(8px) scale(0.985);
             }
             to {
                 opacity: 1;
-                transform: translateY(0) scale(1);
+                filter: blur(0px);
+                transform: none;
             }
         }
 
@@ -76,11 +78,11 @@
             align-items: center;
             justify-content: center;
             filter: drop-shadow(0 12px 26px rgba(0, 96, 224, 0.28));
-            transition: transform 0.34s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transition: filter 0.28s var(--ease-spring);
         }
 
         .brand-logo:hover {
-            transform: scale(1.05);
+            filter: drop-shadow(0 12px 30px rgba(0, 122, 255, 0.38));
         }
 
         .brand-logo svg {
@@ -153,12 +155,13 @@
 
         .btn-submit:hover {
             background: linear-gradient(180deg, #007aff 0%, #0062cc 100%);
-            box-shadow: 0 6px 20px rgba(0, 122, 255, 0.34);
-            transform: translateY(-1px);
+            box-shadow:
+                0 0 0 3px rgba(0, 122, 255, 0.16),
+                0 4px 16px rgba(0, 122, 255, 0.28);
         }
 
         .btn-submit:active {
-            transform: translateY(0) scale(0.98);
+            transform: scale(0.98);
         }
 
         .error-msg {

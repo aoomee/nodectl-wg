@@ -159,13 +159,23 @@
     }
 
     .sub-format-card:hover {
-        border-color: #d1d1d6;
-        background: #fafafa;
+        border-color: rgba(0, 122, 255, 0.36);
+        background: #ffffff;
+        box-shadow:
+            0 0 0 3px rgba(0, 122, 255, 0.09),
+            0 4px 12px rgba(0, 122, 255, 0.05);
+    }
+
+    .sub-format-card:active {
+        transform: scale(0.985);
     }
 
     .sub-format-card.active {
         border-color: #007aff;
         background: #f0f7ff;
+        box-shadow:
+            0 0 0 3px rgba(0, 122, 255, 0.12),
+            0 2px 10px rgba(0, 122, 255, 0.08);
     }
 
     .sub-format-info {
@@ -206,8 +216,7 @@
     }
 
     .sub-format-card:hover .sub-expand-indicator {
-        color: #86868b;
-        transform: translateX(2px);
+        color: #007aff;
     }
 
     .sub-format-card.active .sub-expand-indicator {
@@ -482,11 +491,12 @@
         border-radius: 12px;
         border: 1px solid rgba(0, 0, 0, 0.06);
         background: #ffffff;
-        transition: border-color 0.15s, background-color 0.15s;
+        transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
     }
     .sub-node-row:hover {
-        border-color: rgba(0, 122, 255, 0.22);
-        background: #fafcff;
+        border-color: rgba(0, 122, 255, 0.34);
+        background: #ffffff;
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.08);
     }
     .sub-node-row.is-hidden {
         background: #fafafb;

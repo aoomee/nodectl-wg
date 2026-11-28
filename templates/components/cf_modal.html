@@ -156,14 +156,23 @@
     }
 
     .cft-nav-card:hover {
-        border-color: rgba(0, 122, 255, 0.24);
-        background: #f8faff;
+        border-color: rgba(0, 122, 255, 0.36);
+        background: #ffffff;
+        box-shadow:
+            0 0 0 3px rgba(0, 122, 255, 0.09),
+            0 4px 12px rgba(0, 122, 255, 0.05);
+    }
+
+    .cft-nav-card:active {
+        transform: scale(0.985);
     }
 
     .cft-nav-card.active {
         border-color: #007aff;
         background: #f0f7ff;
-        box-shadow: 0 2px 10px rgba(0, 122, 255, 0.08);
+        box-shadow:
+            0 0 0 3px rgba(0, 122, 255, 0.12),
+            0 2px 10px rgba(0, 122, 255, 0.08);
     }
 
     .cft-nav-name {
@@ -212,8 +221,7 @@
     }
 
     .cft-nav-card:hover .cft-expand-indicator {
-        color: #86868b;
-        transform: translateX(2px);
+        color: #007aff;
     }
 
     .cft-nav-card.active .cft-expand-indicator {
@@ -468,7 +476,8 @@
     }
 
     .cft-node-item:hover {
-        border-color: #d1d1d6;
+        border-color: rgba(0, 122, 255, 0.32);
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.08);
     }
 
     .cft-node-header {
@@ -543,6 +552,12 @@
 
     .cft-node-item.expanded .cft-node-body {
         display: block;
+        animation: cftBodyReveal 0.28s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    }
+
+    @keyframes cftBodyReveal {
+        from { opacity: 0; filter: blur(4px); transform: translateY(-3px); }
+        to { opacity: 1; filter: blur(0px); transform: none; }
     }
 
     .cft-node-head {

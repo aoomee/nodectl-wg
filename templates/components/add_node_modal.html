@@ -311,7 +311,11 @@
 
     .btn-add-cancel:hover {
         background: #e5e6eb;
-        transform: translateY(-1px);
+        box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .btn-add-cancel:active {
+        transform: scale(0.97);
     }
 
     .btn-add-submit {
@@ -329,7 +333,13 @@
 
     .btn-add-submit:hover {
         background: linear-gradient(180deg, #007aff 0%, #0062cc 100%);
-        transform: translateY(-1px);
+        box-shadow:
+            0 0 0 3px rgba(0, 122, 255, 0.16),
+            0 4px 12px rgba(0, 122, 255, 0.26);
+    }
+
+    .btn-add-submit:active:not(:disabled) {
+        transform: scale(0.97);
     }
 
     .btn-add-submit:disabled {

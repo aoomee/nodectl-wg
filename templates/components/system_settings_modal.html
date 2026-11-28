@@ -139,14 +139,23 @@
     }
 
     .sys-nav-card:hover {
-        border-color: rgba(0, 122, 255, 0.22);
-        background: #f8faff;
+        border-color: rgba(0, 122, 255, 0.36);
+        background: #ffffff;
+        box-shadow:
+            0 0 0 3px rgba(0, 122, 255, 0.09),
+            0 4px 12px rgba(0, 122, 255, 0.05);
+    }
+
+    .sys-nav-card:active {
+        transform: scale(0.985);
     }
 
     .sys-nav-card.active {
         border-color: #007aff;
         background: #f0f7ff;
-        box-shadow: 0 2px 10px rgba(0, 122, 255, 0.08);
+        box-shadow:
+            0 0 0 3px rgba(0, 122, 255, 0.12),
+            0 2px 10px rgba(0, 122, 255, 0.08);
     }
 
     .sys-nav-name {
@@ -194,8 +203,7 @@
     }
 
     .sys-nav-card:hover .sys-expand-indicator {
-        color: #86868b;
-        transform: translateX(2px);
+        color: #007aff;
     }
 
     .sys-nav-card.active .sys-expand-indicator {
@@ -223,6 +231,24 @@
         to {
             opacity: 1;
         }
+    }
+
+    .sys-tab-loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 240px;
+        width: 100%;
+    }
+
+    .sys-tab-loading.sys-mobile-inline-loading {
+        min-height: 110px;
+        background: #fdfdfd;
+        border: 1px solid #cce4ff;
+        border-top: none;
+        border-radius: 0 0 10px 10px;
+        margin-top: -10px;
+        margin-bottom: 12px;
     }
 
     /* 表单组件：统一 14px 大圆角、42px 统一控件高度、精确顶基线对齐 */
@@ -1901,7 +1927,12 @@
 
     .sys-btn-add-dashed:hover {
         background: #e0efff;
-        transform: translateY(-1px);
+        border-color: #007aff;
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+    }
+
+    .sys-btn-add-dashed:active {
+        transform: scale(0.985);
     }
 
     /* ================= 证书管理================= */
@@ -2149,6 +2180,12 @@
 
             <div class="sys-right-col sys-no-scrollbar" id="sysRightCol">
                 <label class="sys-section-label" id="sysRightTitle" style="display: none">设置详情</label>
+                <div id="sysTabLoadingOverlay" class="sys-tab-loading" style="display: none">
+                    <div class="wa-loading-state">
+                        <span class="wa-spinner lg"></span>
+                        <span>加载配置中...</span>
+                    </div>
+                </div>
 
                 <div class="sys-form-section" id="sys-form-basic" style="display: none">
                     <!-- Selects -->
@@ -3689,6 +3726,141 @@
     let mihomoState = "checking";
     let sysMonitorTimer = null; // 监控定时器
 
+    // 各分类数据注水与预加载状态：杜绝先展示硬编码默认值再跳变刷新的割裂感
+    let sysActiveCatId = null;
+    let sysApplyingSettings = false;
+    const sysHydrated = {
+        offline: false,
+        geo: false,
+        mihomo: false,
+        database: false,
+        monitor: false,
+    };
+    const sysInflight = {
+        settings: null,
+        offline: null,
+        geo: null,
+        mihomo: null,
+        database: null,
+        monitor: null,
+    };
+    const sysLastFetched = {
+        settings: 0,
+        offline: 0,
+        geo: 0,
+        mihomo: 0,
+        database: 0,
+        monitor: 0,
+    };
+
+    function isSysCategoryReady(catId) {
+        if (catId === "basic" || catId === "tg" || catId === "pref") {
+            return sysSettingsLoaded;
+        }
+        if (catId === "offline-notify") return sysHydrated.offline;
+        if (catId === "geo") return sysSettingsLoaded && sysHydrated.geo;
+        if (catId === "mihomo") return sysSettingsLoaded && sysHydrated.mihomo;
+        if (catId === "database") return sysHydrated.database;
+        if (catId === "monitor") return sysHydrated.monitor;
+        return true;
+    }
+
+    function showSysTabLoading(cardElement, isMobile) {
+        const loader = document.getElementById("sysTabLoadingOverlay");
+        if (!loader) return;
+        loader.classList.remove("sys-mobile-inline-loading");
+        if (isMobile && cardElement && cardElement.parentNode) {
+            loader.classList.add("sys-mobile-inline-loading");
+            cardElement.parentNode.insertBefore(loader, cardElement.nextSibling);
+        } else {
+            document.getElementById("sysRightCol").appendChild(loader);
+        }
+        loader.style.display = "flex";
+    }
+
+    function hideSysTabLoading() {
+        const loader = document.getElementById("sysTabLoadingOverlay");
+        if (!loader) return;
+        loader.style.display = "none";
+        loader.classList.remove("sys-mobile-inline-loading");
+        const rightCol = document.getElementById("sysRightCol");
+        if (rightCol && loader.parentNode !== rightCol) {
+            rightCol.appendChild(loader);
+        }
+    }
+
+    function revealActiveSysForm(catId) {
+        if (!catId || catId !== sysActiveCatId) return;
+        if (!sysModal.classList.contains("active")) return;
+        if (!isSysCategoryReady(catId)) return;
+        const formEl = document.getElementById("sys-form-" + catId);
+        if (!formEl) return;
+        const wasHidden = formEl.style.display === "none";
+        hideSysTabLoading();
+        formEl.style.display = "block";
+        if (wasHidden) {
+            formEl.classList.remove("wa-pane-reveal");
+            void formEl.offsetWidth;
+            formEl.classList.add("wa-pane-reveal");
+        }
+    }
+
+    function ensureSysCategoryData(catId) {
+        const now = Date.now();
+        const tasks = [];
+        if (
+            catId === "basic" ||
+            catId === "tg" ||
+            catId === "pref" ||
+            catId === "geo" ||
+            catId === "mihomo"
+        ) {
+            if (!sysSettingsLoaded || now - sysLastFetched.settings > 10000) {
+                tasks.push(loadAllSystemSettings({ silent: sysSettingsLoaded }));
+            }
+        }
+        if (catId === "geo") {
+            if (!sysHydrated.geo || now - sysLastFetched.geo > 60000) {
+                tasks.push(checkGeoStatus({ silent: sysHydrated.geo }));
+            }
+        } else if (catId === "mihomo") {
+            if (!sysHydrated.mihomo || now - sysLastFetched.mihomo > 60000) {
+                tasks.push(checkMihomoStatus({ silent: sysHydrated.mihomo }));
+            }
+        } else if (catId === "offline-notify") {
+            if (!sysHydrated.offline || now - sysLastFetched.offline > 8000) {
+                tasks.push(loadOfflineNotifySettings({ silent: sysHydrated.offline }));
+            }
+        } else if (catId === "monitor") {
+            startSysMonitor();
+            if (sysInflight.monitor) tasks.push(sysInflight.monitor);
+        } else if (catId === "database") {
+            if (!sysHydrated.database || now - sysLastFetched.database > 10000) {
+                tasks.push(loadDBStatus({ silent: sysHydrated.database }));
+            }
+        }
+        return tasks.length ? Promise.all(tasks) : Promise.resolve();
+    }
+
+    function preloadOtherSysCategories() {
+        const now = Date.now();
+        if (!sysHydrated.offline || now - sysLastFetched.offline > 15000) {
+            loadOfflineNotifySettings({ silent: true }).catch(() => {});
+        }
+        if (!sysHydrated.database || now - sysLastFetched.database > 15000) {
+            loadDBStatus({ silent: true }).catch(() => {});
+        }
+        if (!sysHydrated.monitor || now - sysLastFetched.monitor > 15000) {
+            fetchSystemMonitor().catch(() => {});
+        }
+        if (!sysHydrated.geo || now - sysLastFetched.geo > 60000) {
+            checkGeoStatus({ silent: true }).catch(() => {});
+        }
+        if (!sysHydrated.mihomo || now - sysLastFetched.mihomo > 60000) {
+            checkMihomoStatus({ silent: true }).catch(() => {});
+        }
+    }
+
     // 手风琴/分栏切换核心逻辑
     function selectSysCategory(catId, cardElement) {
         const isAlreadyActive = cardElement.classList.contains("active");
@@ -3696,38 +3868,27 @@
 
         // 停止之前的监控
         stopSysMonitor();
+        hideSysTabLoading();
 
         document
             .querySelectorAll(".sys-nav-card")
             .forEach((c) => c.classList.remove("active", "mobile-expanded"));
         document.querySelectorAll(".sys-form-section").forEach((f) => {
             f.style.display = "none";
-            f.classList.remove("sys-mobile-inline-form");
+            f.classList.remove("sys-mobile-inline-form", "wa-pane-reveal");
             document.getElementById("sysRightCol").appendChild(f);
         });
 
         if (isAlreadyActive && isMobile) {
+            sysActiveCatId = null;
             sysModalCard.classList.remove("has-content");
             return;
         }
 
+        sysActiveCatId = catId;
         cardElement.classList.add("active");
-        // const catName = cardElement.querySelector('.sys-nav-name').innerText.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]/g, '').trim();
-        // document.getElementById('sysRightTitle').innerText = catName;
 
         const formEl = document.getElementById("sys-form-" + catId);
-
-        if (catId === "geo" && !hasCheckedGeo) {
-            checkGeoStatus();
-        } else if (catId === "mihomo" && !hasCheckedMihomo) {
-            checkMihomoStatus();
-        } else if (catId === "offline-notify") {
-            loadOfflineNotifySettings();
-        } else if (catId === "monitor") {
-            startSysMonitor(); // ✨ 开启系统实时监控
-        } else if (catId === "database") {
-            loadDBStatus(); // 加载数据库状态
-        }
 
         if (isMobile) {
             cardElement.classList.add("mobile-expanded");
@@ -3742,7 +3903,25 @@
             sysModalCard.classList.add("has-content");
         }
 
-        formEl.style.display = "block";
+        const alreadyReady = isSysCategoryReady(catId);
+        if (alreadyReady) {
+            hideSysTabLoading();
+            formEl.style.display = "block";
+        } else {
+            formEl.style.display = "none";
+            showSysTabLoading(cardElement, isMobile);
+        }
+
+        ensureSysCategoryData(catId).finally(() => {
+            if (sysActiveCatId !== catId || !sysModal.classList.contains("active")) return;
+            hideSysTabLoading();
+            if (formEl.style.display === "none") {
+                formEl.style.display = "block";
+                formEl.classList.remove("wa-pane-reveal");
+                void formEl.offsetWidth;
+                formEl.classList.add("wa-pane-reveal");
+            }
+        });
 
         if (isMobile) {
             setTimeout(
@@ -3983,231 +4162,340 @@
             : "TG Bot 代理（点击展开）";
     }
 
-    // 功能：拉取所有后端设置，并渲染到表单和证书状态 UI 中
+    // 功能：拉取所有后端设置，并渲染到表单和证书状态 UI 中（支持静默后台刷新与并发去重）
     let sysSettingsLoaded = false;
-    async function loadAllSystemSettings() {
-        sysSettingsLoaded = false;
-        clearTimeout(sysAutoSaveTimer);
-        try {
-            const res = await fetch("/api/get-settings");
-            const result = await res.json();
-            if (!res.ok || result.status !== "success") throw new Error("设置读取失败");
-            if (result.status === "success") {
-                const data = result.data;
+    function setSysFieldValueSafely(id, val, silent) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (silent && document.activeElement === el) return;
+        el.value = val;
+    }
 
-                // 1. 基础配置
-                document.getElementById("sys_panel_url").value =
-                    data.panel_url || "";
-                document.getElementById("sys_sub_token").value =
-                    data.sub_token || "";
-                document.getElementById("sys_pref_flag").checked =
-                    data.pref_use_emoji_flag !== "false";
-                document.getElementById(
-                    "sys_pref_force_protocol_prefix",
-                ).checked = data.pref_force_protocol_prefix === "true";
-                document.getElementById("sys_pref_ip_strategy").value =
-                    data.pref_ip_strategy || "ipv4_prefer";
-                document.getElementById("sys_airport_filter_invalid").checked =
-                    data.airport_filter_invalid === "true";
-                document.getElementById(
-                    "sys_agent_startup_silent_update_enabled",
-                ).checked = data.agent_startup_silent_update_enabled === "true";
-                document.getElementById("sys_pref_speed_test_file_size").value =
-                    data.pref_speed_test_file_size || "50";
-                document.getElementById(
-                    "sys_pref_traffic_stats_retention_days",
-                ).value = data.pref_traffic_stats_retention_days || "30";
+    async function loadAllSystemSettings(options = {}) {
+        const silent = !!options.silent;
+        if (sysInflight.settings) return sysInflight.settings;
+        if (!silent) clearTimeout(sysAutoSaveTimer);
 
-                document.getElementById(
-                    "sys_pref_traffic_point_persist_interval_sec",
-                ).value = data.pref_traffic_point_persist_interval_sec || "0";
-                document.getElementById("sys_auth_cookie_ttl_mode").value =
-                    data.auth_cookie_ttl_mode || "1d";
-                document.getElementById("sys_force_http").checked =
-                    parseSysBool(data.sys_force_http, false);
-                document.getElementById("sys_login_ip_retry_window_sec").value =
-                    data.login_ip_retry_window_sec || "600";
-                document.getElementById("sys_login_ip_max_retries").value =
-                    data.login_ip_max_retries || "5";
-                document.getElementById("sys_login_ip_block_ttl_sec").value =
-                    data.login_ip_block_ttl_sec || "900";
-                document.getElementById(
-                    "sys_clash_proxies_update_interval",
-                ).value = data.clash_proxies_update_interval || "300";
-                document.getElementById(
-                    "sys_clash_rules_update_interval",
-                ).value = data.clash_rules_update_interval || "3600";
-                document.getElementById(
-                    "sys_clash_public_rules_update_interval",
-                ).value = data.clash_public_rules_update_interval || "86400";
-                document.getElementById("sys_log_level").value =
-                    data.sys_log_level || "info";
-                loadSysDefaultInstallProtocols(
-                    data.pref_default_install_protocols || "[]",
-                );
+        sysInflight.settings = (async () => {
+            try {
+                const res = await fetch("/api/get-settings");
+                const result = await res.json();
+                if (!res.ok || result.status !== "success") throw new Error("设置读取失败");
+                if (result.status === "success") {
+                    const data = result.data;
+                    sysApplyingSettings = true;
+                    try {
+                        // 1. 基础配置
+                        setSysFieldValueSafely("sys_panel_url", data.panel_url || "", silent);
+                        setSysFieldValueSafely("sys_sub_token", data.sub_token || "", silent);
+                        document.getElementById("sys_pref_flag").checked =
+                            data.pref_use_emoji_flag !== "false";
+                        document.getElementById(
+                            "sys_pref_force_protocol_prefix",
+                        ).checked = data.pref_force_protocol_prefix === "true";
+                        setSysFieldValueSafely(
+                            "sys_pref_ip_strategy",
+                            data.pref_ip_strategy || "ipv4_prefer",
+                            silent,
+                        );
+                        document.getElementById("sys_airport_filter_invalid").checked =
+                            data.airport_filter_invalid === "true";
+                        document.getElementById(
+                            "sys_agent_startup_silent_update_enabled",
+                        ).checked = data.agent_startup_silent_update_enabled === "true";
+                        setSysFieldValueSafely(
+                            "sys_pref_speed_test_file_size",
+                            data.pref_speed_test_file_size || "50",
+                            silent,
+                        );
+                        setSysFieldValueSafely(
+                            "sys_pref_traffic_stats_retention_days",
+                            data.pref_traffic_stats_retention_days || "30",
+                            silent,
+                        );
+                        setSysFieldValueSafely(
+                            "sys_pref_traffic_point_persist_interval_sec",
+                            data.pref_traffic_point_persist_interval_sec || "0",
+                            silent,
+                        );
+                        setSysFieldValueSafely(
+                            "sys_auth_cookie_ttl_mode",
+                            data.auth_cookie_ttl_mode || "1d",
+                            silent,
+                        );
+                        document.getElementById("sys_force_http").checked =
+                            parseSysBool(data.sys_force_http, false);
+                        setSysFieldValueSafely(
+                            "sys_login_ip_retry_window_sec",
+                            data.login_ip_retry_window_sec || "600",
+                            silent,
+                        );
+                        setSysFieldValueSafely(
+                            "sys_login_ip_max_retries",
+                            data.login_ip_max_retries || "5",
+                            silent,
+                        );
+                        setSysFieldValueSafely(
+                            "sys_login_ip_block_ttl_sec",
+                            data.login_ip_block_ttl_sec || "900",
+                            silent,
+                        );
+                        setSysFieldValueSafely(
+                            "sys_clash_proxies_update_interval",
+                            data.clash_proxies_update_interval || "300",
+                            silent,
+                        );
+                        setSysFieldValueSafely(
+                            "sys_clash_rules_update_interval",
+                            data.clash_rules_update_interval || "3600",
+                            silent,
+                        );
+                        setSysFieldValueSafely(
+                            "sys_clash_public_rules_update_interval",
+                            data.clash_public_rules_update_interval || "86400",
+                            silent,
+                        );
+                        setSysFieldValueSafely("sys_log_level", data.sys_log_level || "info", silent);
+                        loadSysDefaultInstallProtocols(
+                            data.pref_default_install_protocols || "[]",
+                        );
 
-                // Geo / Mihomo 自动更新开关
-                document.getElementById("sys_geo_auto_update").checked =
-                    parseSysBool(data.geo_auto_update, false);
-                document.getElementById("sys_mihomo_auto_update").checked =
-                    parseSysBool(data.mihomo_auto_update, false);
+                        // Geo / Mihomo 自动更新开关
+                        document.getElementById("sys_geo_auto_update").checked =
+                            parseSysBool(data.geo_auto_update, false);
+                        document.getElementById("sys_mihomo_auto_update").checked =
+                            parseSysBool(data.mihomo_auto_update, false);
 
-                // TG Bot 配置
-                document.getElementById("sys_tg_bot_token").value =
-                    data.tg_bot_token || "";
-                document.getElementById("sys_tg_bot_token").dataset.original =
-                    data.tg_bot_token || "";
-                resetTokenConfirmBtn("btn_tg_token_confirm");
-                document.getElementById("sys_tg_bot_enabled").checked =
-                    data.tg_bot_enabled === "true";
-                document.getElementById(
-                    "sys_tg_bot_register_commands",
-                ).checked = data.tg_bot_register_commands === "true";
-                document.getElementById(
-                    "sys_tg_bot_socks5_enabled",
-                ).checked = parseSysBool(data.tg_bot_socks5_enabled, false);
-                document.getElementById("sys_tg_bot_socks5_addr").value =
-                    data.tg_bot_socks5_addr || "";
-                document.getElementById("sys_tg_bot_socks5_user").value =
-                    data.tg_bot_socks5_user || "";
-                document.getElementById("sys_tg_bot_socks5_pass").value =
-                    data.tg_bot_socks5_pass || "";
-                document.getElementById(
-                    "sys_tg_speedtest_notify_enabled",
-                ).checked = parseSysBool(
-                    data.tg_speedtest_notify_enabled,
-                    false,
-                );
-                document.getElementById(
-                    "sys_tg_threshold_stop_notify_enabled",
-                ).checked = parseSysBool(
-                    data.tg_threshold_stop_notify_enabled,
-                    false,
-                );
-                const loginNotifyMode =
-                    data.tg_login_notify_mode ||
-                    (parseSysBool(data.tg_login_notify_enabled, false)
-                        ? "all"
-                        : "off");
-                document.getElementById("sys_tg_login_notify_mode").value = [
-                    "off",
-                    "success_only",
-                    "failure_only",
-                    "all",
-                ].includes(loginNotifyMode)
-                    ? loginNotifyMode
-                    : "off";
-                updateTgBotSettingsVisibility();
-                toggleTgProxyPanel(false);
-
-                // 解析白名单并渲染
-                const wListStr = data.tg_bot_whitelist || "";
-                tgBotWhitelistItems = wListStr
-                    .split(",")
-                    .filter(Boolean)
-                    .map((s) => {
-                        const idx = s.indexOf("=");
-                        if (idx === -1)
-                            return {
-                                id: s.trim(),
-                                remark: "",
-                                notify_node: true,
-                                notify_login: true,
-                                notify_speedtest: true,
-                                notify_threshold_stop: true,
-                                notify_open: false,
-                            };
-
-                        const id = s.substring(0, idx).trim();
-                        const rest = s.substring(idx + 1).trim();
-                        const parts = rest.split("|");
-                        const remark = (parts[0] || "").trim();
-                        const item = {
-                            id,
-                            remark,
-                            notify_node: true,
-                            notify_login: true,
-                            notify_speedtest: true,
-                            notify_threshold_stop: true,
-                            notify_open: false,
-                        };
-
-                        for (let i = 1; i < parts.length; i++) {
-                            const seg = (parts[i] || "").trim();
-                            if (!seg) continue;
-                            const kvIdx = seg.indexOf("=");
-                            if (kvIdx === -1) continue;
-                            const key = seg
-                                .substring(0, kvIdx)
-                                .trim()
-                                .toLowerCase();
-                            const val = seg
-                                .substring(kvIdx + 1)
-                                .trim()
-                                .toLowerCase();
-                            const allow = val === "1" || val === "true";
-                            if (key === "node" || key === "node_status")
-                                item.notify_node = allow;
-                            if (key === "login" || key === "login_notify")
-                                item.notify_login = allow;
-                            if (
-                                key === "speedtest" ||
-                                key === "speed_test" ||
-                                key === "batch_speedtest"
-                            )
-                                item.notify_speedtest = allow;
-                            if (
-                                key === "threshold" ||
-                                key === "threshold_stop" ||
-                                key === "threshold_notify" ||
-                                key === "threshold_stop_notify"
-                            )
-                                item.notify_threshold_stop = allow;
+                        // TG Bot 配置
+                        const tgTokenEl = document.getElementById("sys_tg_bot_token");
+                        if (!silent || document.activeElement !== tgTokenEl) {
+                            tgTokenEl.value = data.tg_bot_token || "";
+                            tgTokenEl.dataset.original = data.tg_bot_token || "";
+                            resetTokenConfirmBtn("btn_tg_token_confirm");
                         }
+                        document.getElementById("sys_tg_bot_enabled").checked =
+                            data.tg_bot_enabled === "true";
+                        document.getElementById(
+                            "sys_tg_bot_register_commands",
+                        ).checked = data.tg_bot_register_commands === "true";
+                        document.getElementById(
+                            "sys_tg_bot_socks5_enabled",
+                        ).checked = parseSysBool(data.tg_bot_socks5_enabled, false);
+                        setSysFieldValueSafely(
+                            "sys_tg_bot_socks5_addr",
+                            data.tg_bot_socks5_addr || "",
+                            silent,
+                        );
+                        setSysFieldValueSafely(
+                            "sys_tg_bot_socks5_user",
+                            data.tg_bot_socks5_user || "",
+                            silent,
+                        );
+                        setSysFieldValueSafely(
+                            "sys_tg_bot_socks5_pass",
+                            data.tg_bot_socks5_pass || "",
+                            silent,
+                        );
+                        document.getElementById(
+                            "sys_tg_speedtest_notify_enabled",
+                        ).checked = parseSysBool(
+                            data.tg_speedtest_notify_enabled,
+                            false,
+                        );
+                        document.getElementById(
+                            "sys_tg_threshold_stop_notify_enabled",
+                        ).checked = parseSysBool(
+                            data.tg_threshold_stop_notify_enabled,
+                            false,
+                        );
+                        const loginNotifyMode =
+                            data.tg_login_notify_mode ||
+                            (parseSysBool(data.tg_login_notify_enabled, false)
+                                ? "all"
+                                : "off");
+                        setSysFieldValueSafely(
+                            "sys_tg_login_notify_mode",
+                            [
+                                "off",
+                                "success_only",
+                                "failure_only",
+                                "all",
+                            ].includes(loginNotifyMode)
+                                ? loginNotifyMode
+                                : "off",
+                            silent,
+                        );
+                        updateTgBotSettingsVisibility();
+                        if (!silent) toggleTgProxyPanel(false);
 
-                        return item;
-                    });
-                renderTgWhitelist();
-                sysSettingsLoaded = true;
+                        // 解析白名单并渲染（若用户正在白名单输入框编辑，则静默刷新时跳过覆盖）
+                        const editingWhitelist =
+                            silent &&
+                            document.activeElement &&
+                            document.activeElement.closest &&
+                            document.activeElement.closest("#tgWhitelistContainer");
+                        if (!editingWhitelist) {
+                            const wListStr = data.tg_bot_whitelist || "";
+                            tgBotWhitelistItems = wListStr
+                                .split(",")
+                                .filter(Boolean)
+                                .map((s) => {
+                                    const idx = s.indexOf("=");
+                                    if (idx === -1)
+                                        return {
+                                            id: s.trim(),
+                                            remark: "",
+                                            notify_node: true,
+                                            notify_login: true,
+                                            notify_speedtest: true,
+                                            notify_threshold_stop: true,
+                                            notify_open: false,
+                                        };
+
+                                    const id = s.substring(0, idx).trim();
+                                    const rest = s.substring(idx + 1).trim();
+                                    const parts = rest.split("|");
+                                    const remark = (parts[0] || "").trim();
+                                    const item = {
+                                        id,
+                                        remark,
+                                        notify_node: true,
+                                        notify_login: true,
+                                        notify_speedtest: true,
+                                        notify_threshold_stop: true,
+                                        notify_open: false,
+                                    };
+
+                                    for (let i = 1; i < parts.length; i++) {
+                                        const seg = (parts[i] || "").trim();
+                                        if (!seg) continue;
+                                        const kvIdx = seg.indexOf("=");
+                                        if (kvIdx === -1) continue;
+                                        const key = seg
+                                            .substring(0, kvIdx)
+                                            .trim()
+                                            .toLowerCase();
+                                        const val = seg
+                                            .substring(kvIdx + 1)
+                                            .trim()
+                                            .toLowerCase();
+                                        const allow = val === "1" || val === "true";
+                                        if (key === "node" || key === "node_status")
+                                            item.notify_node = allow;
+                                        if (key === "login" || key === "login_notify")
+                                            item.notify_login = allow;
+                                        if (
+                                            key === "speedtest" ||
+                                            key === "speed_test" ||
+                                            key === "batch_speedtest"
+                                        )
+                                            item.notify_speedtest = allow;
+                                        if (
+                                            key === "threshold" ||
+                                            key === "threshold_stop" ||
+                                            key === "threshold_notify" ||
+                                            key === "threshold_stop_notify"
+                                        )
+                                            item.notify_threshold_stop = allow;
+                                    }
+
+                                    return item;
+                                });
+                            renderTgWhitelist();
+                        }
+                        sysSettingsLoaded = true;
+                        sysLastFetched.settings = Date.now();
+                    } finally {
+                        sysApplyingSettings = false;
+                    }
+                    revealActiveSysForm(sysActiveCatId);
+                }
+            } catch (e) {
+                if (!silent || !sysSettingsLoaded) {
+                    const indicator = document.getElementById("sysSaveIndicator");
+                    indicator.textContent = "设置读取失败，请关闭后重新打开；当前未保存修改";
+                    indicator.style.opacity = "1";
+                }
+            } finally {
+                sysInflight.settings = null;
             }
-        } catch (e) {
-            const indicator = document.getElementById("sysSaveIndicator");
-            indicator.textContent = "设置读取失败，请关闭后重新打开；当前未保存修改";
-            indicator.style.opacity = "1";
-        }
+        })();
+
+        return sysInflight.settings;
     }
 
     async function openSystemSettingsModal() {
+        stopSysMonitor();
+        hideSysTabLoading();
         document
             .querySelectorAll(".sys-nav-card")
             .forEach((c) => c.classList.remove("active", "mobile-expanded"));
         document.querySelectorAll(".sys-form-section").forEach((f) => {
             f.style.display = "none";
-            f.classList.remove("sys-mobile-inline-form");
+            f.classList.remove("sys-mobile-inline-form", "wa-pane-reveal");
             document.getElementById("sysRightCol").appendChild(f);
         });
 
-        if (window.innerWidth > 768) {
+        const isDesktop = window.innerWidth > 768;
+        if (isDesktop) {
             sysModalCard.classList.add("has-content");
             const firstCard = document.querySelector(".sys-nav-card");
-            firstCard.classList.add("active");
-            document.getElementById("sys-form-basic").style.display = "block";
+            if (firstCard) firstCard.classList.add("active");
+            sysActiveCatId = "basic";
+            const basicForm = document.getElementById("sys-form-basic");
+            if (sysSettingsLoaded) {
+                // 已通过悬停预加载或此前打开完成注水：首帧直接展示真实数据，零闪烁
+                basicForm.style.display = "block";
+            } else {
+                // 首次加载未完成前隐藏默认表单，先以极简转圈占位，就绪后一次性柔焦显现
+                basicForm.style.display = "none";
+                showSysTabLoading(firstCard, false);
+            }
         } else {
+            sysActiveCatId = null;
             sysModalCard.classList.remove("has-content");
         }
 
         sysModal.classList.add("active");
-        hasCheckedGeo = false;
-        renderGeoBtn("checking");
-        hasCheckedMihomo = false;
-        renderMihomoBtn("checking");
         document.getElementById("sysSaveIndicator").style.opacity = "0";
 
-        // 弹窗打开时，调用重构后的方法加载所有配置项
-        await loadAllSystemSettings();
+        // 优先确保基础配置就绪，同时后台并行预加载其余全部标签页，切换任意分类均可零延迟直出
+        const settingsTask =
+            !sysSettingsLoaded || Date.now() - sysLastFetched.settings > 10000
+                ? loadAllSystemSettings({ silent: sysSettingsLoaded })
+                : Promise.resolve();
+        preloadOtherSysCategories();
+
+        await settingsTask;
+        if (isDesktop && sysActiveCatId === "basic" && sysModal.classList.contains("active")) {
+            hideSysTabLoading();
+            const basicForm = document.getElementById("sys-form-basic");
+            if (basicForm && basicForm.style.display === "none") {
+                basicForm.style.display = "block";
+                basicForm.classList.remove("wa-pane-reveal");
+                void basicForm.offsetWidth;
+                basicForm.classList.add("wa-pane-reveal");
+            }
+        }
     }
 
+    // 悬停/聚焦首页「系统设置」按钮时静默预热核心配置，实现点击即开、零延迟呈现
+    (function bindSysSettingsHoverPrefetch() {
+        const trigger = document.getElementById("sysSettingsTriggerBtn");
+        if (!trigger) return;
+        const prefetch = () => {
+            if (!sysSettingsLoaded || Date.now() - sysLastFetched.settings > 10000) {
+                loadAllSystemSettings({ silent: true }).catch(() => {});
+            }
+        };
+        trigger.addEventListener("mouseenter", prefetch, { passive: true });
+        trigger.addEventListener("focus", prefetch, { passive: true });
+        trigger.addEventListener("touchstart", prefetch, { passive: true });
+    })();
+
     function closeSystemSettingsModal() {
+        sysActiveCatId = null;
+        hideSysTabLoading();
         sysModal.classList.remove("active");
         stopSysMonitor(); // 确保关闭弹窗时停止监控
         setTimeout(() => sysModalCard.classList.remove("has-content"), 300);
@@ -4338,43 +4626,63 @@
     // 存储原始节点数据用于搜索过滤
     let offlineNotifyAllNodes = [];
 
-    async function loadOfflineNotifySettings() {
+    async function loadOfflineNotifySettings(options = {}) {
+        const silent = !!options.silent;
         const tbody = document.getElementById("sysOfflineNotifyTableBody");
         if (!tbody) return;
+        if (sysInflight.offline) return sysInflight.offline;
 
-        // 清空搜索框
         const searchInput = document.getElementById("sysOfflineNodeSearch");
-        if (searchInput) searchInput.value = "";
-
-        tbody.innerHTML = `<tr><td colspan="5" style="padding: 16px; text-align: center; color: #999;">加载中...</td></tr>`;
-        try {
-            const res = await fetch("/api/offline-notify/settings");
-            const result = await res.json();
-            if (result.status !== "success") {
-                throw new Error(result.message || "load failed");
-            }
-
-            const nodes = Array.isArray(result.nodes) ? result.nodes : [];
-            offlineNotifyAllNodes = nodes;
-            offlineNotifyRows = nodes
-                .map((n) => ({
-                    uuid: String(n.uuid || ""),
-                    grace: Number(n.offline_notify_grace_sec ?? 180),
-                    threshold: Number(n.traffic_threshold_percent || 0),
-                }))
-                .filter((n) => n.uuid);
-
-            const validUUIDs = new Set(offlineNotifyRows.map((n) => n.uuid));
-            Array.from(offlineNotifySelectedUUIDs).forEach((uuid) => {
-                if (!validUUIDs.has(uuid))
-                    offlineNotifySelectedUUIDs.delete(uuid);
-            });
-
-            renderOfflineNotifyNodes(nodes);
-        } catch (e) {
-            tbody.innerHTML = `<tr><td colspan="5" style="padding: 16px; text-align: center; color: #d74242;">加载失败，请稍后重试</td></tr>`;
-            updateOfflineNotifySelectAllState();
+        if (!silent && searchInput && !sysHydrated.offline) {
+            searchInput.value = "";
         }
+
+        if (!silent && !sysHydrated.offline) {
+            tbody.innerHTML = `<tr><td colspan="5" style="padding: 16px; text-align: center; color: #999;">加载中...</td></tr>`;
+        }
+
+        sysInflight.offline = (async () => {
+            try {
+                const res = await fetch("/api/offline-notify/settings");
+                const result = await res.json();
+                if (result.status !== "success") {
+                    throw new Error(result.message || "load failed");
+                }
+
+                const nodes = Array.isArray(result.nodes) ? result.nodes : [];
+                offlineNotifyAllNodes = nodes;
+                offlineNotifyRows = nodes
+                    .map((n) => ({
+                        uuid: String(n.uuid || ""),
+                        grace: Number(n.offline_notify_grace_sec ?? 180),
+                        threshold: Number(n.traffic_threshold_percent || 0),
+                    }))
+                    .filter((n) => n.uuid);
+
+                const validUUIDs = new Set(offlineNotifyRows.map((n) => n.uuid));
+                Array.from(offlineNotifySelectedUUIDs).forEach((uuid) => {
+                    if (!validUUIDs.has(uuid))
+                        offlineNotifySelectedUUIDs.delete(uuid);
+                });
+
+                const activeKeyword = searchInput ? searchInput.value.trim().toLowerCase() : "";
+                const displayNodes = activeKeyword
+                    ? nodes.filter((n) => String(n.name || "").toLowerCase().includes(activeKeyword))
+                    : nodes;
+                renderOfflineNotifyNodes(displayNodes);
+                sysHydrated.offline = true;
+                sysLastFetched.offline = Date.now();
+                revealActiveSysForm("offline-notify");
+            } catch (e) {
+                if (!sysHydrated.offline) {
+                    tbody.innerHTML = `<tr><td colspan="5" style="padding: 16px; text-align: center; color: #d74242;">加载失败，请稍后重试</td></tr>`;
+                    updateOfflineNotifySelectAllState();
+                }
+            } finally {
+                sysInflight.offline = null;
+            }
+        })();
+        return sysInflight.offline;
     }
 
     function renderOfflineNotifyNodes(nodes) {
@@ -4842,6 +5150,7 @@
             return;
         }
 
+        if (sysApplyingSettings) return;
         if (!sysSettingsLoaded) {
             const indicator = document.getElementById("sysSaveIndicator");
             indicator.textContent = "设置尚未加载，请关闭后重新打开";
@@ -5048,34 +5357,50 @@
 
     // ================= Geo API 相关逻辑 =================
     // ... 省略了保持不变的 Geo 相关函数 (checkGeoStatus, handleGeoBtnClick, updateGeoDatabase, renderGeoBtn)
-    async function checkGeoStatus() {
+    async function checkGeoStatus(options = {}) {
+        const silent = !!options.silent;
+        if (sysInflight.geo) return sysInflight.geo;
         hasCheckedGeo = true;
-        renderGeoBtn("checking");
-        try {
-            const res = await fetch("/api/get-geo-status");
-            const result = await res.json();
-            if (result.status === "success") {
-                const data = result.data;
-                document.getElementById("sysGeoLocalVersion").innerText =
-                    data.local_version || "未下载";
-                document.getElementById("sysGeoRemoteVersion").innerText =
-                    data.remote_version || "未知";
-                let uiState = "error";
-                if (data.state === "latest") uiState = "latest";
-                else if (
-                    data.state === "update_available" ||
-                    data.state === "not_found"
-                )
-                    uiState = "update";
-                renderGeoBtn(uiState, data.state === "not_found");
-            } else {
-                throw new Error(result.message);
-            }
-        } catch (e) {
-            document.getElementById("sysGeoRemoteVersion").innerText =
-                "网络错误";
-            renderGeoBtn("error");
+        if (!silent || !sysHydrated.geo) {
+            renderGeoBtn("checking");
         }
+        sysInflight.geo = (async () => {
+            try {
+                const res = await fetch("/api/get-geo-status");
+                const result = await res.json();
+                if (result.status === "success") {
+                    const data = result.data;
+                    document.getElementById("sysGeoLocalVersion").innerText =
+                        data.local_version || "未下载";
+                    document.getElementById("sysGeoRemoteVersion").innerText =
+                        data.remote_version || "未知";
+                    let uiState = "error";
+                    if (data.state === "latest") uiState = "latest";
+                    else if (
+                        data.state === "update_available" ||
+                        data.state === "not_found"
+                    )
+                        uiState = "update";
+                    renderGeoBtn(uiState, data.state === "not_found");
+                    sysHydrated.geo = true;
+                    sysLastFetched.geo = Date.now();
+                    revealActiveSysForm("geo");
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (e) {
+                if (!sysHydrated.geo) {
+                    document.getElementById("sysGeoRemoteVersion").innerText =
+                        "网络错误";
+                    renderGeoBtn("error");
+                    sysHydrated.geo = true;
+                    revealActiveSysForm("geo");
+                }
+            } finally {
+                sysInflight.geo = null;
+            }
+        })();
+        return sysInflight.geo;
     }
     function handleGeoBtnClick() {
         if (geoState === "update") updateGeoDatabase();
@@ -5164,34 +5489,50 @@
     }
 
     // ================= Mihomo 核心管理 =================
-    async function checkMihomoStatus() {
+    async function checkMihomoStatus(options = {}) {
+        const silent = !!options.silent;
+        if (sysInflight.mihomo) return sysInflight.mihomo;
         hasCheckedMihomo = true;
-        renderMihomoBtn("checking");
-        try {
-            const res = await fetch("/api/get-mihomo-status");
-            const result = await res.json();
-            if (result.status === "success") {
-                const data = result.data;
-                document.getElementById("sysMihomoLocalVersion").innerText =
-                    data.local_version || "未下载";
-                document.getElementById("sysMihomoRemoteVersion").innerText =
-                    data.remote_version || "未知";
-                let uiState = "error";
-                if (data.state === "latest") uiState = "latest";
-                else if (
-                    data.state === "update_available" ||
-                    data.state === "not_found"
-                )
-                    uiState = "update";
-                renderMihomoBtn(uiState, data.state === "not_found");
-            } else {
-                throw new Error(result.message);
-            }
-        } catch (e) {
-            document.getElementById("sysMihomoRemoteVersion").innerText =
-                "网络错误";
-            renderMihomoBtn("error");
+        if (!silent || !sysHydrated.mihomo) {
+            renderMihomoBtn("checking");
         }
+        sysInflight.mihomo = (async () => {
+            try {
+                const res = await fetch("/api/get-mihomo-status");
+                const result = await res.json();
+                if (result.status === "success") {
+                    const data = result.data;
+                    document.getElementById("sysMihomoLocalVersion").innerText =
+                        data.local_version || "未下载";
+                    document.getElementById("sysMihomoRemoteVersion").innerText =
+                        data.remote_version || "未知";
+                    let uiState = "error";
+                    if (data.state === "latest") uiState = "latest";
+                    else if (
+                        data.state === "update_available" ||
+                        data.state === "not_found"
+                    )
+                        uiState = "update";
+                    renderMihomoBtn(uiState, data.state === "not_found");
+                    sysHydrated.mihomo = true;
+                    sysLastFetched.mihomo = Date.now();
+                    revealActiveSysForm("mihomo");
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (e) {
+                if (!sysHydrated.mihomo) {
+                    document.getElementById("sysMihomoRemoteVersion").innerText =
+                        "网络错误";
+                    renderMihomoBtn("error");
+                    sysHydrated.mihomo = true;
+                    revealActiveSysForm("mihomo");
+                }
+            } finally {
+                sysInflight.mihomo = null;
+            }
+        })();
+        return sysInflight.mihomo;
     }
 
     function handleMihomoBtnClick() {
@@ -5391,75 +5732,84 @@
     }
 
     async function fetchSystemMonitor() {
-        try {
-            const res = await fetch("/api/system-monitor");
-            const result = await res.json();
-            if (result.status === "success") {
-                const d = result.data;
+        if (sysInflight.monitor) return sysInflight.monitor;
+        sysInflight.monitor = (async () => {
+            try {
+                const res = await fetch("/api/system-monitor");
+                const result = await res.json();
+                if (result.status === "success") {
+                    const d = result.data;
 
-                // 顶部基础信息
-                document.getElementById("sysMonOsArch").innerText = d.os_arch;
-                document.getElementById("sysMonGoVer").innerText = d.go_version;
+                    // 顶部基础信息
+                    document.getElementById("sysMonOsArch").innerText = d.os_arch;
+                    document.getElementById("sysMonGoVer").innerText = d.go_version;
 
-                // 堆内存卡片
-                document.getElementById("sysMonHeapInuse").innerText =
-                    formatBytes(d.heap_inuse);
-                document.getElementById("sysMonHeapSys").innerText =
-                    formatBytes(d.heap_sys);
-                let heapPct =
-                    d.heap_sys > 0
-                        ? ((d.heap_inuse / d.heap_sys) * 100).toFixed(1)
-                        : 0;
-                document.getElementById("sysMonHeapPct").innerText =
-                    heapPct + "%";
-                document.getElementById("sysMonHeapBar").style.width =
-                    heapPct + "%";
+                    // 堆内存卡片
+                    document.getElementById("sysMonHeapInuse").innerText =
+                        formatBytes(d.heap_inuse);
+                    document.getElementById("sysMonHeapSys").innerText =
+                        formatBytes(d.heap_sys);
+                    let heapPct =
+                        d.heap_sys > 0
+                            ? ((d.heap_inuse / d.heap_sys) * 100).toFixed(1)
+                            : 0;
+                    document.getElementById("sysMonHeapPct").innerText =
+                        heapPct + "%";
+                    document.getElementById("sysMonHeapBar").style.width =
+                        heapPct + "%";
 
-                // CPU 卡片
-                document.getElementById("sysMonCpuCores").innerText = d.num_cpu;
-                document.getElementById("sysMonCpuMaxProcs").innerText =
-                    d.go_max_procs;
+                    // CPU 卡片
+                    document.getElementById("sysMonCpuCores").innerText = d.num_cpu;
+                    document.getElementById("sysMonCpuMaxProcs").innerText =
+                        d.go_max_procs;
 
-                // Goroutines 卡片
-                document.getElementById("sysMonGoroutines").innerText =
-                    d.num_goroutine;
-                document.getElementById("sysMonCgo").innerText = d.num_cgo_call;
+                    // Goroutines 卡片
+                    document.getElementById("sysMonGoroutines").innerText =
+                        d.num_goroutine;
+                    document.getElementById("sysMonCgo").innerText = d.num_cgo_call;
 
-                // 运行时间卡片
-                document.getElementById("sysMonUptime").innerText = d.uptime;
-                document.getElementById("sysMonStart").innerText = d.start_time;
+                    // 运行时间卡片
+                    document.getElementById("sysMonUptime").innerText = d.uptime;
+                    document.getElementById("sysMonStart").innerText = d.start_time;
 
-                // 底部详情
-                document.getElementById("sysMonGcNum").innerText = d.num_gc;
-                document.getElementById("sysMonGcPause").innerText =
-                    d.pause_total_ms.toFixed(2) + " ms";
-                document.getElementById("sysMonGcCpu").innerText =
-                    (d.gc_cpu_fraction * 100).toFixed(4) + " %";
-                document.getElementById("sysMonSysMem").innerText = formatBytes(
-                    d.sys_mem,
-                );
-                document.getElementById("sysMonTotalAlloc").innerText =
-                    formatBytes(d.total_alloc);
-                document.getElementById("sysMonStack").innerText = formatBytes(
-                    d.stack_inuse,
-                );
+                    // 底部详情
+                    document.getElementById("sysMonGcNum").innerText = d.num_gc;
+                    document.getElementById("sysMonGcPause").innerText =
+                        d.pause_total_ms.toFixed(2) + " ms";
+                    document.getElementById("sysMonGcCpu").innerText =
+                        (d.gc_cpu_fraction * 100).toFixed(4) + " %";
+                    document.getElementById("sysMonSysMem").innerText = formatBytes(
+                        d.sys_mem,
+                    );
+                    document.getElementById("sysMonTotalAlloc").innerText =
+                        formatBytes(d.total_alloc);
+                    document.getElementById("sysMonStack").innerText = formatBytes(
+                        d.stack_inuse,
+                    );
 
-                // 子进程/进程树统计
-                document.getElementById("sysMonProcRootPid").innerText =
-                    d.process_tree_pid ?? "--";
-                document.getElementById("sysMonProcCount").innerText =
-                    d.process_tree_count ?? 0;
-                document.getElementById("sysMonProcChildren").innerText =
-                    d.process_tree_children_count ?? 0;
-                document.getElementById("sysMonProcTotalRSS").innerText =
-                    formatBytes(Number(d.process_tree_total_rss || 0));
-                document.getElementById("sysMonProcTotalCPU").innerText =
-                    formatPercent(d.process_tree_total_cpu_percent || 0);
-                renderProcessMonitor(d.process_tree_items || []);
+                    // 子进程/进程树统计
+                    document.getElementById("sysMonProcRootPid").innerText =
+                        d.process_tree_pid ?? "--";
+                    document.getElementById("sysMonProcCount").innerText =
+                        d.process_tree_count ?? 0;
+                    document.getElementById("sysMonProcChildren").innerText =
+                        d.process_tree_children_count ?? 0;
+                    document.getElementById("sysMonProcTotalRSS").innerText =
+                        formatBytes(Number(d.process_tree_total_rss || 0));
+                    document.getElementById("sysMonProcTotalCPU").innerText =
+                        formatPercent(d.process_tree_total_cpu_percent || 0);
+                    renderProcessMonitor(d.process_tree_items || []);
+                    sysHydrated.monitor = true;
+                    sysLastFetched.monitor = Date.now();
+                    revealActiveSysForm("monitor");
+                }
+            } catch (e) {
+                console.error("无法获取系统监控数据", e);
+            } finally {
+                sysInflight.monitor = null;
             }
-        } catch (e) {
-            console.error("无法获取系统监控数据", e);
-        }
+        })();
+        return sysInflight.monitor;
     }
 
     function startSysMonitor() {
@@ -5657,63 +6007,78 @@
     let dbCurrentType = "sqlite"; // 当前数据库类型
     let dbTestPassed = false; // 测试是否通过
 
-    async function loadDBStatus() {
-        try {
-            const res = await fetch("/api/db/status");
-            const result = await res.json();
-            if (result.status === "success") {
-                const d = result.data;
-                const cfg = result.config;
-                dbCurrentType = d.type || "sqlite";
+    async function loadDBStatus(options = {}) {
+        const silent = !!options.silent;
+        if (sysInflight.database) return sysInflight.database;
+        sysInflight.database = (async () => {
+            try {
+                const res = await fetch("/api/db/status");
+                const result = await res.json();
+                if (result.status === "success") {
+                    const d = result.data;
+                    const cfg = result.config;
+                    dbCurrentType = d.type || "sqlite";
 
-                // 渲染状态卡片
-                const engineEl = document.getElementById("dbEngineDisplay");
-                if (d.type === "postgres") {
-                    engineEl.innerText = "PostgreSQL";
-                    engineEl.style.color = "#336791";
-                } else {
-                    engineEl.innerText = "SQLite";
-                    engineEl.style.color = "#0f9d58";
+                    // 渲染状态卡片
+                    const engineEl = document.getElementById("dbEngineDisplay");
+                    if (d.type === "postgres") {
+                        engineEl.innerText = "PostgreSQL";
+                        engineEl.style.color = "#336791";
+                    } else {
+                        engineEl.innerText = "SQLite";
+                        engineEl.style.color = "#0f9d58";
+                    }
+                    document.getElementById("dbSizeDisplay").innerText =
+                        d.size_human || "--";
+
+                    const healthEl = document.getElementById("dbHealthDisplay");
+                    if (d.healthy) {
+                        healthEl.innerText = "✅ 运行正常";
+                        healthEl.className = "cert-val secure";
+                    } else {
+                        healthEl.innerText = "❌ " + (d.health_msg || "异常");
+                        healthEl.className = "cert-val warning";
+                    }
+                    document.getElementById("dbTableCountDisplay").innerText =
+                        d.table_count || "--";
+
+                    // 设置下拉菜单（若用户正手动切换准备测试连接，则静默刷新不强行覆盖）
+                    const selectEl = document.getElementById("dbEngineSelect");
+                    const desiredEngine = dbCurrentType === "postgres" ? "postgres" : "sqlite";
+                    if (!silent || !sysHydrated.database) {
+                        selectEl.value = desiredEngine;
+                        updateDBUIVisibility();
+                    } else if (selectEl.value === desiredEngine) {
+                        const vacuumSection = document.getElementById("dbVacuumSection");
+                        if (vacuumSection) {
+                            vacuumSection.style.display = (dbCurrentType === "postgres") ? "block" : "none";
+                        }
+                    }
+
+                    // 如果当前是 postgres，填充连接参数
+                    if (cfg && cfg.type === "postgres") {
+                        setSysFieldValueSafely("db_pg_host", cfg.host || "", silent);
+                        setSysFieldValueSafely("db_pg_port", cfg.port || 5432, silent);
+                        setSysFieldValueSafely("db_pg_dbname", cfg.dbname || "", silent);
+                        setSysFieldValueSafely("db_pg_user", cfg.user || "", silent);
+                        setSysFieldValueSafely("db_pg_sslmode", cfg.sslmode || "disable", silent);
+                    }
+                    sysHydrated.database = true;
+                    sysLastFetched.database = Date.now();
+                    revealActiveSysForm("database");
                 }
-                document.getElementById("dbSizeDisplay").innerText =
-                    d.size_human || "--";
-
-                const healthEl = document.getElementById("dbHealthDisplay");
-                if (d.healthy) {
-                    healthEl.innerText = "✅ 运行正常";
-                    healthEl.className = "cert-val secure";
-                } else {
-                    healthEl.innerText = "❌ " + (d.health_msg || "异常");
-                    healthEl.className = "cert-val warning";
+            } catch (e) {
+                console.error("加载数据库状态失败", e);
+                if (!sysHydrated.database) {
+                    document.getElementById("dbEngineDisplay").innerText = "加载失败";
+                    sysHydrated.database = true;
+                    revealActiveSysForm("database");
                 }
-                document.getElementById("dbTableCountDisplay").innerText =
-                    d.table_count || "--";
-
-                // 设置下拉菜单
-                document.getElementById("dbEngineSelect").value =
-                    dbCurrentType === "postgres" ? "postgres" : "sqlite";
-
-                // 显示/隐藏相关区域
-                updateDBUIVisibility();
-
-                // 如果当前是 postgres，填充连接参数
-                if (cfg && cfg.type === "postgres") {
-                    document.getElementById("db_pg_host").value =
-                        cfg.host || "";
-                    document.getElementById("db_pg_port").value =
-                        cfg.port || 5432;
-                    document.getElementById("db_pg_dbname").value =
-                        cfg.dbname || "";
-                    document.getElementById("db_pg_user").value =
-                        cfg.user || "";
-                    document.getElementById("db_pg_sslmode").value =
-                        cfg.sslmode || "disable";
-                }
+            } finally {
+                sysInflight.database = null;
             }
-        } catch (e) {
-            console.error("加载数据库状态失败", e);
-            document.getElementById("dbEngineDisplay").innerText = "加载失败";
-        }
+        })();
+        return sysInflight.database;
     }
 
     function onDBEngineSelectChange() {

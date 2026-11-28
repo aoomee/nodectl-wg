@@ -83,8 +83,9 @@
 
     .variant-check-item:hover {
         background: #e8f2ff;
-        border-color: rgba(0, 122, 255, 0.25);
+        border-color: rgba(0, 122, 255, 0.34);
         color: #007aff;
+        box-shadow: 0 0 0 2.5px rgba(0, 122, 255, 0.09);
     }
 
     /* 代码框样式 */
@@ -161,7 +162,13 @@
 
     .btn-script-copy:hover {
         background: linear-gradient(180deg, #007aff 0%, #0062cc 100%);
-        transform: translateY(-1px);
+        box-shadow:
+            0 0 0 3px rgba(0, 122, 255, 0.16),
+            0 4px 12px rgba(0, 122, 255, 0.26);
+    }
+
+    .btn-script-copy:active {
+        transform: scale(0.97);
     }
 
     .btn-script-cancel {
@@ -179,7 +186,11 @@
     .btn-script-cancel:hover {
         background: #e5e5ea;
         color: #1d1d1f;
-        transform: translateY(-1px);
+        box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .btn-script-cancel:active {
+        transform: scale(0.97);
     }
 
     /* 回调地址说明 Tooltip（样式参考 system_settings_modal） */

@@ -183,13 +183,15 @@
     }
 
     .air-sub-card:hover {
-        background: #f0f2f7;
+        background: #ffffff;
+        border-color: rgba(0, 122, 255, 0.34);
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.08);
     }
 
     .air-sub-card.active {
         background: #eaf4ff;
-        border-color: rgba(0, 122, 255, 0.28);
-        box-shadow: 0 2px 8px rgba(0, 122, 255, 0.06);
+        border-color: rgba(0, 122, 255, 0.36);
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
     }
 
     .air-sub-header-row {
@@ -339,7 +341,11 @@
     .air-dashed-btn:hover {
         background: #e2f0ff;
         border-color: var(--air-primary);
-        transform: translateY(-1px);
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+    }
+
+    .air-dashed-btn:active {
+        transform: scale(0.985);
     }
 
     .air-add-form-container {
@@ -805,7 +811,8 @@
     }
 
     .air-node-item:hover {
-        border-color: #e5e5ea;
+        border-color: rgba(0, 122, 255, 0.32);
+        box-shadow: 0 0 0 2.5px rgba(0, 122, 255, 0.08);
     }
 
     .air-node-row {

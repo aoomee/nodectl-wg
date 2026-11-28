@@ -54,12 +54,14 @@
         background: #f2f2f7; border: none; color: #1d1d1f; padding: 9px 22px; border-radius: 999px;
         cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
     }
-    .btn-pwd-cancel:hover { background: #e5e5ea; transform: translateY(-1px); }
+    .btn-pwd-cancel:hover { background: #e5e5ea; box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05); }
+    .btn-pwd-cancel:active { transform: scale(0.97); }
     .btn-pwd-submit {
         background: linear-gradient(180deg, #148eff 0%, #007aff 100%); border: none; color: white; padding: 9px 22px; border-radius: 999px;
         cursor: pointer; font-size: 13px; font-weight: 600; box-shadow: 0 3px 10px rgba(0, 122, 255, 0.25); transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
     }
-    .btn-pwd-submit:hover { background: linear-gradient(180deg, #007aff 0%, #0062cc 100%); transform: translateY(-1px); }
+    .btn-pwd-submit:hover { background: linear-gradient(180deg, #007aff 0%, #0062cc 100%); box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.16), 0 4px 12px rgba(0, 122, 255, 0.26); }
+    .btn-pwd-submit:active:not(:disabled) { transform: scale(0.97); }
     .btn-pwd-submit:disabled { background: #aacdfa; cursor: not-allowed; box-shadow: none; transform: none; }
 
     /* ✨ 移动端适配：统一弹窗宽度留白 */

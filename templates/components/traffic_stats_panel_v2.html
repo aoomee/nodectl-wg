@@ -250,8 +250,13 @@
     }
 
     .ts-enable-sample-btn:hover:not(:disabled) {
-        transform: translateY(-1px);
-        box-shadow: 0 5px 14px rgba(0, 122, 255, 0.32);
+        box-shadow:
+            0 0 0 3px rgba(0, 122, 255, 0.16),
+            0 4px 12px rgba(0, 122, 255, 0.24);
+    }
+
+    .ts-enable-sample-btn:active:not(:disabled) {
+        transform: scale(0.96);
     }
 
     .ts-enable-sample-btn:disabled {
@@ -624,16 +629,23 @@
     }
 
     .ts-rank-item:hover {
-        border-color: rgba(0, 0, 0, 0.12);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-        transform: translateY(-1px);
+        border-color: rgba(0, 122, 255, 0.36);
+        box-shadow:
+            0 0 0 3px rgba(0, 122, 255, 0.09),
+            0 4px 12px rgba(0, 122, 255, 0.05);
+    }
+
+    .ts-rank-item:active {
+        transform: scale(0.985);
     }
 
     .ts-rank-item.active,
     .ts-rank-item.active:hover {
         border-color: #007aff;
         background: #f2f8ff;
-        box-shadow: 0 4px 12px rgba(0, 122, 255, 0.1);
+        box-shadow:
+            0 0 0 3px rgba(0, 122, 255, 0.12),
+            0 4px 12px rgba(0, 122, 255, 0.08);
     }
 
     /* 离线节点斜纹警示底纹 */
@@ -693,14 +705,86 @@
         display: flex;
         border-radius: 999px;
         overflow: hidden;
+        transform-origin: left center;
+        transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     .ts-rank-bar-up {
         background: #34c759;
+        transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     .ts-rank-bar-down {
         background: #007aff;
+        transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    /* 渐进展开：柱状图基线生长、曲线面积渐显、排行项柔焦入场与进度条展开 */
+    @keyframes tsBarRise {
+        0% {
+            opacity: 0.25;
+            transform: scaleY(0);
+        }
+        100% {
+            opacity: 1;
+            transform: scaleY(1);
+        }
+    }
+
+    @keyframes tsAreaFade {
+        0% {
+            opacity: 0;
+        }
+        100% {
+            opacity: 1;
+        }
+    }
+
+    @keyframes tsRankReveal {
+        0% {
+            opacity: 0;
+            filter: blur(6px);
+            transform: translateY(5px) scale(0.99);
+        }
+        100% {
+            opacity: 1;
+            filter: blur(0px);
+            transform: none;
+        }
+    }
+
+    @keyframes tsBarGrow {
+        0% {
+            transform: scaleX(0);
+        }
+        100% {
+            transform: scaleX(1);
+        }
+    }
+
+    .ts-bar-col.ts-bar-anim {
+        animation: tsBarRise 0.48s cubic-bezier(0.22, 1, 0.36, 1) var(--bar-delay, 0ms) backwards;
+    }
+
+    .ts-line-area.ts-area-anim {
+        animation: tsAreaFade 0.56s cubic-bezier(0.22, 1, 0.36, 1) 120ms backwards;
+    }
+
+    .ts-rank-item.ts-rank-enter {
+        animation: tsRankReveal 0.44s cubic-bezier(0.22, 1, 0.36, 1) var(--rank-delay, 0ms) backwards;
+    }
+
+    .ts-rank-item.ts-rank-enter .ts-rank-bar-fill {
+        animation: tsBarGrow 0.62s cubic-bezier(0.22, 1, 0.36, 1) calc(var(--rank-delay, 0ms) + 80ms) backwards;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .ts-bar-col.ts-bar-anim,
+        .ts-line-area.ts-area-anim,
+        .ts-rank-item.ts-rank-enter,
+        .ts-rank-item.ts-rank-enter .ts-rank-bar-fill {
+            animation: none !important;
+        }
     }
 
     .ts-rank-meta {
@@ -1725,7 +1809,7 @@
             }
 
             // 完整重建：顺序变化或首次渲染
-            list.innerHTML = items.map(item => {
+            list.innerHTML = items.map((item, idx) => {
                 const up = Number(item.traffic_up || 0);
                 const down = Number(item.traffic_down || 0);
                 const total = Number(item.total_bytes || 0);
@@ -1735,9 +1819,10 @@
                 const offline = isNodeOffline(item.uuid);
                 const offlineCls = offline ? 'offline' : '';
                 const rateHtml = buildLiveRateHtml(item.uuid, offline);
+                const rankDelay = Math.min(idx, 10) * 40;
 
                 return `
-                    <div class="ts-rank-item ${active} ${offlineCls}" data-uuid="${esc(item.uuid)}" data-name="${esc(item.name || item.uuid)}" data-region="${esc(String(item.region || '').trim().toUpperCase())}">
+                    <div class="ts-rank-item ts-rank-enter ${active} ${offlineCls}" style="--rank-delay:${rankDelay}ms" data-uuid="${esc(item.uuid)}" data-name="${esc(item.name || item.uuid)}" data-region="${esc(String(item.region || '').trim().toUpperCase())}">
                         <div class="ts-rank-top">
                             <div class="ts-rank-name">
                                 ${flagEmoji(item.region)} 
@@ -1877,7 +1962,7 @@
             return { w, h };
         }
 
-        function renderBar() {
+        function renderBar(animate = true) {
             const svg = barSvg();
             const points = state.barPoints;
             const hasTraffic = Array.isArray(points) && points.some(p => Number(p.total_bytes || 0) > 0);
@@ -1909,6 +1994,7 @@
             out += `<circle cx="${left}" cy="${h - bottom}" r="3.2" fill="#34c759" stroke="#fff" stroke-width="1"/>`;
             out += `<circle cx="${w - right}" cy="${h - bottom}" r="3.2" fill="#ff6b6b" stroke="#fff" stroke-width="1"/>`;
 
+            const baseY = top + chartH;
             let hitAreas = '';
             points.forEach((p, i) => {
                 const up = Number(p.up_bytes || 0);
@@ -1923,6 +2009,10 @@
 
                 if (totalH > 0) {
                     const maxR = Math.min(barW / 2, 6.5);
+                    const barDelay = Math.min(i * 18, 280);
+                    const cx = (x + barW / 2).toFixed(2);
+                    const colCls = animate ? 'ts-bar-col ts-bar-anim' : 'ts-bar-col';
+                    out += `<g class="${colCls}" style="--bar-delay:${barDelay}ms;transform-origin:${cx}px ${baseY.toFixed(2)}px;">`;
                     if (downH > 3.5 && upH > 3.5) {
                         const dH = downH - 1;
                         const uH = upH - 1;
@@ -1940,6 +2030,7 @@
                             out += `<rect x="${x.toFixed(2)}" y="${yUp.toFixed(2)}" width="${barW.toFixed(2)}" height="${upH.toFixed(2)}" fill="#34c759" rx="${rUp.toFixed(2)}" ry="${rUp.toFixed(2)}"/>`;
                         }
                     }
+                    out += `</g>`;
                 }
 
                 if (tickSet.has(i)) {
@@ -2038,7 +2129,7 @@
             return d;
         }
 
-        function renderLine() {
+        function renderLine(animate = true) {
             const svg = lineSvg();
             const points = state.linePoints;
             if (!points || !points.length) {
@@ -2134,12 +2225,12 @@
                 </defs>
                 ${yGuides}
                 <line x1="${left}" y1="${baseY.toFixed(2)}" x2="${w - right}" y2="${baseY.toFixed(2)}" stroke="#e5e7eb" stroke-width="1"/>
-                ${totalAreaPath ? `<path d="${totalAreaPath}" fill="url(#ts-grad-total)" stroke="none"/>` : ''}
-                ${downAreaPath ? `<path d="${downAreaPath}" fill="url(#ts-grad-down)" stroke="none"/>` : ''}
-                ${upAreaPath ? `<path d="${upAreaPath}" fill="url(#ts-grad-up)" stroke="none"/>` : ''}
-                <path d="${upPath}" fill="none" stroke="#34c759" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="${downPath}" fill="none" stroke="#007aff" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="${totalPath}" fill="none" stroke="#8b5cf6" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+                ${totalAreaPath ? `<path class="ts-line-area${animate ? ' ts-area-anim' : ''}" d="${totalAreaPath}" fill="url(#ts-grad-total)" stroke="none"/>` : ''}
+                ${downAreaPath ? `<path class="ts-line-area${animate ? ' ts-area-anim' : ''}" d="${downAreaPath}" fill="url(#ts-grad-down)" stroke="none"/>` : ''}
+                ${upAreaPath ? `<path class="ts-line-area${animate ? ' ts-area-anim' : ''}" d="${upAreaPath}" fill="url(#ts-grad-up)" stroke="none"/>` : ''}
+                <path class="ts-line-stroke" data-order="2" d="${upPath}" fill="none" stroke="#34c759" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"/>
+                <path class="ts-line-stroke" data-order="1" d="${downPath}" fill="none" stroke="#007aff" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"/>
+                <path class="ts-line-stroke" data-order="0" d="${totalPath}" fill="none" stroke="#8b5cf6" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
                 ${singlePointMark}
                 ${axisLabels}
                 <g class="ts-line-hover-group" style="display:none;pointer-events:none;">
@@ -2150,6 +2241,28 @@
                 </g>
                 <rect class="ts-line-hit-area" x="${left}" y="${top}" width="${chartW.toFixed(2)}" height="${chartH.toFixed(2)}" fill="transparent" style="cursor:crosshair;"/>
             `;
+
+            // 曲线路径平滑绘制入场（类似路由描边展开，减弱动态效果时跳过）
+            const reducedMotion = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (animate && !reducedMotion && points.length > 1) {
+                const strokes = svg.querySelectorAll('.ts-line-stroke');
+                strokes.forEach((pathEl) => {
+                    try {
+                        const len = pathEl.getTotalLength();
+                        if (!len || !isFinite(len)) return;
+                        const order = Number(pathEl.getAttribute('data-order') || 0);
+                        pathEl.style.strokeDasharray = `${len}`;
+                        pathEl.style.strokeDashoffset = `${len}`;
+                        pathEl.style.transition = 'none';
+                        requestAnimationFrame(() => {
+                            requestAnimationFrame(() => {
+                                pathEl.style.transition = `stroke-dashoffset 0.68s cubic-bezier(0.22, 1, 0.36, 1) ${order * 45}ms`;
+                                pathEl.style.strokeDashoffset = '0';
+                            });
+                        });
+                    } catch (_) {}
+                });
+            }
 
             // 单层透明热区动态追踪最近时间点，替代上百个 DOM 圆点监听，渲染和交互都更流畅
             const wrap = document.getElementById('ts-line-wrap');
@@ -2462,8 +2575,8 @@
             window.addEventListener('resize', function () {
                 clearTimeout(resizeDebounceTimer);
                 resizeDebounceTimer = setTimeout(function () {
-                    renderBar();
-                    renderLine();
+                    renderBar(false);
+                    renderLine(false);
                     syncRankListHeight();
                 }, 120);
             });
@@ -2529,8 +2642,8 @@
                     requestAnimationFrame(function () {
                         const nextBarW = (barSvg() && barSvg().clientWidth) || 0;
                         const nextLineW = (lineSvg() && lineSvg().clientWidth) || 0;
-                        if (Math.abs(nextBarW - initialBarW) > 4) renderBar();
-                        if (Math.abs(nextLineW - initialLineW) > 4) renderLine();
+                        if (Math.abs(nextBarW - initialBarW) > 4) renderBar(false);
+                        if (Math.abs(nextLineW - initialLineW) > 4) renderLine(false);
                         syncRankListHeight();
                     });
 

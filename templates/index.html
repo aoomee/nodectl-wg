@@ -159,28 +159,24 @@
             }
 
             .nav-brand:hover {
-                opacity: 0.92;
+                opacity: 0.9;
             }
 
             .nav-brand svg {
                 width: 30px;
                 height: 30px;
                 filter: drop-shadow(0 4px 10px rgba(0, 96, 224, 0.28));
-                transition: transform 0.34s var(--ease-spell);
+                transition: filter 0.28s var(--ease-spring);
             }
 
             .nav-brand:hover svg {
-                transform: scale(1.06);
+                filter: drop-shadow(0 4px 14px rgba(0, 122, 255, 0.38));
             }
 
             .nav-brand .wa-logo-ribbon {
                 transform-box: fill-box;
                 transform-origin: center;
-                transition: transform 0.36s var(--ease-spell);
-            }
-
-            .nav-brand:hover .wa-logo-ribbon {
-                transform: scale(1.04) translateY(-0.4px);
+                transition: opacity 0.25s ease;
             }
 
             /* 当前安装版本，仅展示，不执行更新检查。 */
@@ -228,7 +224,7 @@
             .mail-log-btn:hover {
                 background: #eaf4ff;
                 color: var(--primary);
-                transform: translateY(-1px);
+                box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.12);
             }
 
             .mail-log-btn:active {
@@ -260,8 +256,8 @@
             }
 
             .user-btn:hover {
-                background: #e4e5eb;
-                transform: translateY(-1px);
+                background: #e8ecf4;
+                box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
             }
 
             .user-btn:active {
@@ -360,7 +356,6 @@
             .dropdown-item:hover .dropdown-item-icon {
                 background: #eaf4ff;
                 color: #007aff;
-                transform: scale(1.05);
             }
 
             .logout-item {
@@ -509,9 +504,11 @@
             }
 
             .stat-item:hover {
+                border-color: rgba(0, 122, 255, 0.36);
                 background: #ffffff;
-                box-shadow: 0 8px 20px rgba(0, 0, 0, 0.045);
-                transform: translateY(-2px);
+                box-shadow:
+                    0 0 0 3px rgba(0, 122, 255, 0.09),
+                    0 4px 12px rgba(0, 122, 255, 0.06);
             }
 
             .stat-num {
@@ -520,7 +517,7 @@
                 line-height: 1.15;
                 letter-spacing: -0.02em;
                 font-variant-numeric: tabular-nums;
-                transition: transform 0.25s var(--ease-spring), opacity 0.2s;
+                transition: opacity 0.2s ease;
             }
 
             .stat-label {
@@ -528,6 +525,11 @@
                 font-weight: 600;
                 color: var(--text-sec);
                 margin-top: 5px;
+                transition: color 0.24s var(--ease-spring);
+            }
+
+            .stat-item:hover .stat-label {
+                color: var(--primary);
             }
 
             .text-blue {
@@ -580,8 +582,9 @@
 
             .btn-color-purple:hover {
                 background-color: #5a4bcf;
-                box-shadow: 0 6px 16px rgba(108, 92, 231, 0.34);
-                transform: translateY(-1px);
+                box-shadow:
+                    0 0 0 3px rgba(108, 92, 231, 0.16),
+                    0 4px 12px rgba(108, 92, 231, 0.26);
             }
 
             .btn-color-blue {
@@ -591,8 +594,9 @@
 
             .btn-color-blue:hover {
                 background: linear-gradient(180deg, #007aff 0%, #0062cc 100%);
-                box-shadow: 0 6px 16px rgba(0, 122, 255, 0.32);
-                transform: translateY(-1px);
+                box-shadow:
+                    0 0 0 3px rgba(0, 122, 255, 0.16),
+                    0 4px 12px rgba(0, 122, 255, 0.26);
             }
 
             /* 次级柔和浅蓝按钮，让右上角操作组层次分明不刺眼 */
@@ -603,9 +607,9 @@
             }
 
             .btn-color-soft:hover {
-                background: #dcebff;
+                background: #e3f0ff;
                 color: #0062cc;
-                transform: translateY(-1px);
+                box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.12);
             }
 
             .rule-actions {
@@ -628,7 +632,7 @@
                 border-radius: 18px;
                 background: #f7f8fa;
                 cursor: pointer;
-                transition: all 0.28s var(--ease-spring);
+                transition: all 0.24s var(--ease-spring);
                 text-decoration: none;
                 color: #3a3a3c;
                 position: relative;
@@ -637,15 +641,16 @@
             }
 
             .btn-edit-rule:hover {
-                border-color: rgba(0, 122, 255, 0.28);
+                border-color: rgba(0, 122, 255, 0.36);
                 background: #ffffff;
                 color: var(--primary);
-                transform: translateY(-2px);
-                box-shadow: 0 10px 24px rgba(0, 122, 255, 0.08);
+                box-shadow:
+                    0 0 0 3px rgba(0, 122, 255, 0.09),
+                    0 4px 12px rgba(0, 122, 255, 0.06);
             }
 
             .btn-edit-rule:active {
-                transform: translateY(-1px) scale(0.97);
+                transform: scale(0.97);
             }
 
             .rule-icon-box {
@@ -656,16 +661,11 @@
                 align-items: center;
                 justify-content: center;
                 margin-bottom: 7px;
-                transition: transform 0.28s var(--ease-spring);
             }
 
             .rule-icon-box svg {
                 width: 19px;
                 height: 19px;
-            }
-
-            .btn-edit-rule:hover .rule-icon-box {
-                transform: scale(1.1);
             }
 
             .rule-name {
@@ -731,7 +731,8 @@
                 flex-direction: column;
                 gap: 8px;
                 overflow-y: auto;
-                padding: 2px 0;
+                padding: 4px;
+                margin: -2px -4px;
                 max-height: 460px;
                 scrollbar-width: none;
                 -ms-overflow-style: none;
@@ -916,9 +917,10 @@
             }
 
             .node-item:hover {
-                box-shadow: var(--shadow-item-hover);
-                border-color: rgba(0, 122, 255, 0.25);
-                transform: translateY(-1px);
+                border-color: rgba(0, 122, 255, 0.36);
+                box-shadow:
+                    0 0 0 3px rgba(0, 122, 255, 0.09),
+                    0 4px 12px rgba(0, 122, 255, 0.05);
             }
 
             .node-row-main {
@@ -995,6 +997,13 @@
                 opacity: 0.82;
             }
 
+            .node-item.is-blocked:hover {
+                border-color: rgba(255, 59, 48, 0.6);
+                box-shadow:
+                    0 0 0 3px rgba(255, 59, 48, 0.09),
+                    0 4px 12px rgba(255, 59, 48, 0.05);
+            }
+
             .node-item.is-blocked .node-name {
                 color: #d74242;
                 text-decoration: line-through;
@@ -1053,8 +1062,9 @@
             }
 
             .proto-badge:hover {
-                background: #e9ebf0;
-                transform: translateY(-1px);
+                background: #ffffff;
+                border-color: rgba(0, 122, 255, 0.3);
+                box-shadow: 0 0 0 2.5px rgba(0, 122, 255, 0.08);
             }
 
             .proto-count {
@@ -1097,11 +1107,12 @@
 
             .node-action-btn:hover {
                 background: #eaf4ff;
-                transform: translateY(-1px);
+                box-shadow: 0 0 0 2.5px rgba(0, 122, 255, 0.14);
             }
 
             .node-action-btn[title="删除节点"]:hover {
                 background: #fff0f0;
+                box-shadow: 0 0 0 2.5px rgba(255, 59, 48, 0.14);
             }
 
             .node-action-btn:active {
@@ -1962,6 +1973,7 @@
             // =========================================================
             // 核心优化：节点列表项渲染逻辑
             // =========================================================
+            const _waNodesAnimatedContainers = {};
             function renderNodes(containerId, nodes, dotColor) {
                 const container = document.getElementById(containerId);
                 container.innerHTML = "";
@@ -1971,9 +1983,15 @@
                     return;
                 }
 
-                nodes.forEach((node) => {
+                const shouldReveal = !_waNodesAnimatedContainers[containerId];
+                _waNodesAnimatedContainers[containerId] = true;
+
+                nodes.forEach((node, idx) => {
                     const item = document.createElement("div");
-                    item.className = "node-item";
+                    item.className = shouldReveal ? "node-item wa-node-reveal" : "node-item";
+                    if (shouldReveal) {
+                        item.style.setProperty("--wa-delay", `${Math.min(idx, 8) * 38 + 160}ms`);
+                    }
                     item.setAttribute("data-uuid", node.uuid);
 
                     if (node.is_blocked) item.classList.add("is-blocked");
@@ -2188,6 +2206,89 @@
 
         <style id="wirearc-ui-unified">
             /* WireArc 全局统一视觉规范：圆润卡片、柔和遮罩、现代美化下拉选择框与表单控件 */
+            /* 渐进景深柔焦展开动效体系（首页级联显现 + 弹窗/子面板柔焦切换） */
+            @keyframes waBlurReveal {
+                0% {
+                    opacity: 0;
+                    filter: blur(7px);
+                    transform: translateY(6px) scale(0.988);
+                }
+                100% {
+                    opacity: 1;
+                    filter: blur(0px);
+                    transform: none;
+                }
+            }
+            @keyframes waModalUnblur {
+                0% {
+                    opacity: 0;
+                    filter: blur(5px);
+                    transform: scale(0.982);
+                }
+                100% {
+                    opacity: 1;
+                    filter: blur(0px);
+                    transform: none;
+                }
+            }
+            @keyframes waPaneUnblur {
+                0% {
+                    opacity: 0;
+                    filter: blur(5px);
+                    transform: translateY(4px);
+                }
+                100% {
+                    opacity: 1;
+                    filter: blur(0px);
+                    transform: none;
+                }
+            }
+
+            /* 首屏分区与核心卡片错峰柔焦显现（fill-mode: backwards，结束后自动释放合成层） */
+            .top-navbar .nav-brand {
+                animation: waBlurReveal 0.42s var(--ease-spring) 0ms backwards;
+            }
+            .top-navbar .top-version-badge {
+                animation: waBlurReveal 0.42s var(--ease-spring) 50ms backwards;
+            }
+            .top-navbar .nav-right-actions {
+                animation: waBlurReveal 0.42s var(--ease-spring) 85ms backwards;
+            }
+            .wa-overview-card {
+                animation: waBlurReveal 0.48s var(--ease-spring) 35ms backwards;
+            }
+            .wa-tools-card {
+                animation: waBlurReveal 0.48s var(--ease-spring) 80ms backwards;
+            }
+            #node-manager-card {
+                animation: waBlurReveal 0.5s var(--ease-spring) 130ms backwards;
+            }
+            .traffic-stats-card {
+                animation: waBlurReveal 0.52s var(--ease-spring) 185ms backwards;
+            }
+            .wa-overview-card .proto-badge {
+                animation: waBlurReveal 0.4s var(--ease-spring) calc(80ms + var(--wa-idx, 0) * 35ms) backwards;
+            }
+            .stats-grid .stat-item {
+                animation: waBlurReveal 0.46s var(--ease-spring) var(--wa-delay, 70ms) backwards;
+            }
+            .stats-grid .stat-item:nth-child(1) { --wa-delay: 65ms; }
+            .stats-grid .stat-item:nth-child(2) { --wa-delay: 105ms; }
+            .stats-grid .stat-item:nth-child(3) { --wa-delay: 145ms; }
+            .stats-grid .stat-item:nth-child(4) { --wa-delay: 185ms; }
+            .rule-actions .btn-edit-rule {
+                animation: waBlurReveal 0.46s var(--ease-spring) var(--wa-delay, 100ms) backwards;
+            }
+            .rule-actions .btn-edit-rule:nth-child(1) { --wa-delay: 95ms; }
+            .rule-actions .btn-edit-rule:nth-child(2) { --wa-delay: 130ms; }
+            .rule-actions .btn-edit-rule:nth-child(3) { --wa-delay: 165ms; }
+            .rule-actions .btn-edit-rule:nth-child(4) { --wa-delay: 200ms; }
+            .rule-actions .btn-edit-rule:nth-child(5) { --wa-delay: 235ms; }
+            .rule-actions .btn-edit-rule:nth-child(6) { --wa-delay: 270ms; }
+            .node-item.wa-node-reveal {
+                animation: waBlurReveal 0.44s var(--ease-spring) var(--wa-delay, 160ms) backwards;
+            }
+
             [class$="-modal-overlay"] {
                 backdrop-filter: saturate(180%) blur(10px);
                 -webkit-backdrop-filter: saturate(180%) blur(10px);
@@ -2196,6 +2297,16 @@
                 border-radius: 26px !important;
                 border: 1px solid rgba(0, 0, 0, 0.06);
                 box-shadow: 0 24px 56px rgba(0, 0, 0, 0.14), 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+            }
+            [class$="-modal-overlay"].active [class$="-modal-card"],
+            [class$="-modal-overlay"][style*="flex"] [class$="-modal-card"] {
+                animation: waModalUnblur 0.28s var(--ease-spring) backwards;
+            }
+            .wa-pane-reveal {
+                animation: waPaneUnblur 0.28s var(--ease-spring) backwards;
+            }
+            .wa-modal-item-reveal {
+                animation: waBlurReveal 0.36s var(--ease-spring) var(--wa-delay, 0ms) backwards;
             }
             [class$="-modal-card"] select:not(.no-custom-select) {
                 appearance: none;
@@ -2412,6 +2523,21 @@
 
             /* 无障碍：尊重系统“减弱动态效果”设置 */
             @media (prefers-reduced-motion: reduce) {
+                .top-navbar .nav-brand,
+                .top-navbar .top-version-badge,
+                .top-navbar .nav-right-actions,
+                .wa-overview-card,
+                .wa-tools-card,
+                #node-manager-card,
+                .traffic-stats-card,
+                .wa-overview-card .proto-badge,
+                .stats-grid .stat-item,
+                .rule-actions .btn-edit-rule,
+                .node-item.wa-node-reveal,
+                [class$="-modal-overlay"].active [class$="-modal-card"],
+                [class$="-modal-overlay"][style*="flex"] [class$="-modal-card"],
+                .wa-pane-reveal,
+                .wa-modal-item-reveal,
                 .wa-tools-box *,
                 .wa-spell-mail *,
                 .btn-edit-rule svg *,
@@ -3217,9 +3343,127 @@
                     }
                 }
 
+                const prefersReducedMotion =
+                    typeof window.matchMedia === "function" &&
+                    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+                // 1) 首屏统计数字与协议计数平滑滚动计数
+                function animateCountUp(el, target, duration, delay) {
+                    if (!el || isNaN(target) || target <= 0) return;
+                    if (prefersReducedMotion) {
+                        el.textContent = String(target);
+                        return;
+                    }
+                    el.textContent = "0";
+                    const startAt = performance.now() + (delay || 0);
+                    function tick(now) {
+                        if (now < startAt) {
+                            requestAnimationFrame(tick);
+                            return;
+                        }
+                        const p = Math.min(1, (now - startAt) / duration);
+                        const eased = 1 - Math.pow(1 - p, 4);
+                        const val = Math.round(target * eased);
+                        el.textContent = String(val);
+                        if (p < 1) {
+                            requestAnimationFrame(tick);
+                        } else {
+                            el.textContent = String(target);
+                        }
+                    }
+                    requestAnimationFrame(tick);
+                }
+
+                function runInitialStatChoreography() {
+                    document.querySelectorAll(".wa-overview-card .proto-badge").forEach((badge, idx) => {
+                        badge.style.setProperty("--wa-idx", String(idx));
+                        const countEl = badge.querySelector(".proto-count");
+                        if (countEl) {
+                            const n = parseInt(countEl.textContent.trim(), 10);
+                            if (!isNaN(n) && n > 0) animateCountUp(countEl, n, 420, 80 + idx * 35);
+                        }
+                    });
+                    document.querySelectorAll(".stats-grid .stat-num").forEach((numEl, idx) => {
+                        const n = parseInt(numEl.textContent.trim(), 10);
+                        if (!isNaN(n) && n > 0) animateCountUp(numEl, n, 520, 75 + idx * 45);
+                    });
+                }
+
+                // 2) 二级弹窗打开时对左侧导航卡片执行错峰柔焦展开；切换菜单时对右侧详情面板执行轻柔焦显现
+                function triggerPaneReveal(paneEl) {
+                    if (!paneEl || prefersReducedMotion) return;
+                    paneEl.classList.remove("wa-pane-reveal");
+                    void paneEl.offsetWidth;
+                    paneEl.classList.add("wa-pane-reveal");
+                }
+
+                function staggerModalNavItems(modalEl) {
+                    if (!modalEl || prefersReducedMotion) return;
+                    const navItems = modalEl.querySelectorAll(
+                        ".sys-nav-card, .proto-nav-card, .cft-nav-card, .sub-format-card, .cr-rule-item, .air-sub-card",
+                    );
+                    navItems.forEach((item, idx) => {
+                        if (idx > 10) return;
+                        item.classList.remove("wa-modal-item-reveal");
+                        item.style.setProperty("--wa-delay", `${idx * 26}ms`);
+                        void item.offsetWidth;
+                        item.classList.add("wa-modal-item-reveal");
+                    });
+                }
+
+                const navToPaneMap = [
+                    { nav: ".sys-nav-card", pane: "#sysRightCol" },
+                    { nav: ".proto-nav-card", pane: "#gsRightCol" },
+                    { nav: ".cft-nav-card", pane: "#cftRightCol" },
+                    { nav: ".sub-format-card", pane: "#subRightCol" },
+                    { nav: ".cr-rule-item", pane: "#proxyEditorContainer" },
+                    { nav: ".air-sub-card", pane: "#airDesktopNodesList" },
+                ];
+
+                document.addEventListener("click", function (e) {
+                    const target = e.target;
+                    if (!target || !target.closest) return;
+                    if (
+                        target.closest(
+                            "input, select, textarea, .cr-group-icon-picker, .cr-emoji-popover, .cr-item-actions, .air-sub-actions",
+                        )
+                    ) {
+                        return;
+                    }
+                    for (let i = 0; i < navToPaneMap.length; i++) {
+                        const cfg = navToPaneMap[i];
+                        if (target.closest(cfg.nav)) {
+                            const pane = document.querySelector(cfg.pane);
+                            if (pane) requestAnimationFrame(() => triggerPaneReveal(pane));
+                            break;
+                        }
+                    }
+                });
+
                 document.addEventListener("DOMContentLoaded", function () {
-                    const observer = new MutationObserver(syncIconActiveStates);
-                    [...quickModalIds, "logViewerModal", "systemSettingsModal"].forEach((id) => {
+                    runInitialStatChoreography();
+
+                    const activeModalSet = new Set();
+                    const observer = new MutationObserver(function (mutations) {
+                        syncIconActiveStates();
+                        mutations.forEach((m) => {
+                            const el = m.target;
+                            if (!el || !el.classList) return;
+                            const isOpen = el.classList.contains("active");
+                            if (isOpen && !activeModalSet.has(el)) {
+                                activeModalSet.add(el);
+                                staggerModalNavItems(el);
+                            } else if (!isOpen && activeModalSet.has(el)) {
+                                activeModalSet.delete(el);
+                            }
+                        });
+                    });
+                    [
+                        ...quickModalIds,
+                        "logViewerModal",
+                        "systemSettingsModal",
+                        "subLinksModal",
+                    ].forEach((id) => {
                         const el = document.getElementById(id);
                         if (el) observer.observe(el, { attributes: true, attributeFilter: ["class"] });
                     });

@@ -130,8 +130,10 @@
     }
 
     .cn-node-card:hover {
-        border-color: rgba(0, 122, 255, 0.28);
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.045);
+        border-color: rgba(0, 122, 255, 0.36);
+        box-shadow:
+            0 0 0 3px rgba(0, 122, 255, 0.09),
+            0 4px 12px rgba(0, 122, 255, 0.05);
     }
 
     /* 卡片头部（折叠状态显示的内容） */
@@ -258,7 +260,7 @@
 
     .cn-item-del:hover {
         background: #fff0f0;
-        transform: scale(1.06);
+        box-shadow: 0 0 0 2.5px rgba(255, 59, 48, 0.14);
     }
 
     /* ===== 折叠内容区：协议详情 ===== */
@@ -271,12 +273,12 @@
 
     .cn-node-card.expanded .cn-node-body {
         display: block;
-        animation: cnFadeIn 0.22s ease;
+        animation: cnFadeIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) backwards;
     }
 
     @keyframes cnFadeIn {
-        from { opacity: 0; transform: translateY(-4px); }
-        to { opacity: 1; transform: translateY(0); }
+        from { opacity: 0; filter: blur(4px); transform: translateY(-4px); }
+        to { opacity: 1; filter: blur(0px); transform: none; }
     }
 
     .cn-body-label {
@@ -357,8 +359,9 @@
 
     .cn-btn-add:hover {
         background: linear-gradient(180deg, #007aff 0%, #0062cc 100%);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0, 122, 255, 0.34);
+        box-shadow:
+            0 0 0 3px rgba(0, 122, 255, 0.16),
+            0 4px 12px rgba(0, 122, 255, 0.28);
     }
 
     .cn-btn-add:active {
@@ -398,7 +401,7 @@
 
     .btn-cn-cancel:hover {
         background: #e5e5ea;
-        transform: translateY(-1px);
+        box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
     }
 
     .btn-cn-cancel:active {

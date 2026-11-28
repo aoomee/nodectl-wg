@@ -1,8 +1,10 @@
 package middleware
 
 import (
+	"bytes"
 	"compress/gzip"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -70,5 +72,49 @@ func TestGzipSkipsSSEAndUpgrade(t *testing.T) {
 	sseHandler.ServeHTTP(wsRec, wsReq)
 	if wsRec.Header().Get("Content-Encoding") != "" {
 		t.Fatalf("WebSocket upgrade request must bypass gzip")
+	}
+}
+
+func TestGzipFlushBeforeWriteDoesNotEmitSuperfluousWriteHeader(t *testing.T) {
+	var logBuf bytes.Buffer
+	srv := httptest.NewUnstartedServer(Gzip(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		if f, ok := w.(http.Flusher); ok {
+			f.Flush()
+		}
+		_, _ = w.Write([]byte("data: hello\n\n"))
+		if f, ok := w.(http.Flusher); ok {
+			f.Flush()
+		}
+	})))
+	srv.Config.ErrorLog = log.New(&logBuf, "", 0)
+	srv.Start()
+	defer srv.Close()
+
+	req, err := http.NewRequest(http.MethodGet, srv.URL, nil)
+	if err != nil {
+		t.Fatalf("new request failed: %v", err)
+	}
+	req.Header.Set("Accept-Encoding", "gzip")
+
+	resp, err := srv.Client().Do(req)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read body failed: %v", err)
+	}
+	if string(body) != "data: hello\n\n" {
+		t.Fatalf("unexpected body: %q", string(body))
+	}
+	if resp.Header.Get("Content-Encoding") != "" {
+		t.Fatalf("expected no Content-Encoding for SSE, got %q", resp.Header.Get("Content-Encoding"))
+	}
+	if strings.Contains(logBuf.String(), "superfluous response.WriteHeader") {
+		t.Fatalf("unexpected superfluous WriteHeader warning: %s", logBuf.String())
 	}
 }

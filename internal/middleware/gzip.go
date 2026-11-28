@@ -62,12 +62,16 @@ func (w *gzipResponseWriter) decideCompression(statusCode int) {
 	if w.wroteHeader {
 		return
 	}
+	// 1xx 临时信息头（如 103 Early Hints）不会结束响应头阶段，直接透传且保持 wroteHeader=false。
+	if statusCode >= 100 && statusCode < 200 {
+		w.ResponseWriter.WriteHeader(statusCode)
+		return
+	}
 	w.wroteHeader = true
 
 	h := w.Header()
 	if statusCode == http.StatusNoContent ||
 		statusCode == http.StatusNotModified ||
-		(statusCode >= 100 && statusCode < 200) ||
 		h.Get("Content-Encoding") != "" ||
 		!shouldCompressContentType(h.Get("Content-Type")) {
 		w.bypass = true
@@ -103,6 +107,11 @@ func (w *gzipResponseWriter) Write(p []byte) (int, error) {
 }
 
 func (w *gzipResponseWriter) Flush() {
+	// net/http 的 Flush() 在未写 header 时会隐式调用底层 WriteHeader(200)，
+	// 必须先经过 decideCompression 同步 wroteHeader 与压缩决策，避免后续 Write 触发 superfluous WriteHeader。
+	if !w.wroteHeader {
+		w.decideCompression(http.StatusOK)
+	}
 	if w.gz != nil {
 		_ = w.gz.Flush()
 	}
@@ -113,7 +122,12 @@ func (w *gzipResponseWriter) Flush() {
 
 func (w *gzipResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	if hj, ok := w.ResponseWriter.(http.Hijacker); ok {
-		return hj.Hijack()
+		conn, rw, err := hj.Hijack()
+		if err == nil {
+			w.wroteHeader = true
+			w.bypass = true
+		}
+		return conn, rw, err
 	}
 	return nil, nil, errors.New("hijack not supported")
 }

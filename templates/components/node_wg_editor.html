@@ -67,8 +67,12 @@
 }
 .node-wg-chip:hover {
     background: #e9ecf2;
-    border-color: rgba(0, 122, 255, 0.28);
+    border-color: rgba(0, 122, 255, 0.34);
     color: #1d1d1f;
+    box-shadow: 0 0 0 2.5px rgba(0, 122, 255, 0.09);
+}
+.node-wg-chip:active {
+    transform: scale(0.97);
 }
 .node-wg-chip[data-tone="success"] {
     background: #e8fdf0;
@@ -134,6 +138,13 @@
     border-top: 1px solid rgba(0, 0, 0, 0.045);
     border-radius: 0;
     background: #fafbfd;
+}
+.protocol-card > .node-wg-outbound:not([hidden]) {
+    animation: nodeWGPanelReveal 0.24s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+@keyframes nodeWGPanelReveal {
+    from { opacity: 0; filter: blur(4px); transform: translateY(-3px); }
+    to { opacity: 1; filter: blur(0px); transform: none; }
 }
 .node-wg-setup-head, .node-wg-actions {
     display: flex;
@@ -348,34 +359,42 @@
     box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.14);
 }
 .node-wg-outbound p, .node-wg-setup p { font-size: 11.5px; line-height: 1.55; color: var(--editor-muted); }
-/* 极简轻量按钮：停用/重试内联在标题栏 */
-.node-wg-inline-btn.node-editor-button {
+/* 极简轻量按钮：停用/重试内联在标题栏（使用 #editNodeModal 提升优先级，覆盖通用 40px 大按钮高度） */
+#editNodeModal .node-wg-inline-btn.node-editor-button {
     min-height: 24px;
     height: 24px;
-    padding: 0 9px;
+    padding: 0 10px;
     font-size: 11.5px;
+    line-height: 1;
     font-weight: 600;
     border-radius: 999px;
     background: transparent;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.09);
     color: var(--editor-muted);
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.16s ease;
 }
-.node-wg-inline-btn.node-editor-button:hover:not(:disabled) {
+#editNodeModal .node-wg-inline-btn.node-editor-button:hover:not(:disabled) {
     background: rgba(0, 0, 0, 0.045);
+    border-color: rgba(0, 0, 0, 0.16);
     color: var(--editor-ink);
+    box-shadow: 0 0 0 2.5px rgba(0, 0, 0, 0.05);
 }
-.node-wg-inline-btn.node-editor-button-danger {
+#editNodeModal .node-wg-inline-btn.node-editor-button:active:not(:disabled) {
+    transform: scale(0.96);
+}
+#editNodeModal .node-wg-inline-btn.node-editor-button-danger {
+    background: #fff8f8;
     border-color: rgba(255, 59, 48, 0.24);
     color: #d93025;
 }
-.node-wg-inline-btn.node-editor-button-danger:hover:not(:disabled) {
-    background: #fff1f0;
-    border-color: rgba(255, 59, 48, 0.4);
+#editNodeModal .node-wg-inline-btn.node-editor-button-danger:hover:not(:disabled) {
+    background: #fff0f0;
+    border-color: rgba(255, 59, 48, 0.42);
     color: #cf1322;
+    box-shadow: 0 0 0 2.5px rgba(255, 59, 48, 0.12);
 }
 @media (max-width:768px) {
     .node-wg-outbound, .node-wg-setup { padding: 10px 11px; }
@@ -414,7 +433,7 @@ function nodeWGMessage(message, tone = 'error') {
     const card = document.getElementById('nodeWGCard');
     const setup = document.getElementById('nodeWGSetup');
     if (card) {
-        const shouldReveal = !!message && (tone === 'error' || tone === 'warning' || tone === 'progress' || nodeWGEditor.panelOpen === true || nodeWGEditor.mode === 'wg' || nodeWGBlocksOrdinary());
+        const shouldReveal = !!message && (tone === 'error' || tone === 'warning' || tone === 'progress' || nodeWGEditor.panelOpen === true);
         if (shouldReveal) {
             card.hidden = false;
             const toggle = document.getElementById('nodeWGToggle');
@@ -652,7 +671,7 @@ function renderNodeWGCard() {
     const blocked = p?.topology_version === 2 && !p.enabled && !p.restore_direct;
     const hasBlockingNotice = !!nodeWGEditor.error && (nodeWGEditor.errorTone === 'error' || nodeWGEditor.errorTone === 'warning' || nodeWGEditor.errorTone === 'progress');
     const mustShowCard = (!reality || landing) || (!!p && p.status !== 'disabled' && p.status !== 'active') || (!!p && p.status === 'active' && !!p.retry_count) || blocked || hasBlockingNotice;
-    const defaultOpen = mustShowCard || nodeWGEditor.mode === 'wg' || nodeWGBlocksOrdinary();
+    const defaultOpen = mustShowCard;
     const cardOpen = mustShowCard ? true : (nodeWGEditor.panelOpen !== null ? nodeWGEditor.panelOpen : defaultOpen);
 
     // A2：REALITY 标题栏内联紧凑出站角标（直连态卡片保持单行纯净，点击展开配置）

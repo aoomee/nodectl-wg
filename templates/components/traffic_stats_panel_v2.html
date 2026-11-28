@@ -722,8 +722,8 @@
     /* 渐进展开：柱状图基线生长、曲线面积渐显、排行项柔焦入场与进度条展开 */
     @keyframes tsBarRise {
         0% {
-            opacity: 0.25;
-            transform: scaleY(0);
+            opacity: 0.4;
+            transform: scaleY(0.06);
         }
         100% {
             opacity: 1;
@@ -742,9 +742,9 @@
 
     @keyframes tsRankReveal {
         0% {
-            opacity: 0;
-            filter: blur(6px);
-            transform: translateY(5px) scale(0.99);
+            opacity: 0.1;
+            filter: blur(3px);
+            transform: translateY(3px);
         }
         100% {
             opacity: 1;
@@ -763,19 +763,19 @@
     }
 
     .ts-bar-col.ts-bar-anim {
-        animation: tsBarRise 0.48s cubic-bezier(0.22, 1, 0.36, 1) var(--bar-delay, 0ms) backwards;
+        animation: tsBarRise 0.38s cubic-bezier(0.22, 1, 0.36, 1) var(--bar-delay, 0ms) backwards;
     }
 
     .ts-line-area.ts-area-anim {
-        animation: tsAreaFade 0.56s cubic-bezier(0.22, 1, 0.36, 1) 120ms backwards;
+        animation: tsAreaFade 0.45s cubic-bezier(0.22, 1, 0.36, 1) 80ms backwards;
     }
 
     .ts-rank-item.ts-rank-enter {
-        animation: tsRankReveal 0.44s cubic-bezier(0.22, 1, 0.36, 1) var(--rank-delay, 0ms) backwards;
+        animation: tsRankReveal 0.32s cubic-bezier(0.22, 1, 0.36, 1) var(--rank-delay, 0ms) backwards;
     }
 
     .ts-rank-item.ts-rank-enter .ts-rank-bar-fill {
-        animation: tsBarGrow 0.62s cubic-bezier(0.22, 1, 0.36, 1) calc(var(--rank-delay, 0ms) + 80ms) backwards;
+        animation: tsBarGrow 0.44s cubic-bezier(0.22, 1, 0.36, 1) calc(var(--rank-delay, 0ms) + 30ms) backwards;
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -1819,7 +1819,7 @@
                 const offline = isNodeOffline(item.uuid);
                 const offlineCls = offline ? 'offline' : '';
                 const rateHtml = buildLiveRateHtml(item.uuid, offline);
-                const rankDelay = Math.min(idx, 10) * 40;
+                const rankDelay = Math.min(idx, 6) * 28;
 
                 return `
                     <div class="ts-rank-item ts-rank-enter ${active} ${offlineCls}" style="--rank-delay:${rankDelay}ms" data-uuid="${esc(item.uuid)}" data-name="${esc(item.name || item.uuid)}" data-region="${esc(String(item.region || '').trim().toUpperCase())}">
@@ -1995,6 +1995,7 @@
             out += `<circle cx="${w - right}" cy="${h - bottom}" r="3.2" fill="#ff6b6b" stroke="#fff" stroke-width="1"/>`;
 
             const baseY = top + chartH;
+            let visibleBarIdx = 0;
             let hitAreas = '';
             points.forEach((p, i) => {
                 const up = Number(p.up_bytes || 0);
@@ -2009,7 +2010,8 @@
 
                 if (totalH > 0) {
                     const maxR = Math.min(barW / 2, 6.5);
-                    const barDelay = Math.min(i * 18, 280);
+                    const barDelay = Math.min(visibleBarIdx * 24, 140);
+                    visibleBarIdx++;
                     const cx = (x + barW / 2).toFixed(2);
                     const colCls = animate ? 'ts-bar-col ts-bar-anim' : 'ts-bar-col';
                     out += `<g class="${colCls}" style="--bar-delay:${barDelay}ms;transform-origin:${cx}px ${baseY.toFixed(2)}px;">`;

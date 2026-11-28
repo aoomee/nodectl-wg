@@ -1135,6 +1135,50 @@
                     height: 28px;
                 }
             }
+
+            /* 首屏渐进柔焦展开（必须置于 <head> 内，确保首帧一次性平滑呈现，杜绝解析完底部弹窗后整页白屏重绘） */
+            @keyframes waBlurReveal {
+                0% {
+                    opacity: 0.06;
+                    filter: blur(3.5px);
+                    transform: translateY(3px);
+                }
+                100% {
+                    opacity: 1;
+                    filter: blur(0px);
+                    transform: none;
+                }
+            }
+
+            .stats-grid .stat-item {
+                animation: waBlurReveal 0.32s var(--ease-spring) var(--wa-delay, 0ms) backwards;
+            }
+            .stats-grid .stat-item:nth-child(1) { --wa-delay: 0ms; }
+            .stats-grid .stat-item:nth-child(2) { --wa-delay: 24ms; }
+            .stats-grid .stat-item:nth-child(3) { --wa-delay: 48ms; }
+            .stats-grid .stat-item:nth-child(4) { --wa-delay: 72ms; }
+
+            .rule-actions .btn-edit-rule {
+                animation: waBlurReveal 0.32s var(--ease-spring) var(--wa-delay, 0ms) backwards;
+            }
+            .rule-actions .btn-edit-rule:nth-child(1) { --wa-delay: 0ms; }
+            .rule-actions .btn-edit-rule:nth-child(2) { --wa-delay: 22ms; }
+            .rule-actions .btn-edit-rule:nth-child(3) { --wa-delay: 44ms; }
+            .rule-actions .btn-edit-rule:nth-child(4) { --wa-delay: 66ms; }
+            .rule-actions .btn-edit-rule:nth-child(5) { --wa-delay: 88ms; }
+            .rule-actions .btn-edit-rule:nth-child(6) { --wa-delay: 110ms; }
+
+            .node-item.wa-node-reveal {
+                animation: waBlurReveal 0.32s var(--ease-spring) var(--wa-delay, 20ms) backwards;
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                .stats-grid .stat-item,
+                .rule-actions .btn-edit-rule,
+                .node-item.wa-node-reveal {
+                    animation: none !important;
+                }
+            }
         </style>
     </head>
 
@@ -1990,7 +2034,7 @@
                     const item = document.createElement("div");
                     item.className = shouldReveal ? "node-item wa-node-reveal" : "node-item";
                     if (shouldReveal) {
-                        item.style.setProperty("--wa-delay", `${Math.min(idx, 8) * 38 + 160}ms`);
+                        item.style.setProperty("--wa-delay", `${Math.min(idx, 6) * 26 + 20}ms`);
                     }
                     item.setAttribute("data-uuid", node.uuid);
 
@@ -2206,19 +2250,7 @@
 
         <style id="wirearc-ui-unified">
             /* WireArc 全局统一视觉规范：圆润卡片、柔和遮罩、现代美化下拉选择框与表单控件 */
-            /* 渐进景深柔焦展开动效体系（首页级联显现 + 弹窗/子面板柔焦切换） */
-            @keyframes waBlurReveal {
-                0% {
-                    opacity: 0;
-                    filter: blur(7px);
-                    transform: translateY(6px) scale(0.988);
-                }
-                100% {
-                    opacity: 1;
-                    filter: blur(0px);
-                    transform: none;
-                }
-            }
+            /* 弹窗与子面板柔焦显现动效（首屏动效已前置至 <head>，避免解析至底部时触发二次重绘） */
             @keyframes waModalUnblur {
                 0% {
                     opacity: 0;
@@ -2234,7 +2266,7 @@
             @keyframes waPaneUnblur {
                 0% {
                     opacity: 0;
-                    filter: blur(5px);
+                    filter: blur(4px);
                     transform: translateY(4px);
                 }
                 100% {
@@ -2242,51 +2274,6 @@
                     filter: blur(0px);
                     transform: none;
                 }
-            }
-
-            /* 首屏分区与核心卡片错峰柔焦显现（fill-mode: backwards，结束后自动释放合成层） */
-            .top-navbar .nav-brand {
-                animation: waBlurReveal 0.42s var(--ease-spring) 0ms backwards;
-            }
-            .top-navbar .top-version-badge {
-                animation: waBlurReveal 0.42s var(--ease-spring) 50ms backwards;
-            }
-            .top-navbar .nav-right-actions {
-                animation: waBlurReveal 0.42s var(--ease-spring) 85ms backwards;
-            }
-            .wa-overview-card {
-                animation: waBlurReveal 0.48s var(--ease-spring) 35ms backwards;
-            }
-            .wa-tools-card {
-                animation: waBlurReveal 0.48s var(--ease-spring) 80ms backwards;
-            }
-            #node-manager-card {
-                animation: waBlurReveal 0.5s var(--ease-spring) 130ms backwards;
-            }
-            .traffic-stats-card {
-                animation: waBlurReveal 0.52s var(--ease-spring) 185ms backwards;
-            }
-            .wa-overview-card .proto-badge {
-                animation: waBlurReveal 0.4s var(--ease-spring) calc(80ms + var(--wa-idx, 0) * 35ms) backwards;
-            }
-            .stats-grid .stat-item {
-                animation: waBlurReveal 0.46s var(--ease-spring) var(--wa-delay, 70ms) backwards;
-            }
-            .stats-grid .stat-item:nth-child(1) { --wa-delay: 65ms; }
-            .stats-grid .stat-item:nth-child(2) { --wa-delay: 105ms; }
-            .stats-grid .stat-item:nth-child(3) { --wa-delay: 145ms; }
-            .stats-grid .stat-item:nth-child(4) { --wa-delay: 185ms; }
-            .rule-actions .btn-edit-rule {
-                animation: waBlurReveal 0.46s var(--ease-spring) var(--wa-delay, 100ms) backwards;
-            }
-            .rule-actions .btn-edit-rule:nth-child(1) { --wa-delay: 95ms; }
-            .rule-actions .btn-edit-rule:nth-child(2) { --wa-delay: 130ms; }
-            .rule-actions .btn-edit-rule:nth-child(3) { --wa-delay: 165ms; }
-            .rule-actions .btn-edit-rule:nth-child(4) { --wa-delay: 200ms; }
-            .rule-actions .btn-edit-rule:nth-child(5) { --wa-delay: 235ms; }
-            .rule-actions .btn-edit-rule:nth-child(6) { --wa-delay: 270ms; }
-            .node-item.wa-node-reveal {
-                animation: waBlurReveal 0.44s var(--ease-spring) var(--wa-delay, 160ms) backwards;
             }
 
             [class$="-modal-overlay"] {
@@ -2303,10 +2290,10 @@
                 animation: waModalUnblur 0.28s var(--ease-spring) backwards;
             }
             .wa-pane-reveal {
-                animation: waPaneUnblur 0.28s var(--ease-spring) backwards;
+                animation: waPaneUnblur 0.26s var(--ease-spring) backwards;
             }
             .wa-modal-item-reveal {
-                animation: waBlurReveal 0.36s var(--ease-spring) var(--wa-delay, 0ms) backwards;
+                animation: waBlurReveal 0.3s var(--ease-spring) var(--wa-delay, 0ms) backwards;
             }
             [class$="-modal-card"] select:not(.no-custom-select) {
                 appearance: none;
@@ -3347,49 +3334,7 @@
                     typeof window.matchMedia === "function" &&
                     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-                // 1) 首屏统计数字与协议计数平滑滚动计数
-                function animateCountUp(el, target, duration, delay) {
-                    if (!el || isNaN(target) || target <= 0) return;
-                    if (prefersReducedMotion) {
-                        el.textContent = String(target);
-                        return;
-                    }
-                    el.textContent = "0";
-                    const startAt = performance.now() + (delay || 0);
-                    function tick(now) {
-                        if (now < startAt) {
-                            requestAnimationFrame(tick);
-                            return;
-                        }
-                        const p = Math.min(1, (now - startAt) / duration);
-                        const eased = 1 - Math.pow(1 - p, 4);
-                        const val = Math.round(target * eased);
-                        el.textContent = String(val);
-                        if (p < 1) {
-                            requestAnimationFrame(tick);
-                        } else {
-                            el.textContent = String(target);
-                        }
-                    }
-                    requestAnimationFrame(tick);
-                }
-
-                function runInitialStatChoreography() {
-                    document.querySelectorAll(".wa-overview-card .proto-badge").forEach((badge, idx) => {
-                        badge.style.setProperty("--wa-idx", String(idx));
-                        const countEl = badge.querySelector(".proto-count");
-                        if (countEl) {
-                            const n = parseInt(countEl.textContent.trim(), 10);
-                            if (!isNaN(n) && n > 0) animateCountUp(countEl, n, 420, 80 + idx * 35);
-                        }
-                    });
-                    document.querySelectorAll(".stats-grid .stat-num").forEach((numEl, idx) => {
-                        const n = parseInt(numEl.textContent.trim(), 10);
-                        if (!isNaN(n) && n > 0) animateCountUp(numEl, n, 520, 75 + idx * 45);
-                    });
-                }
-
-                // 2) 二级弹窗打开时对左侧导航卡片执行错峰柔焦展开；切换菜单时对右侧详情面板执行轻柔焦显现
+                // 二级弹窗打开时对左侧导航卡片执行错峰柔焦展开；切换菜单时对右侧详情面板执行轻柔焦显现
                 function triggerPaneReveal(paneEl) {
                     if (!paneEl || prefersReducedMotion) return;
                     paneEl.classList.remove("wa-pane-reveal");
@@ -3441,8 +3386,6 @@
                 });
 
                 document.addEventListener("DOMContentLoaded", function () {
-                    runInitialStatChoreography();
-
                     const activeModalSet = new Set();
                     const observer = new MutationObserver(function (mutations) {
                         syncIconActiveStates();
